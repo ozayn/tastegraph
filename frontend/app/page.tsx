@@ -1,4 +1,5 @@
 import { BackendHealth } from "./components/BackendHealth";
+import { EnrichedSample } from "./components/EnrichedSample";
 import { ImportStatus } from "./components/ImportStatus";
 import { MetadataCoverage } from "./components/MetadataCoverage";
 import { RatingsSummary } from "./components/RatingsSummary";
@@ -25,6 +26,7 @@ export default function Home() {
         <RatingsTimeline />
         <TasteHints />
         <StrongPositiveSample />
+        <EnrichedSample />
         <RecentRatings />
 
         <section className="mt-20">
