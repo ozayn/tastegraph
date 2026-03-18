@@ -8,23 +8,31 @@ type GenreMultiSelectProps = {
   selected: string[];
   onChange: (genres: string[]) => void;
   disabled?: boolean;
+  /** Override genres endpoint (e.g. for watchlist). Default: /recommendations/genres */
+  genresUrl?: string;
 };
 
 export function GenreMultiSelect({
   selected,
   onChange,
   disabled = false,
+  genresUrl = `${API_URL}/recommendations/genres`,
 }: GenreMultiSelectProps) {
   const [genres, setGenres] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/recommendations/genres`)
+    setLoading(true);
+    fetch(genresUrl)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then(setGenres)
-      .catch(() => setGenres([]));
-  }, []);
+      .then((data) => {
+        setGenres(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setGenres([]))
+      .finally(() => setLoading(false));
+  }, [genresUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,8 +81,12 @@ export function GenreMultiSelect({
           role="listbox"
           className="absolute left-0 top-full z-10 mt-1 max-h-48 min-w-[10rem] overflow-y-auto border border-[var(--muted-subtle)] bg-[var(--background)] py-1.5 shadow-sm"
         >
-          {genres.length === 0 ? (
+          {loading ? (
             <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">Loading…</p>
+          ) : genres.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">
+              Genres will appear as metadata is enriched
+            </p>
           ) : (
             genres.map((g) => (
               <label
