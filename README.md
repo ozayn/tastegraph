@@ -63,11 +63,12 @@ Deploy frontend, backend, and Postgres as separate Railway services. Set the roo
 - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - **Environment variables:**
 
-| Variable       | Required | Description                                              |
-|----------------|----------|----------------------------------------------------------|
-| `DATABASE_URL` | Yes      | From Railway Postgres (auto when linked)                |
-| `CORS_ORIGINS` | Yes      | Frontend URL, e.g. `https://yourapp.railway.app`         |
-| `OMDB_API_KEY` | No       | Optional, for metadata enrichment                       |
+| Variable            | Required | Description                                              |
+|---------------------|----------|----------------------------------------------------------|
+| `DATABASE_URL`      | Yes      | From Railway Postgres (auto when linked)                |
+| `CORS_ORIGINS`      | Yes      | Frontend URL, e.g. `https://yourapp.railway.app`         |
+| `ADMIN_IMPORT_TOKEN` | No     | Token for CSV import (X-Admin-Import-Token header)       |
+| `OMDB_API_KEY`      | No       | Optional, for metadata enrichment                       |
 
 - After deploy, run migrations: `alembic upgrade head` (via Railway shell or CLI)
 
@@ -83,6 +84,47 @@ Deploy frontend, backend, and Postgres as separate Railway services. Set the roo
 | `NEXT_PUBLIC_API_URL`   | Yes      | Backend URL, e.g. `https://yourapp-backend.railway.app` |
 
 - Set `NEXT_PUBLIC_API_URL` before building (it is inlined at build time)
+
+### 4. Admin import (CSV sync to deployed backend)
+
+Set `ADMIN_IMPORT_TOKEN` on the backend service. Use it in the `X-Admin-Import-Token` header when uploading CSVs.
+
+**Local (backend on port 8000):**
+
+```bash
+curl -X POST http://localhost:8000/admin/import/ratings \
+  -H "X-Admin-Import-Token: YOUR_TOKEN" \
+  -F "file=@data/imdb/ratings.csv"
+
+curl -X POST http://localhost:8000/admin/import/watchlist \
+  -H "X-Admin-Import-Token: YOUR_TOKEN" \
+  -F "file=@data/imdb/watchlist.csv"
+```
+
+**Deployed (Railway backend URL):**
+
+```bash
+curl -X POST https://YOUR-BACKEND.railway.app/admin/import/ratings \
+  -H "X-Admin-Import-Token: YOUR_TOKEN" \
+  -F "file=@data/imdb/ratings.csv"
+
+curl -X POST https://YOUR-BACKEND.railway.app/admin/import/watchlist \
+  -H "X-Admin-Import-Token: YOUR_TOKEN" \
+  -F "file=@data/imdb/watchlist.csv"
+```
+
+Response: `{"inserted": N, "skipped": M, "errors": K}` (ratings) or `{"inserted": N, "updated": M, "errors": K}` (watchlist).
+
+**Local script (no token in command):** Add `REMOTE_API_URL` and `ADMIN_IMPORT_TOKEN` to `backend/.env` or project root `.env` (script loads them automatically), then:
+
+```bash
+./scripts/import_remote.sh ratings
+./scripts/import_remote.sh watchlist
+```
+
+Uses `data/imdb/ratings.csv` and `data/imdb/watchlist.csv` by default. Run from project root.
+
+Local CLI scripts (`python -m app.imports.ratings`, `python -m app.imports.watchlist`) remain unchanged for local development.
 
 ### Order
 
