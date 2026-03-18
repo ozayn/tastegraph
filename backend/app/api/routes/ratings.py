@@ -230,6 +230,36 @@ def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
         db.close()
 
 
+@router.get("/enriched-sample")
+def ratings_enriched_sample(limit: int = Query(default=10, ge=1, le=50)):
+    """Sample of enriched ratings joined with TitleMetadata, ordered by user_rating desc."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(IMDbRating, TitleMetadata)
+            .join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            .order_by(
+                desc(IMDbRating.user_rating),
+                nulls_last(desc(IMDbRating.date_rated)),
+            )
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "imdb_title_id": r.imdb_title_id,
+                "title": m.title,
+                "year": m.year,
+                "genres": m.genres,
+                "user_rating": r.user_rating,
+                "date_rated": r.date_rated.isoformat() if r.date_rated else None,
+            }
+            for r, m in rows
+        ]
+    finally:
+        db.close()
+
+
 @router.get("/metadata-coverage")
 def ratings_metadata_coverage():
     """Preview metadata coverage: ratings with vs without TitleMetadata."""
