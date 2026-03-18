@@ -7,7 +7,7 @@ from sqlalchemy import pool
 from app.core.config import settings
 from app.models.base import Base
 
-from app.models import IMDbRating, TitleMetadata, User  # noqa: F401 - register models
+from app.models import IMDbRating, IMDbWatchlistItem, TitleMetadata, User  # noqa: F401 - register models
 
 config = context.config
 

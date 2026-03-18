@@ -25,10 +25,14 @@ alembic revision --autogenerate -m "description"   # create new migration
 
 ## Import ratings
 
-Raw IMDb ratings CSV expected columns: **Title ID**, **Rating**, **Last Modified Date**.
+Supports two CSV formats. **Rich format** (ratings.csv) is preferred — includes metadata.
+
+**Rich format:** Const, Your Rating, Date Rated, Title, Title Type, Year, Genres, IMDb Rating, Runtime (mins), Num Votes, Release Date, Directors, URL
+
+**Raw format:** Title ID, Rating, Last Modified Date
 
 ```bash
-# From backend directory, defaults to ../data/imdb/user_ratings_raw.csv
+# Defaults to ../data/imdb/ratings.csv
 python -m app.scripts.import_ratings_default
 
 # Or with custom path
@@ -67,3 +71,7 @@ python -m app.scripts.import_metadata_default
 # Or with custom path
 python -m app.scripts.import_metadata_default path/to/metadata.csv
 ```
+
+## Watchlist
+
+The `imdb_watchlist` table stores items from the IMDb watchlist export (watchlist.csv). Importer not yet implemented.

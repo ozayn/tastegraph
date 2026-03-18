@@ -6,7 +6,7 @@ from pathlib import Path
 from app.imports.ratings import run_import
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
-_DEFAULT_PATH = _BACKEND_ROOT.parent / "data" / "imdb" / "user_ratings_raw.csv"
+_DEFAULT_PATH = _BACKEND_ROOT.parent / "data" / "imdb" / "ratings.csv"
 
 
 def main() -> None:

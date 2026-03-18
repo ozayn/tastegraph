@@ -1,9 +1,8 @@
-"""Import IMDb ratings from raw CSV export.
+"""Import IMDb ratings from CSV.
 
-Expected columns: Title ID, Rating, Last Modified Date
-- Title ID -> imdb_title_id
-- Rating -> user_rating
-- Last Modified Date -> date_rated (date rating was last modified)
+Supports two formats:
+1. Rich IMDb export: Const, Your Rating, Date Rated, Title, Title Type, Year, Genres, etc.
+2. Raw format: Title ID, Rating, Last Modified Date
 """
 
 import csv
@@ -24,6 +23,15 @@ def _parse_int(value: str) -> int | None:
         return None
 
 
+def _parse_float(value: str) -> float | None:
+    if not value or not value.strip():
+        return None
+    try:
+        return float(value.strip())
+    except (ValueError, TypeError):
+        return None
+
+
 def _parse_date(value: str) -> date | None:
     if not value or not value.strip():
         return None
@@ -31,7 +39,14 @@ def _parse_date(value: str) -> date | None:
     try:
         return date.fromisoformat(s[:10])
     except (ValueError, TypeError):
-        return None
+        pass
+    try:
+        year = int(s[:4])
+        if 1900 <= year <= 2100:
+            return date(year, 1, 1)
+    except (ValueError, TypeError):
+        pass
+    return None
 
 
 def _parse_str(value: str, max_len: int | None = None) -> str | None:
@@ -43,11 +58,14 @@ def _parse_str(value: str, max_len: int | None = None) -> str | None:
     return s
 
 
-def _row_to_rating(row: dict[str, str]) -> IMDbRating | None:
+def _is_rich_format(fieldnames: list[str]) -> bool:
+    return "Const" in fieldnames and "Your Rating" in fieldnames
+
+
+def _row_to_rating_raw(row: dict[str, str]) -> IMDbRating | None:
     imdb_id = _parse_str(row.get("Title ID", ""), 20)
     if not imdb_id:
         return None
-
     return IMDbRating(
         imdb_title_id=imdb_id,
         title=None,
@@ -65,6 +83,27 @@ def _row_to_rating(row: dict[str, str]) -> IMDbRating | None:
     )
 
 
+def _row_to_rating_rich(row: dict[str, str]) -> IMDbRating | None:
+    imdb_id = _parse_str(row.get("Const", ""), 20)
+    if not imdb_id:
+        return None
+    return IMDbRating(
+        imdb_title_id=imdb_id,
+        title=_parse_str(row.get("Title", ""), 500),
+        title_type=_parse_str(row.get("Title Type", ""), 50),
+        year=_parse_int(row.get("Year", "")),
+        genres=_parse_str(row.get("Genres", ""), 500),
+        user_rating=_parse_int(row.get("Your Rating", "")),
+        date_rated=_parse_date(row.get("Date Rated", "")),
+        imdb_rating=_parse_float(row.get("IMDb Rating", "")),
+        runtime_mins=_parse_int(row.get("Runtime (mins)", "")),
+        num_votes=_parse_int(row.get("Num Votes", "")),
+        release_date=_parse_date(row.get("Release Date", "")),
+        directors=_parse_str(row.get("Directors", ""), 500),
+        url=_parse_str(row.get("URL", ""), 500),
+    )
+
+
 def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
     """Import ratings from CSV. Returns (inserted, skipped, errors)."""
     existing_ids = {r.imdb_title_id for r in db.query(IMDbRating.imdb_title_id).all()}
@@ -75,8 +114,15 @@ def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]
 
     with open(csv_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames or []
+        is_rich = _is_rich_format(fieldnames)
+
         for row in reader:
-            rating = _row_to_rating(row)
+            if is_rich:
+                rating = _row_to_rating_rich(row)
+            else:
+                rating = _row_to_rating_raw(row)
+
             if not rating:
                 errors += 1
                 continue
