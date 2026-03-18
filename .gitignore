@@ -53,6 +53,7 @@ yarn-error.log*
 
 # Local IMDb exports (personal data)
 data/imdb/*.csv
+!data/imdb/title_metadata.template.csv
 
 # Misc
 *.tgz
