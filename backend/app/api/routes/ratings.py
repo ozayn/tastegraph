@@ -8,6 +8,7 @@ from sqlalchemy.sql.expression import nulls_last, and_
 from app.core.database import SessionLocal
 from app.imports.ratings import import_ratings_from_csv
 from app.models.imdb_rating import IMDbRating
+from app.models.title_metadata import TitleMetadata
 
 router = APIRouter(prefix="/ratings", tags=["ratings"])
 
@@ -225,6 +226,30 @@ def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
             }
             for r in rows
         ]
+    finally:
+        db.close()
+
+
+@router.get("/metadata-coverage")
+def ratings_metadata_coverage():
+    """Preview metadata coverage: ratings with vs without TitleMetadata."""
+    db = SessionLocal()
+    try:
+        total = db.query(IMDbRating).count()
+        with_metadata = (
+            db.query(IMDbRating)
+            .join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            .count()
+        )
+        without_metadata = total - with_metadata
+        coverage_ratio = round(with_metadata / total, 4) if total > 0 else 0.0
+
+        return {
+            "total_ratings": total,
+            "ratings_with_metadata": with_metadata,
+            "ratings_without_metadata": without_metadata,
+            "coverage_ratio": coverage_ratio,
+        }
     finally:
         db.close()
 
