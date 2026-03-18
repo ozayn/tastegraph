@@ -139,6 +139,7 @@ def ratings_strong_positive_sample(limit: int = Query(default=10, ge=1, le=50)):
         return [
             {
                 "imdb_title_id": r.imdb_title_id,
+                "title": r.title,
                 "user_rating": r.user_rating,
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
             }
@@ -195,6 +196,7 @@ def ratings_recent(limit: int = Query(default=5, ge=1, le=20)):
         return [
             {
                 "imdb_title_id": r.imdb_title_id,
+                "title": r.title,
                 "user_rating": r.user_rating,
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
             }
