@@ -1,7 +1,7 @@
 """Simple recommendation endpoints."""
 
 from fastapi import APIRouter, Query
-from sqlalchemy import case, desc, or_
+from sqlalchemy import case, desc, exists, or_, select
 from sqlalchemy.sql.expression import nulls_last
 
 from app.core.database import SessionLocal
@@ -43,7 +43,7 @@ def recommendations_simple(
     year_to: int | None = Query(default=None, ge=1900, le=2100),
     limit: int = Query(default=10, ge=1, le=50),
 ):
-    """Filtered recommendations from enriched titles rated 8+."""
+    """Your favorites: enriched titles you rated 8+. Filtered by genre, type, year."""
     db = SessionLocal()
     try:
         q = (
@@ -88,17 +88,58 @@ def recommendations_simple(
         db.close()
 
 
+@router.get("/watchlist-genres")
+def recommendations_watchlist_genres():
+    """Available genres from watchlist items with TitleMetadata."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(TitleMetadata.genres)
+            .join(IMDbWatchlistItem, TitleMetadata.imdb_title_id == IMDbWatchlistItem.imdb_title_id)
+            .filter(TitleMetadata.genres.isnot(None))
+            .all()
+        )
+        genres: set[str] = set()
+        for (g,) in rows:
+            for part in (g or "").split(","):
+                s = part.strip()
+                if s:
+                    genres.add(s)
+        return sorted(genres)
+    finally:
+        db.close()
+
+
 @router.get("/watchlist-simple")
 def recommendations_watchlist_simple(
+    genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     title_type: str | None = Query(default=None, description="movie, TV Series, etc."),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    """Recommendations from watchlist, preferring items with title/title_type/year."""
+    """Things to watch from watchlist. Excludes already-rated titles."""
     db = SessionLocal()
     try:
-        q = db.query(IMDbWatchlistItem)
+        if genres:
+            genre_filters = [
+                TitleMetadata.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
+            ]
+            if genre_filters:
+                q = (
+                    db.query(IMDbWatchlistItem)
+                    .join(TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
+                    .filter(or_(*genre_filters))
+                )
+            else:
+                q = db.query(IMDbWatchlistItem)
+        else:
+            q = db.query(IMDbWatchlistItem)
+
+        # Exclude items already rated (in watchlist or in ratings)
+        q = q.filter(IMDbWatchlistItem.your_rating.is_(None))
+        rated_exists = exists(select(1).where(IMDbRating.imdb_title_id == IMDbWatchlistItem.imdb_title_id))
+        q = q.filter(~rated_exists)
 
         if title_type:
             q = q.filter(IMDbWatchlistItem.title_type == title_type)
@@ -142,7 +183,7 @@ def _build_simple_explanation(
     year_to: int | None,
 ) -> str:
     """Build a deterministic plain-text explanation from filter params."""
-    base = "These are enriched titles you rated 8 or higher"
+    base = "Your favorites: enriched titles you rated 8 or higher"
     parts = []
 
     if genres:
