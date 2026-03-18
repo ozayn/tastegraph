@@ -1,4 +1,5 @@
 import { BackendHealth } from "./components/BackendHealth";
+import { ImportStatus } from "./components/ImportStatus";
 import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
@@ -18,6 +19,7 @@ export default function Home() {
         </p>
 
         <RatingsSummary />
+        <ImportStatus />
         <RatingsTimeline />
         <TasteHints />
         <StrongPositiveSample />
