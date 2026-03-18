@@ -28,6 +28,9 @@ alembic revision --autogenerate -m "description"   # create new migration
 Raw IMDb ratings CSV expected columns: **Title ID**, **Rating**, **Last Modified Date**.
 
 ```bash
-# From backend directory, after migrations
-python -m app.imports.ratings path/to/user_ratings_raw.csv
+# From backend directory, defaults to ../data/imdb/user_ratings_raw.csv
+python -m app.scripts.import_ratings_default
+
+# Or with custom path
+python -m app.scripts.import_ratings_default path/to/ratings.csv
 ```
