@@ -1,11 +1,12 @@
 """Simple recommendation endpoints."""
 
 from fastapi import APIRouter, Query
-from sqlalchemy import desc
+from sqlalchemy import case, desc
 from sqlalchemy.sql.expression import nulls_last
 
 from app.core.database import SessionLocal
 from app.models.imdb_rating import IMDbRating
+from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -55,6 +56,53 @@ def recommendations_simple(
                 "user_rating": r.user_rating,
             }
             for r, m in rows
+        ]
+    finally:
+        db.close()
+
+
+@router.get("/watchlist-simple")
+def recommendations_watchlist_simple(
+    title_type: str | None = Query(default=None, description="movie, TV Series, etc."),
+    year_from: int | None = Query(default=None, ge=1900, le=2100),
+    year_to: int | None = Query(default=None, ge=1900, le=2100),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    """Recommendations from watchlist, preferring items with title/title_type/year."""
+    db = SessionLocal()
+    try:
+        q = db.query(IMDbWatchlistItem)
+
+        if title_type:
+            q = q.filter(IMDbWatchlistItem.title_type == title_type)
+        if year_from is not None:
+            q = q.filter(IMDbWatchlistItem.year >= year_from)
+        if year_to is not None:
+            q = q.filter(IMDbWatchlistItem.year <= year_to)
+
+        has_meta = (
+            IMDbWatchlistItem.title.isnot(None)
+            & IMDbWatchlistItem.title_type.isnot(None)
+            & IMDbWatchlistItem.year.isnot(None)
+        )
+        meta_first = case((has_meta, 0), else_=1)
+
+        rows = (
+            q.order_by(meta_first.asc(), IMDbWatchlistItem.position.asc())
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "imdb_title_id": r.imdb_title_id,
+                "title": r.title,
+                "title_type": r.title_type,
+                "year": r.year,
+                "your_rating": r.your_rating,
+                "date_rated": r.date_rated.isoformat() if r.date_rated else None,
+            }
+            for r in rows
         ]
     finally:
         db.close()
