@@ -25,6 +25,16 @@ A personal AI-powered movie and series recommender based on IMDb ratings, watchl
 - Deployment: Railway
 - LLM providers: Groq, Gemini, OpenRouter
 
+## Run locally
+
+```bash
+make run-backend    # Backend on http://localhost:8000 (from backend/.venv)
+make run-frontend   # Frontend on http://localhost:3000
+make run            # Both in parallel (backend in background)
+```
+
+Use two terminals for `run-backend` and `run-frontend` if you prefer separate logs.
+
 ## Docker (local development)
 
 ```bash
