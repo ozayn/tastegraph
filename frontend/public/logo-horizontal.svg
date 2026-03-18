@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" aria-hidden="true">
+  <style>
+    .mark { fill: #171717; }
+    .word { fill: #171717; font-family: system-ui, -apple-system, sans-serif; font-size: 18px; font-weight: 500; letter-spacing: 0.02em; }
+    @media (prefers-color-scheme: dark) {
+      .mark, .word { fill: #fafafa; }
+    }
+  </style>
+  <path class="mark" d="M4 4h24v4h-8v16h-8V8H4V4z" transform="translate(0,2)" />
+  <text class="word" x="40" y="22">TasteGraph</text>
+</svg>
