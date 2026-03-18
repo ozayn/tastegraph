@@ -59,19 +59,18 @@ def _row_to_item(row: dict[str, str]) -> IMDbWatchlistItem | None:
         title=_parse_str(row.get("Title", ""), 500),
         title_type=_parse_str(row.get("Title Type", ""), 50),
         year=_parse_int(row.get("Year", "")),
+        genres=_parse_str(row.get("Genres", ""), 500),
         your_rating=_parse_int(row.get("Your Rating", "")),
         date_rated=_parse_date(row.get("Date Rated", "")),
     )
 
 
 def import_watchlist_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
-    """Import watchlist from CSV. Returns (inserted, skipped, errors)."""
-    existing_ids = {
-        r.imdb_title_id for r in db.query(IMDbWatchlistItem.imdb_title_id).all()
-    }
+    """Import watchlist from CSV. Returns (inserted, updated, errors)."""
+    existing = {r.imdb_title_id: r for r in db.query(IMDbWatchlistItem).all()}
 
     inserted = 0
-    skipped = 0
+    updated = 0
     errors = 0
 
     with open(csv_path, encoding="utf-8", errors="replace") as f:
@@ -81,15 +80,24 @@ def import_watchlist_from_csv(db: Session, csv_path: Path) -> tuple[int, int, in
             if not item:
                 errors += 1
                 continue
-            if item.imdb_title_id in existing_ids:
-                skipped += 1
-                continue
-            db.add(item)
-            existing_ids.add(item.imdb_title_id)
-            inserted += 1
+            existing_row = existing.get(item.imdb_title_id)
+            if existing_row:
+                existing_row.created = item.created
+                existing_row.modified = item.modified
+                existing_row.title = item.title
+                existing_row.title_type = item.title_type
+                existing_row.year = item.year
+                existing_row.genres = item.genres
+                existing_row.your_rating = item.your_rating
+                existing_row.date_rated = item.date_rated
+                updated += 1
+            else:
+                db.add(item)
+                existing[item.imdb_title_id] = item
+                inserted += 1
 
     db.commit()
-    return inserted, skipped, errors
+    return inserted, updated, errors
 
 
 def run_import(csv_path: str) -> None:
@@ -103,8 +111,8 @@ def run_import(csv_path: str) -> None:
 
     db = SessionLocal()
     try:
-        inserted, skipped, errors = import_watchlist_from_csv(db, path)
-        print(f"Import complete: {inserted} inserted, {skipped} skipped, {errors} errors")
+        inserted, updated, errors = import_watchlist_from_csv(db, path)
+        print(f"Import complete: {inserted} inserted, {updated} updated, {errors} errors")
     finally:
         db.close()
 

@@ -19,6 +19,7 @@ class IMDbWatchlistItem(Base):
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    genres: Mapped[str | None] = mapped_column(String(500), nullable=True)
     your_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_rated: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
