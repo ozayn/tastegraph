@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { API_URL } from "../lib/api";
 
 type GenreMultiSelectProps = {
@@ -16,6 +17,16 @@ type GenreMultiSelectProps = {
   fallbackGenresUrl?: string;
 };
 
+const FALLBACK_GENRES = [
+  "Action",
+  "Comedy",
+  "Drama",
+  "Horror",
+  "Romance",
+  "Sci-Fi",
+  "Thriller",
+];
+
 export function GenreMultiSelect({
   selected,
   onChange,
@@ -26,7 +37,10 @@ export function GenreMultiSelect({
   const [genres, setGenres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -37,22 +51,31 @@ export function GenreMultiSelect({
         if (list.length === 0 && fallbackGenresUrl) {
           return fetch(fallbackGenresUrl)
             .then((r) => (r.ok ? r.json() : Promise.reject()))
-            .then((fallback) => (Array.isArray(fallback) ? fallback : []))
-            .catch(() => []);
+            .then((fallback) => (Array.isArray(fallback) && fallback.length > 0 ? fallback : FALLBACK_GENRES))
+            .catch(() => FALLBACK_GENRES);
         }
         return list;
       })
+      .then((list) => (list.length > 0 ? list : FALLBACK_GENRES))
       .then(setGenres)
-      .catch(() => setGenres([]))
+      .catch(() => setGenres(FALLBACK_GENRES))
       .finally(() => setLoading(false));
   }, [genresUrl, fallbackGenresUrl]);
 
   useEffect(() => {
+    if (open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({ top: rect.bottom + 6, left: rect.left });
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inContainer && !inDropdown) setOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -78,6 +101,7 @@ export function GenreMultiSelect({
   return (
     <div className="relative" ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => !noGenres && setOpen((o) => !o)}
         disabled={disabled || noGenres}
@@ -95,35 +119,41 @@ export function GenreMultiSelect({
         </span>
       </button>
 
-      {open && !noGenres && (
-        <div
-          role="listbox"
-          className="absolute left-0 top-full z-10 mt-1.5 max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-[var(--section-border)] bg-[var(--background)] py-1.5"
-        >
-          {loading ? (
-            <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">Loading…</p>
-          ) : genres.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">
-              Genres will appear as metadata is enriched
-            </p>
-          ) : (
-            genres.map((g) => (
-              <label
-                key={g}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--foreground)] hover:bg-[var(--muted-subtle)]/20"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(g)}
-                  onChange={() => toggle(g)}
-                  className="h-3.5 w-3.5 accent-[var(--foreground)]"
-                />
-                {g}
-              </label>
-            ))
-          )}
-        </div>
-      )}
+      {open &&
+        !noGenres &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            className="fixed z-[9999] max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-[var(--section-border)] bg-[var(--background)] py-1.5 shadow-lg"
+            style={{ top: position.top, left: position.left }}
+          >
+            {loading ? (
+              <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">Loading…</p>
+            ) : genres.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">
+                Genres will appear as metadata is enriched
+              </p>
+            ) : (
+              genres.map((g) => (
+                <label
+                  key={g}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--foreground)] hover:bg-[var(--muted-subtle)]/20"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(g)}
+                    onChange={() => toggle(g)}
+                    className="h-3.5 w-3.5 accent-[var(--foreground)]"
+                  />
+                  {g}
+                </label>
+              ))
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
