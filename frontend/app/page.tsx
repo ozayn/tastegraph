@@ -1,4 +1,5 @@
 import { BackendHealth } from "./components/BackendHealth";
+import { RatingsSummary } from "./components/RatingsSummary";
 
 export default function Home() {
   return (
@@ -11,6 +12,8 @@ export default function Home() {
           Recommend what to watch based on your IMDb ratings, watchlist, mood,
           and platform preferences.
         </p>
+
+        <RatingsSummary />
 
         <section className="mt-20">
           <p className="text-sm font-normal tracking-wide text-[var(--foreground)]/50">
