@@ -12,16 +12,29 @@ from app.models.title_metadata import TitleMetadata
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 
+def _title_type_matches(tt: str) -> list:
+    """Build filters for title_type (movie, series, episode) matching CSV values like Movie, TV Series."""
+    tt = (tt or "").strip().lower()
+    if not tt:
+        return []
+    if tt == "movie":
+        return [IMDbRating.title_type.ilike("movie")]
+    if tt == "series":
+        return [IMDbRating.title_type.ilike("%series%")]
+    if tt == "episode":
+        return [IMDbRating.title_type.ilike("episode")]
+    return [IMDbRating.title_type.ilike(f"%{tt}%")]
+
+
 @router.get("/genres")
 def recommendations_genres():
-    """Available genres from enriched ratings (rated 8+)."""
+    """Available genres from ratings (rated 8+) using IMDbRating.genres."""
     db = SessionLocal()
     try:
         rows = (
-            db.query(TitleMetadata.genres)
-            .join(IMDbRating, TitleMetadata.imdb_title_id == IMDbRating.imdb_title_id)
+            db.query(IMDbRating.genres)
             .filter(IMDbRating.user_rating >= 8)
-            .filter(TitleMetadata.genres.isnot(None))
+            .filter(IMDbRating.genres.isnot(None))
             .all()
         )
         genres: set[str] = set()
@@ -43,27 +56,24 @@ def recommendations_simple(
     year_to: int | None = Query(default=None, ge=1900, le=2100),
     limit: int = Query(default=10, ge=1, le=50),
 ):
-    """Your favorites: enriched titles you rated 8+. Filtered by genre, type, year."""
+    """Your favorites: titles you rated 8+. Uses IMDbRating (CSV) data; no TitleMetadata required."""
     db = SessionLocal()
     try:
-        q = (
-            db.query(IMDbRating, TitleMetadata)
-            .join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
-            .filter(IMDbRating.user_rating >= 8)
-        )
+        q = db.query(IMDbRating).filter(IMDbRating.user_rating >= 8)
 
         if genres:
             genre_filters = [
-                TitleMetadata.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
+                IMDbRating.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
             ]
             if genre_filters:
                 q = q.filter(or_(*genre_filters))
-        if title_type:
-            q = q.filter(TitleMetadata.title_type == title_type)
+        tt_filters = _title_type_matches(title_type or "")
+        if tt_filters:
+            q = q.filter(or_(*tt_filters))
         if year_from is not None:
-            q = q.filter(TitleMetadata.year >= year_from)
+            q = q.filter(IMDbRating.year >= year_from)
         if year_to is not None:
-            q = q.filter(TitleMetadata.year <= year_to)
+            q = q.filter(IMDbRating.year <= year_to)
 
         rows = (
             q.order_by(
@@ -77,12 +87,12 @@ def recommendations_simple(
         return [
             {
                 "imdb_title_id": r.imdb_title_id,
-                "title": m.title,
-                "year": m.year,
-                "genres": m.genres,
+                "title": r.title,
+                "year": r.year,
+                "genres": r.genres,
                 "user_rating": r.user_rating,
             }
-            for r, m in rows
+            for r in rows
         ]
     finally:
         db.close()
@@ -90,13 +100,12 @@ def recommendations_simple(
 
 @router.get("/watchlist-genres")
 def recommendations_watchlist_genres():
-    """Available genres from watchlist items with TitleMetadata."""
+    """Available genres from watchlist items (from IMDbWatchlistItem.genres)."""
     db = SessionLocal()
     try:
         rows = (
-            db.query(TitleMetadata.genres)
-            .join(IMDbWatchlistItem, TitleMetadata.imdb_title_id == IMDbWatchlistItem.imdb_title_id)
-            .filter(TitleMetadata.genres.isnot(None))
+            db.query(IMDbWatchlistItem.genres)
+            .filter(IMDbWatchlistItem.genres.isnot(None))
             .all()
         )
         genres: set[str] = set()
@@ -124,14 +133,10 @@ def recommendations_watchlist_simple(
     try:
         if genres:
             genre_filters = [
-                TitleMetadata.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
+                IMDbWatchlistItem.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
             ]
             if genre_filters:
-                q = (
-                    db.query(IMDbWatchlistItem)
-                    .join(TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
-                    .filter(or_(*genre_filters))
-                )
+                q = db.query(IMDbWatchlistItem).filter(or_(*genre_filters))
             else:
                 q = db.query(IMDbWatchlistItem)
         else:

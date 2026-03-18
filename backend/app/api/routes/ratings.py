@@ -234,12 +234,12 @@ def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
 
 @router.get("/enriched-sample")
 def ratings_enriched_sample(limit: int = Query(default=10, ge=1, le=50)):
-    """Sample of enriched ratings joined with TitleMetadata, ordered by user_rating desc."""
+    """Sample of ratings with metadata. Prefers IMDbRating (CSV) fields; falls back to TitleMetadata."""
     db = SessionLocal()
     try:
         rows = (
             db.query(IMDbRating, TitleMetadata)
-            .join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
             .order_by(
                 desc(IMDbRating.user_rating),
                 nulls_last(desc(IMDbRating.date_rated)),
@@ -250,9 +250,9 @@ def ratings_enriched_sample(limit: int = Query(default=10, ge=1, le=50)):
         return [
             {
                 "imdb_title_id": r.imdb_title_id,
-                "title": m.title,
-                "year": m.year,
-                "genres": m.genres,
+                "title": r.title or (m.title if m else None),
+                "year": r.year if r.year is not None else (m.year if m else None),
+                "genres": r.genres or (m.genres if m else None),
                 "user_rating": r.user_rating,
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
             }
