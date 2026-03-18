@@ -43,7 +43,13 @@ The `title_metadata` table stores enrichment data keyed by `imdb_title_id`. OMDb
 python -m app.scripts.fetch_one_metadata tt1234567
 ```
 
-Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON to stdout.
+To fetch and upsert into the database:
+
+```bash
+python -m app.scripts.enrich_one_title tt0111161
+```
+
+Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON (fetch) or success/failure message (enrich).
 
 Import from CSV (columns: imdb_title_id, title, title_type, year, genres, runtime_mins, release_date, directors, imdb_rating, num_votes, url):
 
