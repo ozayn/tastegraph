@@ -10,6 +10,11 @@ type GenreMultiSelectProps = {
   disabled?: boolean;
   /** Override genres endpoint (e.g. for watchlist). Default: /recommendations/genres */
   genresUrl?: string;
+  /**
+   * Temporary fallback when primary returns empty (e.g. watchlist → ratings genres).
+   * Remove once watchlist metadata enrichment is common.
+   */
+  fallbackGenresUrl?: string;
 };
 
 export function GenreMultiSelect({
@@ -17,6 +22,7 @@ export function GenreMultiSelect({
   onChange,
   disabled = false,
   genresUrl = `${API_URL}/recommendations/genres`,
+  fallbackGenresUrl,
 }: GenreMultiSelectProps) {
   const [genres, setGenres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,11 +34,19 @@ export function GenreMultiSelect({
     fetch(genresUrl)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        setGenres(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        if (list.length === 0 && fallbackGenresUrl) {
+          return fetch(fallbackGenresUrl)
+            .then((r) => (r.ok ? r.json() : Promise.reject()))
+            .then((fallback) => (Array.isArray(fallback) ? fallback : []))
+            .catch(() => []);
+        }
+        return list;
       })
+      .then(setGenres)
       .catch(() => setGenres([]))
       .finally(() => setLoading(false));
-  }, [genresUrl]);
+  }, [genresUrl, fallbackGenresUrl]);
 
   useEffect(() => {
     if (!open) return;
