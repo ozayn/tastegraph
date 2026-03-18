@@ -27,7 +27,7 @@ export function MetadataCoverage() {
   const total = data.total_ratings.toLocaleString();
 
   return (
-    <p className="mt-1.5 text-sm font-normal leading-relaxed text-[var(--foreground)]">
+    <p className="mt-1.5 text-sm font-normal leading-[1.65] text-[var(--foreground)]">
       Metadata coverage: {withMeta} of {total} titles.
     </p>
   );

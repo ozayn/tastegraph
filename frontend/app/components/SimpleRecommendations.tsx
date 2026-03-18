@@ -26,14 +26,14 @@ export function SimpleRecommendations() {
 
   return (
     <section className="mt-16 sm:mt-20">
-      <p className="text-sm font-normal tracking-wide text-[var(--muted)]">
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
         Simple recommendations
       </p>
-      <ul className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
+      <ul className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
         {items.map((r) => (
           <li
             key={r.imdb_title_id}
-            className="font-normal leading-relaxed text-[var(--foreground)] break-words"
+            className="text-[15px] font-normal leading-[1.6] text-[var(--foreground)] break-words sm:text-base"
           >
             {r.title ?? r.imdb_title_id}
             {r.year != null && ` (${r.year})`}

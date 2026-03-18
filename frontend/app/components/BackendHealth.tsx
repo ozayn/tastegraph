@@ -14,7 +14,7 @@ export function BackendHealth() {
   }, []);
 
   return (
-    <p className="text-xs text-[var(--muted-soft)]">
+    <p className="text-[11px] tracking-wide text-[var(--muted-subtle)]">
       API {status === "ok" ? "connected" : status === "error" ? "offline" : "…"}
     </p>
   );

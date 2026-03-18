@@ -1,26 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf8;
-  --foreground: #1a1a18;
-  --muted: rgba(26, 26, 24, 0.96);
-  --muted-soft: rgba(26, 26, 24, 0.88);
-  --muted-subtle: rgba(26, 26, 24, 0.75);
+  --background: #fafafa;
+  --foreground: #171717;
+  --muted: rgba(23, 23, 23, 0.85);
+  --muted-soft: rgba(23, 23, 23, 0.65);
+  --muted-subtle: rgba(23, 23, 23, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-cormorant), Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f0f0e;
-    --foreground: #f0f0ec;
-    --muted: rgba(240, 240, 236, 0.98);
-    --muted-soft: rgba(240, 240, 236, 0.92);
-    --muted-subtle: rgba(240, 240, 236, 0.82);
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --muted: rgba(250, 250, 250, 0.85);
+    --muted-soft: rgba(250, 250, 250, 0.65);
+    --muted-subtle: rgba(250, 250, 250, 0.5);
   }
 }
 
@@ -31,5 +30,9 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
 }
