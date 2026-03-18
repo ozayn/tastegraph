@@ -120,6 +120,33 @@ def ratings_taste_hints():
         db.close()
 
 
+@router.get("/strong-positive-sample")
+def ratings_strong_positive_sample(limit: int = Query(default=10, ge=1, le=50)):
+    """Sample of strongest positive ratings (user_rating >= 8)."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(IMDbRating)
+            .filter(IMDbRating.user_rating >= 8)
+            .order_by(
+                desc(IMDbRating.user_rating),
+                nulls_last(desc(IMDbRating.date_rated)),
+            )
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "imdb_title_id": r.imdb_title_id,
+                "user_rating": r.user_rating,
+                "date_rated": r.date_rated.isoformat() if r.date_rated else None,
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
+
+
 @router.get("/by-year")
 def ratings_by_year():
     """Year-based rating insights from date_rated."""
