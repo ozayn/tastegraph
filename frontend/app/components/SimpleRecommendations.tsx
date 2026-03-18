@@ -28,8 +28,14 @@ export function SimpleRecommendations() {
       const baseParams = new URLSearchParams();
       genres.forEach((g) => baseParams.append("genres", g));
       if (tt) baseParams.set("title_type", tt);
-      if (yf.trim() && !isNaN(Number(yf))) baseParams.set("year_from", yf.trim());
-      if (yt.trim() && !isNaN(Number(yt))) baseParams.set("year_to", yt.trim());
+      const yfNum = Number(yf.trim());
+      if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
+        baseParams.set("year_from", String(Math.floor(yfNum)));
+      }
+      const ytNum = Number(yt.trim());
+      if (yt.trim() && !isNaN(ytNum) && ytNum >= 1900 && ytNum <= 2100) {
+        baseParams.set("year_to", String(Math.floor(ytNum)));
+      }
 
       const recParams = new URLSearchParams(baseParams);
       recParams.set("limit", "10");

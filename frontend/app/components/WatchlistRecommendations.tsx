@@ -29,8 +29,14 @@ export function WatchlistRecommendations() {
       params.set("limit", "5");
       genres.forEach((g) => params.append("genres", g));
       if (tt) params.set("title_type", tt);
-      if (yf.trim() && !isNaN(Number(yf))) params.set("year_from", yf.trim());
-      if (yt.trim() && !isNaN(Number(yt))) params.set("year_to", yt.trim());
+      const yfNum = Number(yf.trim());
+      if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
+        params.set("year_from", String(Math.floor(yfNum)));
+      }
+      const ytNum = Number(yt.trim());
+      if (yt.trim() && !isNaN(ytNum) && ytNum >= 1900 && ytNum <= 2100) {
+        params.set("year_to", String(Math.floor(ytNum)));
+      }
 
       fetch(`${API_URL}/recommendations/watchlist-simple?${params}`)
         .then((res) => (res.ok ? res.json() : Promise.reject()))
