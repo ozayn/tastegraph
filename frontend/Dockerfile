@@ -10,5 +10,6 @@ RUN npm run build
 
 EXPOSE 3000
 
-# Production: use $PORT for Railway; defaults to 3000 for local Docker
-CMD ["sh", "-c", "npm run start -- -p ${PORT:-3000}"]
+# Production: bind to 0.0.0.0; fixed port 3000 (Railway maps public → 3000)
+ENV NODE_ENV=production
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 npm run start -- -p 3000"]
