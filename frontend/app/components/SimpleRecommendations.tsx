@@ -134,17 +134,17 @@ export function SimpleRecommendations() {
                   : "mt-4 space-y-2.5 sm:mt-5 sm:space-y-3"
               }
             >
-          {items.map((r) => (
-            <li
-              key={r.imdb_title_id}
-              className="text-[15px] font-normal leading-[1.6] text-[var(--foreground)] break-words sm:text-base"
-            >
-              {r.title ?? r.imdb_title_id}
-              {r.year != null && ` (${r.year})`}
-              {r.genres && ` · ${r.genres}`}
-              {r.user_rating != null && ` · ${r.user_rating}`}
-            </li>
-          )}
+            {items.map((r) => (
+              <li
+                key={r.imdb_title_id}
+                className="text-[15px] font-normal leading-[1.6] text-[var(--foreground)] break-words sm:text-base"
+              >
+                {r.title ?? r.imdb_title_id}
+                {r.year != null && ` (${r.year})`}
+                {r.genres && ` · ${r.genres}`}
+                {r.user_rating != null && ` · ${r.user_rating}`}
+              </li>
+            ))}
           </ul>
           ) : (
             <p
