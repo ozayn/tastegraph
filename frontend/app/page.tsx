@@ -2,6 +2,7 @@ import { BackendHealth } from "./components/BackendHealth";
 import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
+import { TasteHints } from "./components/TasteHints";
 
 export default function Home() {
   return (
@@ -17,6 +18,7 @@ export default function Home() {
 
         <RatingsSummary />
         <RatingsTimeline />
+        <TasteHints />
         <RecentRatings />
 
         <section className="mt-20">
