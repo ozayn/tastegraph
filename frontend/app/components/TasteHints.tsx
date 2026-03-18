@@ -22,7 +22,7 @@ export function TasteHints() {
   if (!data) return null;
 
   return (
-    <p className="mt-1 text-sm font-light italic text-[var(--foreground)]/50">
+    <p className="mt-1.5 text-sm font-normal italic leading-relaxed text-[var(--muted)]">
       For now, {data.strong_positive_threshold}+ counts as a strong signal. Below {data.weak_negative_threshold} is weak negative.
     </p>
   );

@@ -23,14 +23,16 @@ export function RecentRatings() {
   if (items.length === 0) return null;
 
   return (
-    <p className="mt-3 text-sm font-light text-[var(--foreground)]/55">
-      Recent:{" "}
-      {items.map((r, i) => (
-        <span key={r.imdb_title_id}>
-          {i > 0 && " · "}
-          {r.imdb_title_id} {r.user_rating ?? "—"}
-        </span>
-      ))}
+    <p className="mt-3 text-sm font-normal leading-relaxed text-[var(--foreground)]">
+      <span className="text-[var(--muted)]">Recent:</span>{" "}
+      <span className="break-words">
+        {items.map((r, i) => (
+          <span key={r.imdb_title_id}>
+            {i > 0 && " · "}
+            {r.imdb_title_id} {r.user_rating ?? "—"}
+          </span>
+        ))}
+      </span>
     </p>
   );
 }

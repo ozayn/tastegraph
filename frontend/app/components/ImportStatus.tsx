@@ -33,7 +33,7 @@ export function ImportStatus() {
     : null;
 
   return (
-    <p className="mt-1 text-sm font-light text-[var(--foreground)]/55">
+    <p className="mt-1.5 text-sm font-normal leading-relaxed text-[var(--foreground)]">
       {count} ratings imported.
       {lastImported && ` Last imported ${lastImported}.`}
     </p>

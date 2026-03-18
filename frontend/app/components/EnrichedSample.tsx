@@ -26,15 +26,17 @@ export function EnrichedSample() {
   if (items.length === 0) return null;
 
   return (
-    <p className="mt-3 text-sm font-light text-[var(--foreground)]/55">
-      Enriched sample:{" "}
-      {items.map((r, i) => (
-        <span key={r.imdb_title_id}>
-          {i > 0 && " · "}
-          {r.title ?? r.imdb_title_id}
-          {r.year != null ? ` (${r.year})` : ""}
-        </span>
-      ))}
+    <p className="mt-3 text-sm font-normal leading-relaxed text-[var(--foreground)]">
+      <span className="text-[var(--muted)]">Enriched sample:</span>{" "}
+      <span className="break-words">
+        {items.map((r, i) => (
+          <span key={r.imdb_title_id}>
+            {i > 0 && " · "}
+            {r.title ?? r.imdb_title_id}
+            {r.year != null ? ` (${r.year})` : ""}
+          </span>
+        ))}
+      </span>
     </p>
   );
 }

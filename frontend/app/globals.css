@@ -2,7 +2,10 @@
 
 :root {
   --background: #fafaf8;
-  --foreground: #1c1c1a;
+  --foreground: #1a1a18;
+  --muted: rgba(26, 26, 24, 0.96);
+  --muted-soft: rgba(26, 26, 24, 0.88);
+  --muted-subtle: rgba(26, 26, 24, 0.75);
 }
 
 @theme inline {
@@ -14,8 +17,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0f0f0e;
-    --foreground: #e8e8e4;
+    --foreground: #f0f0ec;
+    --muted: rgba(240, 240, 236, 0.98);
+    --muted-soft: rgba(240, 240, 236, 0.92);
+    --muted-subtle: rgba(240, 240, 236, 0.82);
   }
+}
+
+html {
+  color-scheme: light dark;
 }
 
 body {
