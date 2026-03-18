@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { GenreMultiSelect } from "./GenreMultiSelect";
 
 const API_URL = "http://localhost:8000";
 
@@ -16,16 +17,16 @@ export function SimpleRecommendations() {
   const [items, setItems] = useState<Item[]>([]);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [genre, setGenre] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
   const fetchWithFilters = useCallback(
-    (g: string, tt: string, yf: string, yt: string) => {
+    (genres: string[], tt: string, yf: string, yt: string) => {
       setLoading(true);
       const baseParams = new URLSearchParams();
-      if (g.trim()) baseParams.set("genre_contains", g.trim());
+      genres.forEach((g) => baseParams.append("genres", g));
       if (tt) baseParams.set("title_type", tt);
       if (yf.trim() && !isNaN(Number(yf))) baseParams.set("year_from", yf.trim());
       if (yt.trim() && !isNaN(Number(yt))) baseParams.set("year_to", yt.trim());
@@ -55,12 +56,12 @@ export function SimpleRecommendations() {
   );
 
   useEffect(() => {
-    fetchWithFilters("", "", "", "");
+    fetchWithFilters([], "", "", "");
   }, [fetchWithFilters]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWithFilters(genre, titleType, yearFrom, yearTo);
+    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo);
   };
 
   return (
@@ -73,13 +74,10 @@ export function SimpleRecommendations() {
         onSubmit={handleSubmit}
         className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 sm:mt-5"
       >
-        <input
-          type="text"
-          placeholder="Genre"
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          className="w-28 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-32"
-          aria-label="Filter by genre"
+        <GenreMultiSelect
+          selected={selectedGenres}
+          onChange={setSelectedGenres}
+          disabled={loading}
         />
         <select
           value={titleType}

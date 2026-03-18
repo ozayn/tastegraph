@@ -1,7 +1,7 @@
 """Simple recommendation endpoints."""
 
 from fastapi import APIRouter, Query
-from sqlalchemy import case, desc
+from sqlalchemy import case, desc, or_
 from sqlalchemy.sql.expression import nulls_last
 
 from app.core.database import SessionLocal
@@ -12,9 +12,32 @@ from app.models.title_metadata import TitleMetadata
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 
+@router.get("/genres")
+def recommendations_genres():
+    """Available genres from enriched ratings (rated 8+)."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(TitleMetadata.genres)
+            .join(IMDbRating, TitleMetadata.imdb_title_id == IMDbRating.imdb_title_id)
+            .filter(IMDbRating.user_rating >= 8)
+            .filter(TitleMetadata.genres.isnot(None))
+            .all()
+        )
+        genres: set[str] = set()
+        for (g,) in rows:
+            for part in (g or "").split(","):
+                s = part.strip()
+                if s:
+                    genres.add(s)
+        return sorted(genres)
+    finally:
+        db.close()
+
+
 @router.get("/simple")
 def recommendations_simple(
-    genre_contains: str | None = Query(default=None, description="Filter by genre substring"),
+    genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
@@ -29,8 +52,12 @@ def recommendations_simple(
             .filter(IMDbRating.user_rating >= 8)
         )
 
-        if genre_contains:
-            q = q.filter(TitleMetadata.genres.ilike(f"%{genre_contains}%"))
+        if genres:
+            genre_filters = [
+                TitleMetadata.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
+            ]
+            if genre_filters:
+                q = q.filter(or_(*genre_filters))
         if title_type:
             q = q.filter(TitleMetadata.title_type == title_type)
         if year_from is not None:
@@ -109,7 +136,7 @@ def recommendations_watchlist_simple(
 
 
 def _build_simple_explanation(
-    genre_contains: str | None,
+    genres: list[str] | None,
     title_type: str | None,
     year_from: int | None,
     year_to: int | None,
@@ -118,8 +145,10 @@ def _build_simple_explanation(
     base = "These are enriched titles you rated 8 or higher"
     parts = []
 
-    if genre_contains and genre_contains.strip():
-        parts.append(f"filtered to {genre_contains.strip()}")
+    if genres:
+        cleaned = [g.strip() for g in genres if g.strip()]
+        if cleaned:
+            parts.append(f"filtered to {', '.join(cleaned)}")
 
     if title_type:
         type_labels = {"movie": "movies", "series": "series", "episode": "episodes"}
@@ -140,11 +169,11 @@ def _build_simple_explanation(
 
 @router.get("/simple-explanation")
 def recommendations_simple_explanation(
-    genre_contains: str | None = Query(default=None, description="Filter by genre substring"),
+    genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
 ):
     """Plain-text explanation of the current simple recommendation filters."""
-    explanation = _build_simple_explanation(genre_contains, title_type, year_from, year_to)
+    explanation = _build_simple_explanation(genres, title_type, year_from, year_to)
     return {"explanation": explanation}
