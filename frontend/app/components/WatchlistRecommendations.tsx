@@ -72,6 +72,7 @@ export function WatchlistRecommendations() {
           onChange={setSelectedGenres}
           disabled={loading}
           genresUrl={`${API_URL}/recommendations/watchlist-genres`}
+          fallbackGenresUrl={`${API_URL}/recommendations/genres`}
         />
         <select
           value={titleType}
