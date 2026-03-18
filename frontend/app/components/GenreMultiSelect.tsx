@@ -48,9 +48,9 @@ export function GenreMultiSelect({
   const triggerLabel =
     selected.length === 0
       ? "Genre"
-      : selected.length <= 2
-        ? selected.join(", ")
-        : `${selected.length} genres`;
+      : selected.length <= 3
+        ? selected.join(" · ")
+        : `${selected.slice(0, 2).join(" · ")} · +${selected.length - 2}`;
 
   return (
     <div className="relative" ref={containerRef}>

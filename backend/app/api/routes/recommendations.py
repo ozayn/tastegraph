@@ -148,7 +148,12 @@ def _build_simple_explanation(
     if genres:
         cleaned = [g.strip() for g in genres if g.strip()]
         if cleaned:
-            parts.append(f"filtered to {', '.join(cleaned)}")
+            if len(cleaned) == 1:
+                parts.append(f"in {cleaned[0]}")
+            elif len(cleaned) == 2:
+                parts.append(f"in {cleaned[0]} or {cleaned[1]}")
+            else:
+                parts.append(f"in {', '.join(cleaned[:-1])}, or {cleaned[-1]}")
 
     if title_type:
         type_labels = {"movie": "movies", "series": "series", "episode": "episodes"}
