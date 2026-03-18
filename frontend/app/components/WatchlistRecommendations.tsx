@@ -55,12 +55,12 @@ export function WatchlistRecommendations() {
 
       <form
         onSubmit={handleSubmit}
-        className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-3 sm:mt-5"
+        className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 sm:mt-5"
       >
         <select
           value={titleType}
           onChange={(e) => setTitleType(e.target.value)}
-          className="min-w-[6rem] border-b border-[var(--muted-subtle)] bg-transparent py-1.5 pr-6 text-sm text-[var(--foreground)] focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
+          className="min-w-[6.5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-7 text-sm text-[var(--foreground)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
           aria-label="Title type"
         >
           <option value="">All</option>
@@ -74,7 +74,7 @@ export function WatchlistRecommendations() {
           placeholder="Year from"
           value={yearFrom}
           onChange={(e) => setYearFrom(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year from"
         />
         <input
@@ -83,12 +83,12 @@ export function WatchlistRecommendations() {
           placeholder="Year to"
           value={yearTo}
           onChange={(e) => setYearTo(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year to"
         />
         <button
           type="submit"
-          className="text-xs font-medium tracking-wider text-[var(--muted-soft)] hover:text-[var(--foreground)] focus:outline-none focus:underline"
+          className="text-xs font-medium tracking-wider text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)] focus:outline-none focus:underline"
         >
           Apply
         </button>

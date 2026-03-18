@@ -6,6 +6,7 @@ const API_URL = "http://localhost:8000";
 
 type Item = {
   imdb_title_id: string;
+  title: string | null;
   user_rating: number | null;
   date_rated: string | null;
 };
@@ -30,7 +31,7 @@ export function StrongPositiveSample() {
         {items.map((r, i) => (
           <span key={r.imdb_title_id}>
             {i > 0 && " · "}
-            {r.imdb_title_id} {r.user_rating ?? "—"}
+            {r.title ?? r.imdb_title_id} {r.user_rating ?? "—"}
           </span>
         ))}
       </span>

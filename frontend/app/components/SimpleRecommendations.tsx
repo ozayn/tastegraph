@@ -69,19 +69,22 @@ export function SimpleRecommendations() {
         Simple recommendations
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-3 sm:mt-5">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 sm:mt-5"
+      >
         <input
           type="text"
           placeholder="Genre"
           value={genre}
           onChange={(e) => setGenre(e.target.value)}
-          className="w-28 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-36"
+          className="w-28 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-32"
           aria-label="Filter by genre"
         />
         <select
           value={titleType}
           onChange={(e) => setTitleType(e.target.value)}
-          className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent py-1.5 pr-6 text-sm text-[var(--foreground)] focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
+          className="min-w-[6.5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-7 text-sm text-[var(--foreground)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
           aria-label="Title type"
         >
           <option value="">All</option>
@@ -95,7 +98,7 @@ export function SimpleRecommendations() {
           placeholder="Year from"
           value={yearFrom}
           onChange={(e) => setYearFrom(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year from"
         />
         <input
@@ -104,12 +107,12 @@ export function SimpleRecommendations() {
           placeholder="Year to"
           value={yearTo}
           onChange={(e) => setYearTo(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year to"
         />
         <button
           type="submit"
-          className="text-xs font-medium tracking-wider text-[var(--muted-soft)] hover:text-[var(--foreground)] focus:outline-none focus:underline"
+          className="text-xs font-medium tracking-wider text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)] focus:outline-none focus:underline"
         >
           Apply
         </button>
