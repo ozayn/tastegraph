@@ -75,7 +75,7 @@ Deploy frontend, backend, and Postgres as separate Railway services. Set the roo
 
 - **Root directory:** `frontend`
 - **Build command:** `npm install && npm run build`
-- **Start command:** `next start -p $PORT`
+- **Start command:** `npm run start -- -p $PORT`
 - **Environment variables:**
 
 | Variable                | Required | Description                                    |
