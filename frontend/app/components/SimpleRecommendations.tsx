@@ -14,6 +14,7 @@ type Item = {
 
 export function SimpleRecommendations() {
   const [items, setItems] = useState<Item[]>([]);
+  const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [genre, setGenre] = useState("");
   const [titleType, setTitleType] = useState("");
@@ -23,17 +24,31 @@ export function SimpleRecommendations() {
   const fetchWithFilters = useCallback(
     (g: string, tt: string, yf: string, yt: string) => {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.set("limit", "10");
-      if (g.trim()) params.set("genre_contains", g.trim());
-      if (tt) params.set("title_type", tt);
-      if (yf.trim() && !isNaN(Number(yf))) params.set("year_from", yf.trim());
-      if (yt.trim() && !isNaN(Number(yt))) params.set("year_to", yt.trim());
+      const baseParams = new URLSearchParams();
+      if (g.trim()) baseParams.set("genre_contains", g.trim());
+      if (tt) baseParams.set("title_type", tt);
+      if (yf.trim() && !isNaN(Number(yf))) baseParams.set("year_from", yf.trim());
+      if (yt.trim() && !isNaN(Number(yt))) baseParams.set("year_to", yt.trim());
 
-      fetch(`${API_URL}/recommendations/simple?${params}`)
-        .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then(setItems)
-        .catch(() => setItems([]))
+      const recParams = new URLSearchParams(baseParams);
+      recParams.set("limit", "10");
+
+      Promise.all([
+        fetch(`${API_URL}/recommendations/simple?${recParams}`).then((res) =>
+          res.ok ? res.json() : Promise.reject()
+        ),
+        fetch(`${API_URL}/recommendations/simple-explanation?${baseParams}`).then(
+          (res) => (res.ok ? res.json() : Promise.reject())
+        ),
+      ])
+        .then(([recs, expl]) => {
+          setItems(recs);
+          setExplanation(expl.explanation ?? null);
+        })
+        .catch(() => {
+          setItems([]);
+          setExplanation(null);
+        })
         .finally(() => setLoading(false));
     },
     []
@@ -104,8 +119,21 @@ export function SimpleRecommendations() {
         <p className="mt-4 text-sm text-[var(--muted-subtle)] sm:mt-5">
           …
         </p>
-      ) : items.length > 0 ? (
-        <ul className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
+      ) : (
+        <>
+          {explanation && (
+            <p className="mt-4 text-sm leading-[1.6] text-[var(--muted-soft)] sm:mt-5">
+              {explanation}
+            </p>
+          )}
+          {items.length > 0 ? (
+            <ul
+              className={
+                explanation
+                  ? "mt-3 space-y-2.5 sm:mt-4 sm:space-y-3"
+                  : "mt-4 space-y-2.5 sm:mt-5 sm:space-y-3"
+              }
+            >
           {items.map((r) => (
             <li
               key={r.imdb_title_id}
@@ -116,12 +144,20 @@ export function SimpleRecommendations() {
               {r.genres && ` · ${r.genres}`}
               {r.user_rating != null && ` · ${r.user_rating}`}
             </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-4 text-sm text-[var(--muted-soft)] sm:mt-5">
-          No results.
-        </p>
+          )}
+          </ul>
+          ) : (
+            <p
+              className={
+                explanation
+                  ? "mt-3 text-sm text-[var(--muted-soft)] sm:mt-4"
+                  : "mt-4 text-sm text-[var(--muted-soft)] sm:mt-5"
+              }
+            >
+              No results.
+            </p>
+          )}
+        </>
       )}
     </section>
   );
