@@ -37,7 +37,13 @@ python -m app.scripts.import_ratings_default path/to/ratings.csv
 
 ## Title metadata
 
-The `title_metadata` table stores enrichment data keyed by `imdb_title_id`. OMDb integration is prepared (config, service stub) but not implemented—no HTTP requests yet.
+The `title_metadata` table stores enrichment data keyed by `imdb_title_id`. OMDb can fetch metadata for a single title:
+
+```bash
+python -m app.scripts.fetch_one_metadata tt1234567
+```
+
+Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON to stdout.
 
 Import from CSV (columns: imdb_title_id, title, title_type, year, genres, runtime_mins, release_date, directors, imdb_rating, num_votes, url):
 
