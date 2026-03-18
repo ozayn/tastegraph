@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.sql.expression import nulls_last
 
 from app.core.database import SessionLocal
@@ -14,6 +14,40 @@ router = APIRouter(prefix="/ratings", tags=["ratings"])
 
 class ImportRequest(BaseModel):
     file_path: str
+
+
+@router.get("/summary")
+def ratings_summary():
+    """Basic ratings summary stats."""
+    db = SessionLocal()
+    try:
+        total = db.query(IMDbRating).count()
+        stats = (
+            db.query(
+                func.min(IMDbRating.user_rating).label("min_rating"),
+                func.max(IMDbRating.user_rating).label("max_rating"),
+                func.avg(IMDbRating.user_rating).label("avg_rating"),
+            )
+            .filter(IMDbRating.user_rating.isnot(None))
+            .one()
+        )
+        count_by = (
+            db.query(IMDbRating.user_rating, func.count(IMDbRating.id))
+            .filter(IMDbRating.user_rating.isnot(None))
+            .group_by(IMDbRating.user_rating)
+            .all()
+        )
+        count_by_rating = {int(r): c for r, c in count_by}
+
+        return {
+            "total_ratings": total,
+            "min_rating": float(stats.min_rating) if stats.min_rating is not None else None,
+            "max_rating": float(stats.max_rating) if stats.max_rating is not None else None,
+            "average_rating": round(float(stats.avg_rating), 2) if stats.avg_rating is not None else None,
+            "count_by_rating": count_by_rating,
+        }
+    finally:
+        db.close()
 
 
 @router.get("")
