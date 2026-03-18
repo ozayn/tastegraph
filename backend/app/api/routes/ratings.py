@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, func, extract
-from sqlalchemy.sql.expression import nulls_last
+from sqlalchemy.sql.expression import nulls_last, and_
 
 from app.core.database import SessionLocal
 from app.imports.ratings import import_ratings_from_csv
@@ -75,6 +75,46 @@ def ratings_distribution():
             "count_rated_6": count_by_rating.get(6, 0),
             "count_rated_7": count_by_rating.get(7, 0),
             "count_rated_8_plus": sum(c for r, c in count_by_rating.items() if r >= 8),
+        }
+    finally:
+        db.close()
+
+
+@router.get("/taste-hints")
+def ratings_taste_hints():
+    """First taste-profile hints from ratings only (no metadata)."""
+    STRONG_POSITIVE = 8
+    WEAK_NEGATIVE = 6
+
+    db = SessionLocal()
+    try:
+        strong_positive_count = (
+            db.query(IMDbRating)
+            .filter(IMDbRating.user_rating >= STRONG_POSITIVE)
+            .count()
+        )
+        neutral_or_mid_count = (
+            db.query(IMDbRating)
+            .filter(
+                and_(
+                    IMDbRating.user_rating >= WEAK_NEGATIVE,
+                    IMDbRating.user_rating < STRONG_POSITIVE,
+                )
+            )
+            .count()
+        )
+        weak_negative_count = (
+            db.query(IMDbRating)
+            .filter(IMDbRating.user_rating < WEAK_NEGATIVE)
+            .count()
+        )
+
+        return {
+            "strong_positive_threshold": STRONG_POSITIVE,
+            "weak_negative_threshold": WEAK_NEGATIVE,
+            "strong_positive_count": strong_positive_count,
+            "neutral_or_mid_count": neutral_or_mid_count,
+            "weak_negative_count": weak_negative_count,
         }
     finally:
         db.close()
