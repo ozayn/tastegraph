@@ -1,4 +1,10 @@
-"""Import IMDb ratings from CSV export."""
+"""Import IMDb ratings from raw CSV export.
+
+Expected columns: Title ID, Rating, Last Modified Date
+- Title ID -> imdb_title_id
+- Rating -> user_rating
+- Last Modified Date -> date_rated (date rating was last modified)
+"""
 
 import csv
 from datetime import date
@@ -14,15 +20,6 @@ def _parse_int(value: str) -> int | None:
         return None
     try:
         return int(float(value.strip()))
-    except (ValueError, TypeError):
-        return None
-
-
-def _parse_float(value: str) -> float | None:
-    if not value or not value.strip():
-        return None
-    try:
-        return float(value.strip())
     except (ValueError, TypeError):
         return None
 
@@ -47,39 +44,41 @@ def _parse_str(value: str, max_len: int | None = None) -> str | None:
 
 
 def _row_to_rating(row: dict[str, str]) -> IMDbRating | None:
-    imdb_id = _parse_str(row.get("Const", ""), 20)
+    imdb_id = _parse_str(row.get("Title ID", ""), 20)
     if not imdb_id:
         return None
 
     return IMDbRating(
         imdb_title_id=imdb_id,
-        title=_parse_str(row.get("Title", ""), 500),
-        title_type=_parse_str(row.get("Title Type", ""), 50),
-        year=_parse_int(row.get("Year", "")),
-        genres=_parse_str(row.get("Genres", ""), 500),
-        user_rating=_parse_int(row.get("Your Rating", "")),
-        date_rated=_parse_date(row.get("Date Rated", "")),
-        imdb_rating=_parse_float(row.get("IMDb Rating", "")),
-        runtime_mins=_parse_int(row.get("Runtime (mins)", "")),
-        num_votes=_parse_int(row.get("Num Votes", "")),
-        release_date=_parse_date(row.get("Release Date", "")),
-        directors=_parse_str(row.get("Directors", ""), 500),
-        url=_parse_str(row.get("URL", ""), 500),
+        title=None,
+        title_type=None,
+        year=None,
+        genres=None,
+        user_rating=_parse_int(row.get("Rating", "")),
+        date_rated=_parse_date(row.get("Last Modified Date", "")),
+        imdb_rating=None,
+        runtime_mins=None,
+        num_votes=None,
+        release_date=None,
+        directors=None,
+        url=None,
     )
 
 
-def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int]:
-    """Import ratings from CSV. Returns (inserted, skipped)."""
+def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
+    """Import ratings from CSV. Returns (inserted, skipped, errors)."""
     existing_ids = {r.imdb_title_id for r in db.query(IMDbRating.imdb_title_id).all()}
 
     inserted = 0
     skipped = 0
+    errors = 0
 
     with open(csv_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
         for row in reader:
             rating = _row_to_rating(row)
             if not rating:
+                errors += 1
                 continue
             if rating.imdb_title_id in existing_ids:
                 skipped += 1
@@ -89,7 +88,7 @@ def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int]:
             inserted += 1
 
     db.commit()
-    return inserted, skipped
+    return inserted, skipped, errors
 
 
 def run_import(csv_path: str) -> None:
@@ -103,8 +102,8 @@ def run_import(csv_path: str) -> None:
 
     db = SessionLocal()
     try:
-        inserted, skipped = import_ratings_from_csv(db, path)
-        print(f"Import complete: {inserted} inserted, {skipped} skipped (duplicates)")
+        inserted, skipped, errors = import_ratings_from_csv(db, path)
+        print(f"Import complete: {inserted} inserted, {skipped} skipped, {errors} errors")
     finally:
         db.close()
 
