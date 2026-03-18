@@ -15,29 +15,37 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20 md:pt-[18vh] md:pb-32">
-        <h1>
-          <img
-            src="/logo-horizontal.svg"
-            alt="TasteGraph"
-            className="h-7 w-auto sm:h-8"
-          />
-        </h1>
-        <p className="mt-5 text-[15px] font-normal leading-[1.65] text-[var(--foreground)] sm:mt-6 sm:text-base">
-          Recommend what to watch based on your IMDb ratings, watchlist, mood,
-          and platform preferences.
-        </p>
+        <header>
+          <h1>
+            <img
+              src="/logo-horizontal.svg"
+              alt="TasteGraph"
+              className="h-7 w-auto sm:h-8"
+            />
+          </h1>
+          <p className="mt-6 text-[15px] font-normal leading-[1.65] text-[var(--foreground)] sm:mt-7 sm:text-base">
+            Recommend what to watch based on your IMDb ratings, watchlist, mood,
+            and platform preferences.
+          </p>
+        </header>
 
         <RatingsSummary />
-        <div className="mt-8 space-y-0 sm:mt-10">
-          <ImportStatus />
-          <WatchlistImportStatus />
-          <MetadataCoverage />
-          <RatingsTimeline />
-          <TasteHints />
-          <StrongPositiveSample />
-          <EnrichedSample />
-          <RecentRatings />
-        </div>
+
+        <section className="mt-12 sm:mt-14" aria-label="Data overview">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
+            Overview
+          </p>
+          <div className="mt-3 space-y-2.5">
+            <ImportStatus />
+            <WatchlistImportStatus />
+            <MetadataCoverage />
+            <RatingsTimeline />
+            <TasteHints />
+            <StrongPositiveSample />
+            <EnrichedSample />
+            <RecentRatings />
+          </div>
+        </section>
 
         <SimpleRecommendations />
         <WatchlistRecommendations />

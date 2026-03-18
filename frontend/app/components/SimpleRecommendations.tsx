@@ -64,7 +64,7 @@ export function SimpleRecommendations() {
   };
 
   return (
-    <section className="mt-16 sm:mt-20">
+    <section className="mt-20 sm:mt-24">
       <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
         Simple recommendations
       </p>
