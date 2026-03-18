@@ -7,6 +7,7 @@ import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
 import { SimpleRecommendations } from "./components/SimpleRecommendations";
+import { WatchlistRecommendations } from "./components/WatchlistRecommendations";
 import { StrongPositiveSample } from "./components/StrongPositiveSample";
 import { TasteHints } from "./components/TasteHints";
 
@@ -35,6 +36,7 @@ export default function Home() {
         </div>
 
         <SimpleRecommendations />
+        <WatchlistRecommendations />
 
         <section className="mt-20 sm:mt-24">
           <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
