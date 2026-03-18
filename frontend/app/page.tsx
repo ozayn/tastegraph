@@ -1,5 +1,6 @@
 import { BackendHealth } from "./components/BackendHealth";
 import { RatingsSummary } from "./components/RatingsSummary";
+import { RecentRatings } from "./components/RecentRatings";
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
         </p>
 
         <RatingsSummary />
+        <RecentRatings />
 
         <section className="mt-20">
           <p className="text-sm font-normal tracking-wide text-[var(--foreground)]/50">
