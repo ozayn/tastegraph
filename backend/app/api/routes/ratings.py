@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, extract
 from sqlalchemy.sql.expression import nulls_last
 
 from app.core.database import SessionLocal
@@ -75,6 +75,36 @@ def ratings_distribution():
             "count_rated_6": count_by_rating.get(6, 0),
             "count_rated_7": count_by_rating.get(7, 0),
             "count_rated_8_plus": sum(c for r, c in count_by_rating.items() if r >= 8),
+        }
+    finally:
+        db.close()
+
+
+@router.get("/by-year")
+def ratings_by_year():
+    """Year-based rating insights from date_rated."""
+    db = SessionLocal()
+    try:
+        dates = (
+            db.query(
+                func.min(IMDbRating.date_rated).label("earliest"),
+                func.max(IMDbRating.date_rated).label("latest"),
+            )
+            .filter(IMDbRating.date_rated.isnot(None))
+            .one()
+        )
+        count_by = (
+            db.query(extract("year", IMDbRating.date_rated).label("year"), func.count(IMDbRating.id))
+            .filter(IMDbRating.date_rated.isnot(None))
+            .group_by(extract("year", IMDbRating.date_rated))
+            .all()
+        )
+        ratings_count_by_year = {int(y): c for y, c in count_by}
+
+        return {
+            "earliest_rating_date": dates.earliest.isoformat() if dates.earliest else None,
+            "latest_rating_date": dates.latest.isoformat() if dates.latest else None,
+            "ratings_count_by_year": ratings_count_by_year,
         }
     finally:
         db.close()
