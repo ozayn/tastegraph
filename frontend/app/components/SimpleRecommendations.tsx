@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { API_URL } from "../lib/api";
 import { GenreMultiSelect } from "./GenreMultiSelect";
-
-const API_URL = "http://localhost:8000";
 
 type Item = {
   imdb_title_id: string;

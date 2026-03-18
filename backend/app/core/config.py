@@ -12,9 +12,17 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     DATABASE_URL: str = "postgresql://localhost:5432/tastegraph"
     OMDB_API_KEY: str = ""
+    # CORS: comma-separated origins, e.g. "http://localhost:3000,https://myapp.railway.app"
+    CORS_ORIGINS: str = "http://localhost:3000"
+    PORT: int = 8000
 
     class Config:
         env_file = _ENV_FILE
 
 
 settings = Settings()
+
+
+def get_cors_origins() -> list[str]:
+    """Parse CORS_ORIGINS into a list. Strips whitespace, ignores empty."""
+    return [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]

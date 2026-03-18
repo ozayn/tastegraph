@@ -46,3 +46,46 @@ docker compose up --build
 
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
+
+## Railway deployment
+
+Deploy frontend, backend, and Postgres as separate Railway services. Set the root directory per service.
+
+### 1. Postgres
+
+- Add **PostgreSQL** from Railway dashboard
+- Railway sets `DATABASE_URL` automatically when you link it to the backend
+
+### 2. Backend service
+
+- **Root directory:** `backend`
+- **Build command:** `pip install -r requirements.txt`
+- **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Environment variables:**
+
+| Variable       | Required | Description                                              |
+|----------------|----------|----------------------------------------------------------|
+| `DATABASE_URL` | Yes      | From Railway Postgres (auto when linked)                |
+| `CORS_ORIGINS` | Yes      | Frontend URL, e.g. `https://yourapp.railway.app`         |
+| `OMDB_API_KEY` | No       | Optional, for metadata enrichment                       |
+
+- After deploy, run migrations: `alembic upgrade head` (via Railway shell or CLI)
+
+### 3. Frontend service
+
+- **Root directory:** `frontend`
+- **Build command:** `npm install && npm run build`
+- **Start command:** `next start -p $PORT`
+- **Environment variables:**
+
+| Variable                | Required | Description                                    |
+|-------------------------|----------|------------------------------------------------|
+| `NEXT_PUBLIC_API_URL`   | Yes      | Backend URL, e.g. `https://yourapp-backend.railway.app` |
+
+- Set `NEXT_PUBLIC_API_URL` before building (it is inlined at build time)
+
+### Order
+
+1. Create Postgres
+2. Deploy backend, link Postgres, set `CORS_ORIGINS` to your frontend URL (or `*` for testing)
+3. Deploy frontend, set `NEXT_PUBLIC_API_URL` to your backend URL

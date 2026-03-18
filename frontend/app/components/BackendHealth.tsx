@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const API_URL = "http://localhost:8000";
+import { API_URL } from "../lib/api";
 
 export function BackendHealth() {
   const [status, setStatus] = useState<"checking" | "ok" | "error">("checking");

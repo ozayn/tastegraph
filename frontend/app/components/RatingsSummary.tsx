@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const API_URL = "http://localhost:8000";
+import { API_URL } from "../lib/api";
 
 type Summary = {
   total_ratings: number;
