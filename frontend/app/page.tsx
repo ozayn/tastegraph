@@ -31,11 +31,14 @@ export default function Home() {
 
         <RatingsSummary />
 
-        <section className="mt-12 sm:mt-14" aria-label="Data overview">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
+        <section
+          className="mt-12 rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:mt-14 sm:px-5 sm:py-6"
+          aria-label="Data overview"
+        >
+          <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted-soft)]">
             Overview
           </p>
-          <div className="mt-3 space-y-2.5">
+          <div className="mt-4 space-y-3">
             <ImportStatus />
             <WatchlistImportStatus />
             <MetadataCoverage />
@@ -51,7 +54,7 @@ export default function Home() {
         <WatchlistRecommendations />
 
         <section className="mt-20 sm:mt-24">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
+          <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted-soft)]">
             Example queries
           </p>
           <ul className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">

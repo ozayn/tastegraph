@@ -41,7 +41,7 @@ export function RatingsSummary() {
 
   return (
     <section className="mt-12 sm:mt-14">
-      <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-soft)]">
+      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted-soft)]">
         Your ratings
       </p>
       <p className="mt-2 text-[15px] font-normal leading-[1.6] text-[var(--foreground)] sm:text-base">

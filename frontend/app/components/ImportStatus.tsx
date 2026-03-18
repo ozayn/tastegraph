@@ -33,9 +33,9 @@ export function ImportStatus() {
     : null;
 
   return (
-    <p className="mt-1.5 text-sm font-normal leading-[1.65] text-[var(--foreground)]">
-      {count} ratings imported.
-      {lastImported && ` Last imported ${lastImported}.`}
+    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+      {count} ratings in your library
+      {lastImported && ` · updated ${lastImported}`}
     </p>
   );
 }

@@ -33,9 +33,9 @@ export function WatchlistImportStatus() {
     : null;
 
   return (
-    <p className="mt-1.5 text-sm font-normal leading-[1.65] text-[var(--foreground)]">
-      {count} watchlist items imported.
-      {lastImported && ` Last imported ${lastImported}.`}
+    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+      {count} titles in your watchlist
+      {lastImported && ` · updated ${lastImported}`}
     </p>
   );
 }
