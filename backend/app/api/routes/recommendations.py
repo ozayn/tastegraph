@@ -116,9 +116,10 @@ def recommendations_watchlist_simple(
     title_type: str | None = Query(default=None, description="movie, TV Series, etc."),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
+    include_rated: bool = Query(default=False, description="Include already-rated items"),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    """Things to watch from watchlist. Excludes already-rated titles."""
+    """Things to watch from watchlist. By default excludes already-rated titles."""
     db = SessionLocal()
     try:
         if genres:
@@ -136,10 +137,10 @@ def recommendations_watchlist_simple(
         else:
             q = db.query(IMDbWatchlistItem)
 
-        # Exclude items already rated (in watchlist or in ratings)
-        q = q.filter(IMDbWatchlistItem.your_rating.is_(None))
-        rated_exists = exists(select(1).where(IMDbRating.imdb_title_id == IMDbWatchlistItem.imdb_title_id))
-        q = q.filter(~rated_exists)
+        if not include_rated:
+            q = q.filter(IMDbWatchlistItem.your_rating.is_(None))
+            rated_exists = exists(select(1).where(IMDbRating.imdb_title_id == IMDbWatchlistItem.imdb_title_id))
+            q = q.filter(~rated_exists)
 
         if title_type:
             q = q.filter(IMDbWatchlistItem.title_type == title_type)

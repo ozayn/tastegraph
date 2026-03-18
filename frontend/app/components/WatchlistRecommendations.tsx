@@ -21,9 +21,10 @@ export function WatchlistRecommendations() {
   const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
+  const [includeRated, setIncludeRated] = useState(false);
 
   const fetchWithFilters = useCallback(
-    (genres: string[], tt: string, yf: string, yt: string) => {
+    (genres: string[], tt: string, yf: string, yt: string, incRated: boolean) => {
       setLoading(true);
       const params = new URLSearchParams();
       params.set("limit", "5");
@@ -37,6 +38,7 @@ export function WatchlistRecommendations() {
       if (yt.trim() && !isNaN(ytNum) && ytNum >= 1900 && ytNum <= 2100) {
         params.set("year_to", String(Math.floor(ytNum)));
       }
+      if (incRated) params.set("include_rated", "true");
 
       fetch(`${API_URL}/recommendations/watchlist-simple?${params}`)
         .then((res) => (res.ok ? res.json() : Promise.reject()))
@@ -48,12 +50,12 @@ export function WatchlistRecommendations() {
   );
 
   useEffect(() => {
-    fetchWithFilters([], "", "", "");
-  }, [fetchWithFilters]);
+    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo, includeRated);
+  }, [fetchWithFilters, includeRated]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo);
+    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo, includeRated);
   };
 
   return (
@@ -102,6 +104,16 @@ export function WatchlistRecommendations() {
           className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/80 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year to"
         />
+        <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
+          <input
+            type="checkbox"
+            checked={includeRated}
+            onChange={(e) => setIncludeRated(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[var(--foreground)]"
+            aria-label="Include rated"
+          />
+          <span>Include rated</span>
+        </label>
         <button
           type="submit"
           className="text-xs font-medium tracking-[0.06em] text-[var(--muted-soft)] transition-colors duration-150 hover:text-[var(--foreground)] focus:outline-none focus:underline active:opacity-70"
