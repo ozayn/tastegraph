@@ -15,8 +15,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20 md:pt-[18vh] md:pb-32">
-        <h1 className="font-display text-3xl font-medium tracking-tight text-[var(--foreground)] sm:text-4xl">
-          TasteGraph
+        <h1>
+          <img
+            src="/logo-horizontal.svg"
+            alt="TasteGraph"
+            className="h-7 w-auto sm:h-8"
+          />
         </h1>
         <p className="mt-5 text-[15px] font-normal leading-[1.65] text-[var(--foreground)] sm:mt-6 sm:text-base">
           Recommend what to watch based on your IMDb ratings, watchlist, mood,
