@@ -49,7 +49,14 @@ To fetch and upsert into the database:
 python -m app.scripts.enrich_one_title tt0111161
 ```
 
-Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON (fetch) or success/failure message (enrich).
+To enrich a small batch of ratings missing metadata (default 10):
+
+```bash
+python -m app.scripts.enrich_missing_metadata
+python -m app.scripts.enrich_missing_metadata 25
+```
+
+Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON (fetch), success/failure message (enrich one), or summary counts (enrich batch).
 
 Import from CSV (columns: imdb_title_id, title, title_type, year, genres, runtime_mins, release_date, directors, imdb_rating, num_votes, url):
 
