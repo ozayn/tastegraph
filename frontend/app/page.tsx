@@ -2,6 +2,7 @@ import { BackendHealth } from "./components/BackendHealth";
 import { EnrichedSample } from "./components/EnrichedSample";
 import { ImportStatus } from "./components/ImportStatus";
 import { MetadataCoverage } from "./components/MetadataCoverage";
+import { WatchlistImportStatus } from "./components/WatchlistImportStatus";
 import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
@@ -24,6 +25,7 @@ export default function Home() {
         <RatingsSummary />
         <div className="mt-8 space-y-0 sm:mt-10">
           <ImportStatus />
+          <WatchlistImportStatus />
           <MetadataCoverage />
           <RatingsTimeline />
           <TasteHints />
