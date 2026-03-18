@@ -74,4 +74,8 @@ python -m app.scripts.import_metadata_default path/to/metadata.csv
 
 ## Watchlist
 
-The `imdb_watchlist` table stores items from the IMDb watchlist export (watchlist.csv). Importer not yet implemented.
+Import from IMDb watchlist export (watchlist.csv). Columns: Position, Const, Created, Modified, Title, Title Type, Year, Your Rating, Date Rated.
+
+```bash
+python -m app.scripts.import_watchlist_default
+```
