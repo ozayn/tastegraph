@@ -50,6 +50,36 @@ def ratings_summary():
         db.close()
 
 
+@router.get("/distribution")
+def ratings_distribution():
+    """Top rating distribution insights for quick UI use."""
+    db = SessionLocal()
+    try:
+        count_by = (
+            db.query(IMDbRating.user_rating, func.count(IMDbRating.id))
+            .filter(IMDbRating.user_rating.isnot(None))
+            .group_by(IMDbRating.user_rating)
+            .all()
+        )
+        count_by_rating = {int(r): c for r, c in count_by}
+
+        most_common_rating = None
+        count_of_most_common_rating = 0
+        if count_by_rating:
+            most_common_rating = max(count_by_rating, key=count_by_rating.get)
+            count_of_most_common_rating = count_by_rating[most_common_rating]
+
+        return {
+            "most_common_rating": most_common_rating,
+            "count_of_most_common_rating": count_of_most_common_rating,
+            "count_rated_6": count_by_rating.get(6, 0),
+            "count_rated_7": count_by_rating.get(7, 0),
+            "count_rated_8_plus": sum(c for r, c in count_by_rating.items() if r >= 8),
+        }
+    finally:
+        db.close()
+
+
 @router.get("")
 def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
     """List imported IMDb ratings, ordered by date_rated descending."""
