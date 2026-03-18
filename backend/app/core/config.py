@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     # CORS: comma-separated origins, e.g. "http://localhost:3000,https://myapp.railway.app"
     CORS_ORIGINS: str = "http://localhost:3000"
     PORT: int = 8000
+    # Admin import: token required in X-Admin-Import-Token header for CSV upload endpoints
+    ADMIN_IMPORT_TOKEN: str = ""
 
     class Config:
         env_file = _ENV_FILE
