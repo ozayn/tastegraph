@@ -36,6 +36,8 @@ usage() {
 [[ -n "${REMOTE_API_URL:-}" ]] || { echo "Error: REMOTE_API_URL is not set"; usage; }
 [[ -n "${ADMIN_IMPORT_TOKEN:-}" ]] || { echo "Error: ADMIN_IMPORT_TOKEN is not set"; usage; }
 
+export REMOTE_API_URL ADMIN_IMPORT_TOKEN
+
 echo "--- Importing ratings ---"
 "${ROOT}/scripts/import_remote.sh" ratings
 echo ""
