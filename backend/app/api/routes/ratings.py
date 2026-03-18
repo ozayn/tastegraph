@@ -229,6 +229,25 @@ def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
         db.close()
 
 
+@router.get("/import-status")
+def ratings_import_status():
+    """Basic import status from IMDbRating table."""
+    db = SessionLocal()
+    try:
+        total = db.query(IMDbRating).count()
+        latest = (
+            db.query(func.max(IMDbRating.created_at))
+            .scalar()
+        )
+        return {
+            "total_imported_ratings": total,
+            "has_ratings_data": total > 0,
+            "latest_imported_created_at": latest.isoformat() if latest else None,
+        }
+    finally:
+        db.close()
+
+
 @router.post("/import")
 def import_ratings(request: ImportRequest):
     """Import IMDb ratings from a local CSV file path."""
