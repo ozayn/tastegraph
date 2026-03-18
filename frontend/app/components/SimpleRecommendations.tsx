@@ -16,15 +16,17 @@ export function SimpleRecommendations() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [genre, setGenre] = useState("");
+  const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
   const fetchWithFilters = useCallback(
-    (g: string, yf: string, yt: string) => {
+    (g: string, tt: string, yf: string, yt: string) => {
       setLoading(true);
       const params = new URLSearchParams();
       params.set("limit", "10");
       if (g.trim()) params.set("genre_contains", g.trim());
+      if (tt) params.set("title_type", tt);
       if (yf.trim() && !isNaN(Number(yf))) params.set("year_from", yf.trim());
       if (yt.trim() && !isNaN(Number(yt))) params.set("year_to", yt.trim());
 
@@ -38,12 +40,12 @@ export function SimpleRecommendations() {
   );
 
   useEffect(() => {
-    fetchWithFilters("", "", "");
+    fetchWithFilters("", "", "", "");
   }, [fetchWithFilters]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWithFilters(genre, yearFrom, yearTo);
+    fetchWithFilters(genre, titleType, yearFrom, yearTo);
   };
 
   return (
@@ -61,6 +63,17 @@ export function SimpleRecommendations() {
           className="w-28 border-b border-[var(--muted-subtle)] bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] focus:border-[var(--muted-soft)] focus:outline-none sm:w-36"
           aria-label="Filter by genre"
         />
+        <select
+          value={titleType}
+          onChange={(e) => setTitleType(e.target.value)}
+          className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent py-1.5 pr-6 text-sm text-[var(--foreground)] focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
+          aria-label="Title type"
+        >
+          <option value="">All</option>
+          <option value="movie">movie</option>
+          <option value="series">series</option>
+          <option value="episode">episode</option>
+        </select>
         <input
           type="text"
           inputMode="numeric"
