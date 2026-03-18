@@ -1,6 +1,6 @@
 """Import title metadata from CSV.
 
-Expected columns: imdb_title_id, title, title_type, year, genres, runtime_mins,
+Expected columns: imdb_title_id, title, title_type, year, genres, languages, runtime_mins,
 release_date, directors, imdb_rating, num_votes, url
 Upserts by imdb_title_id. Tolerant of missing fields.
 """
@@ -70,6 +70,7 @@ def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, in
                 existing.title_type = _parse_str(row.get("title_type", ""), 50)
                 existing.year = _parse_int(row.get("year", ""))
                 existing.genres = _parse_str(row.get("genres", ""), 500)
+                existing.languages = _parse_str(row.get("languages", ""), 500)
                 existing.runtime_mins = _parse_int(row.get("runtime_mins", ""))
                 existing.release_date = _parse_date(row.get("release_date", ""))
                 existing.directors = _parse_str(row.get("directors", ""), 500)
@@ -85,6 +86,7 @@ def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, in
                         title_type=_parse_str(row.get("title_type", ""), 50),
                         year=_parse_int(row.get("year", "")),
                         genres=_parse_str(row.get("genres", ""), 500),
+                        languages=_parse_str(row.get("languages", ""), 500),
                         runtime_mins=_parse_int(row.get("runtime_mins", "")),
                         release_date=_parse_date(row.get("release_date", "")),
                         directors=_parse_str(row.get("directors", ""), 500),

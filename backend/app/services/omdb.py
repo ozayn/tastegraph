@@ -18,6 +18,7 @@ class TitleMetadataResult:
     title_type: str | None
     year: int | None
     genres: str | None
+    languages: str | None
     runtime_mins: int | None
     release_date: date | None
     directors: str | None
@@ -95,6 +96,7 @@ def fetch_title_metadata(imdb_title_id: str) -> TitleMetadataResult | None:
         title_type=data.get("Type") or None,
         year=year,
         genres=data.get("Genre") or None,
+        languages=data.get("Language") or None,
         runtime_mins=_parse_runtime(data.get("Runtime")),
         release_date=_parse_date(data.get("Released")),
         directors=data.get("Director") or None,
