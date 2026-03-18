@@ -24,3 +24,12 @@ A personal AI-powered movie and series recommender based on IMDb ratings, watchl
 - Vector search: pgvector
 - Deployment: Railway
 - LLM providers: Groq, Gemini, OpenRouter
+
+## Docker (local development)
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
