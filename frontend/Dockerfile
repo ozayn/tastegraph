@@ -6,7 +6,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+RUN npm run build
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+# Production: use $PORT for Railway; defaults to 3000 for local Docker
+CMD ["sh", "-c", "npm run start -- -p ${PORT:-3000}"]
