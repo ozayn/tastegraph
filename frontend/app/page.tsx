@@ -1,5 +1,6 @@
 import { BackendHealth } from "./components/BackendHealth";
 import { ImportStatus } from "./components/ImportStatus";
+import { MetadataCoverage } from "./components/MetadataCoverage";
 import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
@@ -20,6 +21,7 @@ export default function Home() {
 
         <RatingsSummary />
         <ImportStatus />
+        <MetadataCoverage />
         <RatingsTimeline />
         <TasteHints />
         <StrongPositiveSample />
