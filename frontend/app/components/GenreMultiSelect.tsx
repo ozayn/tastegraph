@@ -53,8 +53,10 @@ export function GenreMultiSelect({
     }
   };
 
-  const triggerLabel =
-    selected.length === 0
+  const noGenres = !loading && genres.length === 0;
+  const triggerLabel = noGenres
+    ? "Genres appear after enrichment"
+    : selected.length === 0
       ? "Genre"
       : selected.length <= 3
         ? selected.join(" · ")
@@ -64,19 +66,23 @@ export function GenreMultiSelect({
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        disabled={disabled}
-        className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-6 text-left text-sm text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none disabled:opacity-50 [color-scheme:inherit] sm:min-w-[6rem]"
-        aria-label="Select genres"
+        onClick={() => !noGenres && setOpen((o) => !o)}
+        disabled={disabled || noGenres}
+        className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-6 text-left text-sm text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[6rem]"
+        aria-label={noGenres ? "Genres unavailable" : "Select genres"}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span className={selected.length === 0 ? "text-[var(--muted-subtle)]" : ""}>
+        <span
+          className={
+            selected.length === 0 || noGenres ? "text-[var(--muted-subtle)]" : ""
+          }
+        >
           {triggerLabel}
         </span>
       </button>
 
-      {open && (
+      {open && !noGenres && (
         <div
           role="listbox"
           className="absolute left-0 top-full z-10 mt-1.5 max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-[var(--section-border)] bg-[var(--background)] py-1.5 shadow-sm"
