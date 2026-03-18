@@ -22,7 +22,7 @@ export function TasteHints() {
   if (!data) return null;
 
   return (
-    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
       Strong signals: {data.strong_positive_threshold}+ · weak signals: below {data.weak_negative_threshold}
     </p>
   );

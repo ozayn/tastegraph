@@ -40,19 +40,19 @@ export function RatingsSummary() {
   if (!summary) return null;
 
   return (
-    <section className="mt-12 sm:mt-14">
-      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted-soft)]">
+    <section>
+      <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--overview-muted)]">
         Your ratings
       </p>
-      <p className="mt-2 text-[15px] font-normal leading-[1.6] text-[var(--foreground)] sm:text-base">
+      <p className="mt-1.5 text-[14px] leading-[1.55] text-[var(--muted-soft)] sm:text-[15px]">
         {summary.total_ratings} titles · avg {summary.average_rating?.toFixed(1) ?? "—"}
         {summary.min_rating != null && summary.max_rating != null && (
           <> · {summary.min_rating}–{summary.max_rating}</>
         )}
       </p>
       {distribution?.most_common_rating != null && (
-        <p className="mt-1.5 text-sm font-normal text-[var(--muted)]">
-          Your most common rating is {distribution.most_common_rating}.{" "}
+        <p className="mt-1 text-[13px] leading-[1.5] text-[var(--overview-muted)]">
+          Most common: {distribution.most_common_rating}.{" "}
           {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus.
         </p>
       )}

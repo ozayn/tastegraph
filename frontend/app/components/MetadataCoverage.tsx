@@ -27,7 +27,7 @@ export function MetadataCoverage() {
   const total = data.total_ratings.toLocaleString();
 
   return (
-    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
       {withMeta} of {total} titles enriched with metadata
     </p>
   );

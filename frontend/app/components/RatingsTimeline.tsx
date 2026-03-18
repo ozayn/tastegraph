@@ -26,7 +26,7 @@ export function RatingsTimeline() {
   const span = parseInt(endYear, 10) - parseInt(startYear, 10) + 1;
 
   return (
-    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
       Your ratings span {startYear}–{endYear}
       {span > 1 && ` (${span} years)`}
     </p>

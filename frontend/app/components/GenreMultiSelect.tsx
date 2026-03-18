@@ -82,7 +82,7 @@ export function GenreMultiSelect({
         type="button"
         onClick={() => !noGenres && setOpen((o) => !o)}
         disabled={disabled || noGenres}
-        className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-6 text-left text-sm text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[6rem]"
+        className="min-w-[5rem] border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 pr-6 text-left text-[14px] text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[6rem]"
         aria-label={noGenres ? "Genres unavailable" : "Select genres"}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -99,7 +99,7 @@ export function GenreMultiSelect({
       {open && !noGenres && (
         <div
           role="listbox"
-          className="absolute left-0 top-full z-10 mt-1.5 max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-[var(--section-border)] bg-[var(--background)] py-1.5 shadow-sm"
+          className="absolute left-0 top-full z-10 mt-1.5 max-h-48 min-w-[10rem] overflow-y-auto rounded-md border border-[var(--section-border)] bg-[var(--background)] py-1.5"
         >
           {loading ? (
             <p className="px-3 py-2 text-sm text-[var(--muted-soft)]">Loading…</p>

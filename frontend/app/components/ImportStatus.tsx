@@ -33,7 +33,7 @@ export function ImportStatus() {
     : null;
 
   return (
-    <p className="text-[15px] leading-[1.6] text-[var(--muted-soft)]">
+    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
       {count} ratings in your library
       {lastImported && ` · updated ${lastImported}`}
     </p>

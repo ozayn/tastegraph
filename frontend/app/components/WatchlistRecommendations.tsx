@@ -59,26 +59,25 @@ export function WatchlistRecommendations() {
   };
 
   return (
-    <section className="mt-16 rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:mt-20 sm:px-5 sm:py-6">
-      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted-soft)]">
+    <section className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[13px] font-medium uppercase tracking-[0.1em] text-[var(--muted-soft)]">
         From your watchlist
-      </p>
+      </h2>
 
       <form
         onSubmit={handleSubmit}
-        className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 sm:mt-5"
+        className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-3 sm:mt-5 sm:gap-x-6"
       >
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
           disabled={loading}
           genresUrl={`${API_URL}/recommendations/watchlist-genres`}
-          fallbackGenresUrl={`${API_URL}/recommendations/genres`}
         />
         <select
           value={titleType}
           onChange={(e) => setTitleType(e.target.value)}
-          className="min-w-[6.5rem] border-b border-[var(--muted-subtle)] bg-transparent py-2 pr-7 text-sm text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit]"
+          className="min-w-[6rem] border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 pr-6 text-[14px] text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit] sm:min-w-[6.5rem]"
           aria-label="Title type"
         >
           <option value="">All</option>
@@ -92,7 +91,7 @@ export function WatchlistRecommendations() {
           placeholder="Year from"
           value={yearFrom}
           onChange={(e) => setYearFrom(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/80 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/70 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year from"
         />
         <input
@@ -101,10 +100,10 @@ export function WatchlistRecommendations() {
           placeholder="Year to"
           value={yearTo}
           onChange={(e) => setYearTo(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/80 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/70 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
           aria-label="Year to"
         />
-        <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
+        <label className="flex cursor-pointer items-baseline gap-2 pb-1.5 pt-0.5 text-[14px] text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
           <input
             type="checkbox"
             checked={includeRated}
@@ -116,7 +115,7 @@ export function WatchlistRecommendations() {
         </label>
         <button
           type="submit"
-          className="text-xs font-medium tracking-[0.06em] text-[var(--muted-soft)] transition-colors duration-150 hover:text-[var(--foreground)] focus:outline-none focus:underline active:opacity-70"
+          className="pb-1.5 pt-0.5 text-[13px] font-medium tracking-[0.04em] text-[var(--muted-soft)] transition-colors duration-150 hover:text-[var(--foreground)] focus:outline-none focus:underline active:opacity-70"
         >
           Apply
         </button>
@@ -129,7 +128,7 @@ export function WatchlistRecommendations() {
           {items.map((r) => (
             <li
               key={r.imdb_title_id}
-              className="text-[15px] font-normal leading-[1.6] text-[var(--foreground)] break-words sm:text-base"
+              className="text-[15px] leading-[1.65] text-[var(--foreground)] break-words sm:text-[15px]"
             >
               {r.title ?? r.imdb_title_id}
               {r.year != null && ` (${r.year})`}
