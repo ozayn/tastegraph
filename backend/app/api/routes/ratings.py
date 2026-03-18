@@ -80,6 +80,32 @@ def ratings_distribution():
         db.close()
 
 
+@router.get("/recent")
+def ratings_recent(limit: int = Query(default=5, ge=1, le=20)):
+    """Most recently rated items for quick display."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(IMDbRating)
+            .order_by(
+                nulls_last(desc(IMDbRating.date_rated)),
+                desc(IMDbRating.created_at),
+            )
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "imdb_title_id": r.imdb_title_id,
+                "user_rating": r.user_rating,
+                "date_rated": r.date_rated.isoformat() if r.date_rated else None,
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
+
+
 @router.get("")
 def list_ratings(limit: int = Query(default=20, ge=1, le=100)):
     """List imported IMDb ratings, ordered by date_rated descending."""
