@@ -28,12 +28,15 @@ A personal AI-powered movie and series recommender based on IMDb ratings, watchl
 ## Run locally
 
 ```bash
-make run-backend    # Backend on http://localhost:8000 (from backend/.venv)
-make run-frontend   # Frontend on http://localhost:3000
-make run            # Both in parallel (backend in background)
+make run      # Start backend + frontend (Ctrl+C stops both)
+make stop     # Stop processes on ports 3000 and 8000
+make status   # Check whether ports 3000 and 8000 are in use
 ```
 
-Use two terminals for `run-backend` and `run-frontend` if you prefer separate logs.
+- **Frontend:** http://localhost:3000
+- **Backend:** http://localhost:8000
+
+For separate logs, use `make run-backend` and `make run-frontend` in two terminals.
 
 ## Docker (local development)
 
