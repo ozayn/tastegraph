@@ -8,6 +8,7 @@ const tabs = [
   { href: "/insights", label: "Insights" },
   { href: "/studies", label: "Studies" },
   { href: "/learn", label: "Learn" },
+  { href: "/model-lab", label: "Model Lab" },
 ];
 
 export function NavBar() {
