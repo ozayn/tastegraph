@@ -10,17 +10,14 @@ Usage:
   python -m app.scripts.seed_favorite_people path/to/favorite_people.csv
 """
 
-import csv
 import sys
 from pathlib import Path
 
 from app.core.database import SessionLocal
-from app.models.favorite_person import FavoritePerson
+from app.imports.favorite_people import import_favorite_people_from_csv
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 _DEFAULT_PATH = _BACKEND_ROOT.parent / "data" / "favorite_people.csv"
-
-_VALID_ROLES = {"actor", "director", "writer"}
 
 
 def main() -> None:
@@ -33,21 +30,8 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        db.query(FavoritePerson).delete()
-        count = 0
-        with path.open(newline="", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) < 2:
-                    continue
-                name = row[0].strip()
-                role = row[1].strip().lower()
-                if not name or role not in _VALID_ROLES:
-                    continue
-                db.add(FavoritePerson(name=name, role=role))
-                count += 1
-        db.commit()
-        print(f"Seeded {count} favorite people from {path}")
+        inserted, errors = import_favorite_people_from_csv(db, path)
+        print(f"Seeded {inserted} favorite people from {path}" + (f" ({errors} skipped)" if errors else ""))
     finally:
         db.close()
 

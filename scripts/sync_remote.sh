@@ -51,6 +51,11 @@ echo ""
 echo "--- Importing metadata ---"
 "${ROOT}/scripts/import_remote.sh" metadata
 echo ""
+if [[ -f "${ROOT}/data/favorite_people.csv" ]]; then
+  echo "--- Importing favorites ---"
+  "${ROOT}/scripts/import_remote.sh" favorites
+  echo ""
+fi
 echo "--- Verification ---"
 URL="${REMOTE_API_URL%/}"
 echo "ratings/import-status:"

@@ -152,9 +152,11 @@ Or import individually:
 ```bash
 ./scripts/import_remote.sh ratings
 ./scripts/import_remote.sh watchlist
+./scripts/import_remote.sh metadata
+./scripts/import_remote.sh favorites
 ```
 
-Uses `data/imdb/ratings.csv` and `data/imdb/watchlist.csv` by default. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
+Uses `data/imdb/ratings.csv`, `data/imdb/watchlist.csv`, `data/imdb/title_metadata.csv`, and `data/favorite_people.csv` by default. Sync includes favorites if `data/favorite_people.csv` exists. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
 
 Local CLI scripts (`python -m app.imports.ratings`, `python -m app.imports.watchlist`) remain unchanged for local development.
 
