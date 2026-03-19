@@ -10,6 +10,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
+from app.services.taste_signals import load_taste_signals, build_reasons, score_watchlist_item
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -89,6 +90,7 @@ def recommendations_simple(
                 TitleMetadata.actors,
                 TitleMetadata.directors,
                 TitleMetadata.writer,
+                TitleMetadata.country,
             )
             .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
             .filter(IMDbRating.user_rating >= 8)
@@ -128,13 +130,14 @@ def recommendations_simple(
         )
 
         favorites_by_role = _load_favorites_by_role(db)
+        signals = load_taste_signals(db)
         scored = []
-        for r, poster, actors, directors, writer in rows:
+        for r, poster, actors, directors, writer, country in rows:
             boost, matches = compute_favorite_boost(
                 actors, directors, writer, favorites_by_role
             )
             score = (r.user_rating or 0) + boost
-            scored.append((score, r.date_rated, r, poster, matches))
+            scored.append((score, r.date_rated, r, poster, matches, country))
 
         def _sort_key(x):
             score, date_rated, *_ = x
@@ -153,8 +156,76 @@ def recommendations_simple(
                 "user_rating": r.user_rating,
                 "poster": poster if poster and poster != "N/A" else None,
                 "favorite_matches": matches,
+                "reasons": build_reasons(
+                    r.genres, country, r.year, matches, signals
+                ),
             }
-            for _, _, r, poster, matches in top
+            for _, _, r, poster, matches, country in top
+        ]
+    finally:
+        db.close()
+
+
+@router.get("/watchlist-high-fit")
+def recommendations_watchlist_high_fit(
+    limit: int = Query(default=15, ge=1, le=50),
+):
+    """Underwatched but high-fit: watchlist items ranked by taste alignment (excludes rated)."""
+    db = SessionLocal()
+    try:
+        q = (
+            db.query(
+                IMDbWatchlistItem,
+                TitleMetadata.poster,
+                TitleMetadata.actors,
+                TitleMetadata.directors,
+                TitleMetadata.writer,
+                TitleMetadata.country,
+                TitleMetadata.genres,
+            )
+            .outerjoin(
+                TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id
+            )
+            .filter(IMDbWatchlistItem.your_rating.is_(None))
+        )
+        rated_exists = exists(select(1).where(IMDbRating.imdb_title_id == IMDbWatchlistItem.imdb_title_id))
+        q = q.filter(~rated_exists)
+
+        rows = q.all()
+
+        favorites_by_role = _load_favorites_by_role(db)
+        signals = load_taste_signals(db)
+
+        scored_items = []
+        for r, poster, actors, directors, writer, country, meta_genres in rows:
+            boost, matches = compute_favorite_boost(
+                actors, directors, writer, favorites_by_role
+            )
+            genres_str = meta_genres or r.genres
+            fit_score, matching_signals = score_watchlist_item(
+                genres_str, country, r.year, matches, signals
+            )
+            total_score = fit_score + boost * 2  # Favorites add to fit
+            scored_items.append((
+                total_score,
+                r,
+                poster if poster and poster != "N/A" else None,
+                matching_signals[:6],
+            ))
+
+        scored_items.sort(key=lambda x: -x[0])
+        top = scored_items[:limit]
+
+        return [
+            {
+                "imdb_title_id": r.imdb_title_id,
+                "title": r.title,
+                "title_type": r.title_type,
+                "year": r.year,
+                "poster": poster,
+                "matching_signals": matching_signals,
+            }
+            for _, r, poster, matching_signals in top
         ]
     finally:
         db.close()
@@ -219,6 +290,8 @@ def recommendations_watchlist_simple(
             TitleMetadata.actors,
             TitleMetadata.directors,
             TitleMetadata.writer,
+            TitleMetadata.country,
+            TitleMetadata.genres,
         ).outerjoin(
             TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id
         )
@@ -267,14 +340,15 @@ def recommendations_watchlist_simple(
         )
 
         favorites_by_role = _load_favorites_by_role(db)
+        signals = load_taste_signals(db)
         scored = []
-        for r, poster, actors, directors, writer in rows:
+        for r, poster, actors, directors, writer, country, meta_genres in rows:
             boost, matches = compute_favorite_boost(
                 actors, directors, writer, favorites_by_role
             )
             has_meta = bool(r.title and r.title_type and r.year is not None)
             meta_first_val = 0 if has_meta else 1
-            scored.append((boost, meta_first_val, r.position or 0, r, poster, matches))
+            scored.append((boost, meta_first_val, r.position or 0, r, poster, matches, country, meta_genres))
 
         def _wl_sort_key(x):
             boost, mf, pos, *_ = x
@@ -293,8 +367,11 @@ def recommendations_watchlist_simple(
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
                 "poster": poster if poster and poster != "N/A" else None,
                 "favorite_matches": matches,
+                "reasons": build_reasons(
+                    meta_genres or r.genres, country, r.year, matches, signals
+                ),
             }
-            for _, _, _, r, poster, matches in top
+            for _, _, _, r, poster, matches, country, meta_genres in top
         ]
     finally:
         db.close()

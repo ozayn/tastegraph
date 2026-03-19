@@ -22,6 +22,7 @@ type Item = {
   your_rating: number | null;
   date_rated: string | null;
   poster?: string | null;
+  reasons?: string[];
 };
 
 export function WatchlistRecommendations() {
@@ -194,6 +195,7 @@ export function WatchlistRecommendations() {
                 title_type={r.title_type}
                 your_rating={r.your_rating}
                 poster={r.poster}
+                reasons={r.reasons}
               />
             </li>
           ))}

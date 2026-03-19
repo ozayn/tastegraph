@@ -11,6 +11,7 @@ type RecommendationCardProps = {
   user_rating?: number | null;
   your_rating?: number | null;
   poster?: string | null;
+  reasons?: string[];
 };
 
 export function RecommendationCard({
@@ -22,6 +23,7 @@ export function RecommendationCard({
   user_rating,
   your_rating,
   poster,
+  reasons,
 }: RecommendationCardProps) {
   const rating = user_rating ?? your_rating;
   const displayTitle = title ?? imdb_title_id;
@@ -81,6 +83,11 @@ export function RecommendationCard({
                     </span>
                   ))}
             </div>
+            {reasons && reasons.length > 0 && (
+              <p className="mt-1.5 text-[12px] leading-[1.4] text-[var(--muted-soft)]">
+                {reasons.slice(0, 3).join(" · ")}
+              </p>
+            )}
           </div>
           {rating != null && (
             <span className="shrink-0 rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">

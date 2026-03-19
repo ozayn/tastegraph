@@ -21,6 +21,7 @@ type Item = {
   genres: string | null;
   user_rating: number | null;
   poster?: string | null;
+  reasons?: string[];
 };
 
 export function SimpleRecommendations() {
@@ -186,6 +187,7 @@ export function SimpleRecommendations() {
                     genres={r.genres}
                     user_rating={r.user_rating}
                     poster={r.poster}
+                    reasons={r.reasons}
                   />
                 </li>
               ))}
