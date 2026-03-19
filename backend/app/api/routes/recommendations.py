@@ -8,6 +8,7 @@ from app.core.database import SessionLocal
 from app.models.imdb_rating import IMDbRating
 from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
+from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -29,7 +30,7 @@ def _title_type_matches(tt: str) -> list:
 
 @router.get("/countries")
 def recommendations_countries():
-    """Available countries from TitleMetadata.country (ratings 8+ with metadata)."""
+    """Available countries from TitleMetadata.country (ratings 8+ with metadata). Normalized: UK->United Kingdom, USA->United States."""
     db = SessionLocal()
     try:
         rows = (
@@ -41,10 +42,7 @@ def recommendations_countries():
         )
         countries: set[str] = set()
         for (c,) in rows:
-            for part in (c or "").split(","):
-                s = part.strip()
-                if s:
-                    countries.add(s)
+            countries |= parse_and_normalize_countries(c)
         return sorted(countries)
     finally:
         db.close()
@@ -103,9 +101,12 @@ def recommendations_simple(
             if genre_filters:
                 q = q.filter(or_(*genre_filters))
         if countries:
-            country_filters = [
-                TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
-            ]
+            country_filters = []
+            for c in countries:
+                if not c or not c.strip():
+                    continue
+                for v in filter_variants_for_country(c.strip()):
+                    country_filters.append(TitleMetadata.country.ilike(f"%{v}%"))
             if country_filters:
                 q = q.filter(or_(*country_filters))
         tt_filters = _title_type_matches(title_type or "")
@@ -161,7 +162,7 @@ def recommendations_simple(
 
 @router.get("/watchlist-countries")
 def recommendations_watchlist_countries():
-    """Available countries from TitleMetadata.country for watchlist items."""
+    """Available countries from TitleMetadata.country for watchlist items. Normalized: UK->United Kingdom, USA->United States."""
     db = SessionLocal()
     try:
         rows = (
@@ -172,10 +173,7 @@ def recommendations_watchlist_countries():
         )
         countries: set[str] = set()
         for (c,) in rows:
-            for part in (c or "").split(","):
-                s = part.strip()
-                if s:
-                    countries.add(s)
+            countries |= parse_and_normalize_countries(c)
         return sorted(countries)
     finally:
         db.close()
@@ -233,9 +231,12 @@ def recommendations_watchlist_simple(
                 q = q.filter(or_(*genre_filters))
 
         if countries:
-            country_filters = [
-                TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
-            ]
+            country_filters = []
+            for c in countries:
+                if not c or not c.strip():
+                    continue
+                for v in filter_variants_for_country(c.strip()):
+                    country_filters.append(TitleMetadata.country.ilike(f"%{v}%"))
             if country_filters:
                 q = q.filter(or_(*country_filters))
 
