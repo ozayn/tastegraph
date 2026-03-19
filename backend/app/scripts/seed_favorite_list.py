@@ -1,4 +1,4 @@
-"""Seed favorite list from CSV. Replaces entire list.
+"""Seed favorite list from CSV. Idempotent sync: inserts missing, deletes removed.
 
 Accepts IMDb-style list CSV (Const, Position, Title, Title Type, Year, Genres).
 Same format as watchlist export.
@@ -27,8 +27,13 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        inserted, errors = import_favorite_list_from_csv(db, path)
-        msg = f"Seeded favorite list from {path}: {inserted} inserted"
+        inserted, deleted, errors = import_favorite_list_from_csv(db, path)
+        parts = []
+        if inserted:
+            parts.append(f"{inserted} inserted")
+        if deleted:
+            parts.append(f"{deleted} deleted")
+        msg = f"Seeded favorite list from {path}: {', '.join(parts) or 'no changes'}"
         if errors:
             msg += f" ({errors} skipped)"
         print(msg)

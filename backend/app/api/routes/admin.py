@@ -120,7 +120,7 @@ async def admin_import_favorite_list(
     file: UploadFile,
     _: None = Depends(_require_admin_token),
 ):
-    """Import favorite list from uploaded CSV. Replaces entire list. IMDb list export format. Requires X-Admin-Import-Token header."""
+    """Import favorite list from uploaded CSV. Idempotent sync: inserts missing, deletes removed. IMDb list export format. Requires X-Admin-Import-Token header."""
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Upload must be a CSV file")
 
@@ -134,8 +134,8 @@ async def admin_import_favorite_list(
     try:
         db = SessionLocal()
         try:
-            inserted, errors = import_favorite_list_from_csv(db, tmp_path)
-            return {"inserted": inserted, "errors": errors}
+            inserted, deleted, errors = import_favorite_list_from_csv(db, tmp_path)
+            return {"inserted": inserted, "deleted": deleted, "errors": errors}
         finally:
             db.close()
     finally:
