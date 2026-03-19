@@ -5,6 +5,7 @@ import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
+import { SectionHelp } from "./SectionHelp";
 
 const DEBOUNCE_MS = 350;
 const DISPLAY_LIMIT = 5;
@@ -119,6 +120,10 @@ export function WatchlistRecommendations() {
     <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
       <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
         From your watchlist
+        <SectionHelp title="How this works">
+          <p>Titles you saved, filtered by genre/country/year. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
+          <p>Unrated items only by default. &quot;Include rated&quot; shows what you&apos;ve already seen for comparison.</p>
+        </SectionHelp>
       </h2>
       <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
         Titles you saved, filtered by your taste

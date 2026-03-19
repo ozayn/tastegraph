@@ -5,6 +5,7 @@ import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
+import { SectionHelp } from "./SectionHelp";
 
 const DEBOUNCE_MS = 350;
 const DISPLAY_LIMIT = 5;
@@ -111,6 +112,10 @@ export function SimpleRecommendations() {
     <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
       <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
         Recommendations for you
+        <SectionHelp title="How this works">
+          <p>Filtered from your <strong>rated 8+</strong> titles by genre, country, and year. Uses overlap with your taste profile—not collaborative filtering.</p>
+          <p>Heuristic-based today; ML/LLM models will add personalized scoring when integrated.</p>
+        </SectionHelp>
       </h2>
       <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
         Based on your ratings and taste profile

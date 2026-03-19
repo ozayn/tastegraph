@@ -6,6 +6,7 @@ import { WatchlistImportStatus } from "./components/WatchlistImportStatus";
 import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
+import { SectionHelp } from "./components/SectionHelp";
 import { SimpleRecommendations } from "./components/SimpleRecommendations";
 import { WatchlistRecommendations } from "./components/WatchlistRecommendations";
 import { StrongPositiveSample } from "./components/StrongPositiveSample";
@@ -39,6 +40,10 @@ export default function Home() {
           >
             <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
               Your library
+              <SectionHelp title="What these mean">
+                <p><strong>Strong signals</strong> = sample of titles you rated 8+. <strong>8+ / &lt;5</strong> = thresholds for strong vs weak taste signals.</p>
+                <p>More ratings and metadata improve recommendations. Studies and high-fit watchlist use these signals.</p>
+              </SectionHelp>
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
               <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">

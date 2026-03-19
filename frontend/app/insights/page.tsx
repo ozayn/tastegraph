@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { SectionHelp } from "../components/SectionHelp";
 
 type Overview = {
   total_rated: number;
@@ -235,6 +236,10 @@ export default function InsightsPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Overview
+              <SectionHelp title="How to read this">
+                <p><strong>Top genres by count</strong> = what you watch most. <strong>Favorite genres by avg</strong> = what you rate highest (min 3 titles to reduce noise).</p>
+                <p>Countries and decades are from production metadata. All derived from your ratings—no external preferences.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Core metrics and distribution across genres, countries, and decades.
@@ -319,6 +324,10 @@ export default function InsightsPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               People
+              <SectionHelp title="How to read this">
+                <p>Most-watched = highest count in your rated titles. Avg rating shows how you tend to rate their work.</p>
+                <p>Count ≠ quality: you might watch many blockbusters but rate arthouse higher. Both signals matter for recommendations.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Most-watched directors, actors, and writers in your rated titles.
@@ -425,6 +434,10 @@ export default function InsightsPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Taste signals
+              <SectionHelp title="How to read this">
+                <p>Patterns in titles you rated <strong>8+</strong>. Strong genres/countries = frequent in your favorites. Recurring people = directors/actors/writers in 2+ titles you rated 8+.</p>
+                <p>These feed into the heuristic recommender: high-fit watchlist and Studies use them to rank and explain recommendations.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Patterns in titles you rated 8 or higher.

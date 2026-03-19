@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { HighFitWatchlist } from "../components/HighFitWatchlist";
+import { SectionHelp } from "../components/SectionHelp";
 
 type GenreShift = {
   genre: string;
@@ -283,6 +284,10 @@ export default function StudiesPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Taste evolution over time
+              <SectionHelp title="How to read this">
+                <p>Tracks how your ratings and genre/country mix change by <strong>year watched</strong> (when you rated, not release year).</p>
+                <p>Genre shifts compare first vs second half of your history—useful for seeing if your taste has drifted. Needs 4+ years of data.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               How your ratings and preferences changed by year watched.
@@ -335,6 +340,11 @@ export default function StudiesPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Features associated with 8+ ratings
+              <SectionHelp title="How to read this">
+                <p>This measures <strong>association</strong>, not causation: genres, countries, decades, etc. that appear more often in titles you rated 8+ than in your library overall.</p>
+                <p><strong>Lift</strong> = (8+ rate for this feature) ÷ (your global 8+ rate). Lift &gt; 1 means you tend to rate higher when this feature is present.</p>
+                <p><strong>Caution:</strong> Small sample sizes (low n) can produce noisy lift. The min support threshold filters out unreliable signals.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Lift = 8+ rate in group / global rate. Ranked by lift × support weight (min n={predictors_8plus.min_support}).
@@ -368,6 +378,10 @@ export default function StudiesPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Underwatched but high-fit watchlist
+              <SectionHelp title="How to read this">
+                <p>Items you saved but haven&apos;t rated, ranked by overlap with your <strong>8+ taste signals</strong>: genres, countries, decades, and creators that appear in titles you loved.</p>
+                <p>Each card explains <em>why</em> it fits—e.g. matched genres, favorite director. Higher overlap suggests stronger fit, but it&apos;s heuristic: your next favorite might surprise you.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Unrated watchlist items ranked by alignment with your strongest taste signals—genres, countries, release decades, and favorite creators that appear in your 8+ ratings. Each item shows why it fits.
@@ -389,6 +403,10 @@ export default function StudiesPage() {
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Watchlist taste alignment
+              <SectionHelp title="How to read this">
+                <p>Genres and countries that appear in your <strong>watchlist</strong> and that you tend to rate 8+ when you <em>do</em> rate them.</p>
+                <p>High 8+ rate here = strong candidates for what to watch next from your saved list. Requires minimum titles in watchlist and in rated history to avoid noise.</p>
+              </SectionHelp>
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               Genres and countries in your watchlist that you tend to rate 8+. When you rate titles in these groups, you give 8+ often—so these are strong recommendation candidates.
@@ -428,6 +446,10 @@ export default function StudiesPage() {
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
                 Curated favorites list
+                <SectionHelp title="How to read this">
+                  <p>Your hand-picked &quot;would recommend&quot; list. Overlap with rated = titles you&apos;ve both saved as favorites and rated.</p>
+                  <p>Used as a strong signal for high-fit watchlist: similar titles (by genre, country, creators) get boosted in recommendations.</p>
+                </SectionHelp>
               </h2>
               <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 Titles you&apos;d recommend to friends. Used as a strong taste signal for high-fit ranking.
@@ -469,6 +491,10 @@ export default function StudiesPage() {
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
                 Genre combination analysis
+                <SectionHelp title="How to read this">
+                  <p>Some genre <strong>pairs</strong> (e.g. Drama + Romance) correlate with higher 8+ rates than either genre alone.</p>
+                  <p>Useful for discovery: if you love both, titles with both may be especially strong fits. Association only—small n can inflate rates.</p>
+                </SectionHelp>
               </h2>
               <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 Genre pairs associated with higher 8+ rate (min {genre_combinations.min_support} titles per pair).
@@ -491,6 +517,10 @@ export default function StudiesPage() {
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
                 Favorite creators (min {best_creators.min_support} rated titles)
+                <SectionHelp title="How to read this">
+                  <p>Creators whose work you consistently rate highly. The min-support threshold ensures they&apos;re based on enough data—one 10/10 doesn&apos;t make a favorite.</p>
+                  <p>Used as a taste signal for high-fit watchlist ranking: titles from these creators get a boost when you haven&apos;t seen them yet.</p>
+                </SectionHelp>
               </h2>
               <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 Directors, actors, and writers with the highest average rating among those you&apos;ve rated at least {best_creators.min_support} times.
