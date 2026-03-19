@@ -26,7 +26,7 @@ export function HighFitWatchlist() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/recommendations/watchlist-high-fit?limit=10`)
+    fetch(`${API_URL}/recommendations/watchlist-high-fit?limit=15`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then(setItems)
       .catch(() => setItems([]))
