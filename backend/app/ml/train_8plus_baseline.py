@@ -76,10 +76,23 @@ def main() -> None:
     else:
         print("\n  Sparse categories filtered by min-support. Model coefficients should be more stable.")
 
-    # Save
+    # Save (include eval metrics and dataset stats for Model Lab / diagnostics)
+    n_pos = int(y.sum())
+    n_neg = len(y) - n_pos
+    artifact_payload = {
+        "artifacts": artifacts,
+        "feature_dim": X.shape[1],
+        "eval_metrics": {"accuracy": round(acc, 4), "roc_auc": round(auc, 4)},
+        "dataset_stats": {
+            "n_rows": len(df),
+            "n_positive": n_pos,
+            "n_negative": n_neg,
+            "positive_rate": round(n_pos / len(df), 4),
+        },
+    }
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"
     model_path = MODELS_DIR / "8plus_baseline_model.joblib"
-    joblib.dump({"artifacts": artifacts, "feature_dim": X.shape[1]}, artifact_path)
+    joblib.dump(artifact_payload, artifact_path)
     joblib.dump(model, model_path)
     print(f"\nSaved to {MODELS_DIR}")
 
