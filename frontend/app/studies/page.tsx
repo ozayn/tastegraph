@@ -124,17 +124,17 @@ function BarListRow({
   barPct: number;
 }) {
   return (
-    <li className="group relative flex items-baseline justify-between gap-3 py-1.5">
+    <li className="group relative flex items-center justify-between gap-4 py-2.5 px-1">
       <div
-        className="absolute inset-y-0 left-0 rounded-md bg-[var(--muted-subtle)]/15 transition-opacity group-hover:opacity-90"
-        style={{ width: `${Math.max(barPct, 4)}%` }}
+        className="absolute inset-y-0 left-0 rounded-md bg-[var(--mondrian-yellow)]/25 transition-opacity group-hover:opacity-100"
+        style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
         aria-hidden
       />
-      <span className="relative min-w-0 truncate pl-1 text-[14px] text-[var(--foreground)]">
+      <span className="relative z-10 min-w-0 truncate pl-2 pr-2 text-[14px] text-[var(--foreground)]">
         {label}
       </span>
       {sub != null && (
-        <span className="relative shrink-0 text-[13px] text-[var(--muted-soft)]">
+        <span className="relative z-10 shrink-0 pl-2 pr-2 text-[13px] text-[var(--muted-soft)]">
           {sub}
         </span>
       )}
@@ -156,7 +156,7 @@ function BarList<T>({
   if (!items.length) return null;
   const maxVal = Math.max(...items.map(getValue), 1);
   return (
-    <ul className="space-y-0">
+    <ul className="space-y-1">
       {items.map((item, i) => (
         <BarListRow
           key={i}
@@ -197,7 +197,7 @@ function BarChart({
           </span>
           <div className="min-w-0 flex-1">
             <div
-              className="h-2.5 rounded-md bg-[var(--muted-subtle)]/25 transition-all"
+              className="h-2.5 rounded-md bg-[var(--mondrian-blue)]/30 transition-all"
               style={{ width: `${Math.max((getValue(d) / maxVal) * 100, 2)}%` }}
             />
           </div>
