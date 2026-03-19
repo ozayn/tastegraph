@@ -10,6 +10,9 @@ from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import ROLE_SCORE_WEIGHT
 
 STRONG_THRESHOLD = 8
+DIRECTOR_MIN_SUPPORT = 2  # min 8+ rated titles for director to be a strong signal
+COUNTRY_MIN_SUPPORT = 5  # min rated titles for country to qualify
+COUNTRY_LIFT_MIN = 1.0  # country 8+ rate must exceed baseline (lift > 1) to be a strong signal
 
 
 def _is_low_quality(s: str) -> bool:
@@ -21,6 +24,13 @@ def _parse_genres(genres: str | None) -> list[str]:
     if not genres or not genres.strip():
         return []
     return [g.strip() for g in genres.split(",") if g.strip() and not _is_low_quality(g.strip())]
+
+
+def _parse_directors(directors: str | None) -> set[str]:
+    """Parse comma-separated director names into lowercase set for matching."""
+    if not directors or not directors.strip():
+        return set()
+    return {n.strip().lower() for n in directors.split(",") if n.strip() and not _is_low_quality(n.strip())}
 
 
 def _decade(year: int | None) -> str | None:
@@ -38,13 +48,10 @@ def load_taste_signals(db: Session) -> dict:
         .all()
     )
     genre_counts: Counter = Counter()
-    country_counts: Counter = Counter()
     decade_counts: Counter = Counter()
     for genres, country, year in rows:
         for g in _parse_genres(genres):
             genre_counts[g] += 1
-        for c in parse_and_normalize_countries(country):
-            country_counts[c] += 1
         d = _decade(year)
         if d:
             decade_counts[d] += 1
@@ -53,14 +60,39 @@ def load_taste_signals(db: Session) -> dict:
         g for g, _ in genre_counts.most_common(15)
         if not _is_low_quality(g)
     }
-    strong_countries = {
-        c for c, _ in country_counts.most_common(15)
-        if not _is_low_quality(c)
-    }
     strong_decades = {
         d for d, _ in decade_counts.most_common(10)
         if d and not _is_low_quality(d)
     }
+
+    # Strong countries: lift-based (8+ rate above baseline), not raw frequency
+    total_rated = db.query(IMDbRating).filter(IMDbRating.user_rating.isnot(None)).count()
+    strong_total = db.query(IMDbRating).filter(IMDbRating.user_rating >= STRONG_THRESHOLD).count()
+    global_rate = strong_total / total_rated if total_rated > 0 else 0
+
+    country_total: Counter = Counter()
+    country_strong: Counter = Counter()
+    country_rows = (
+        db.query(TitleMetadata.country, IMDbRating.user_rating)
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(TitleMetadata.country.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    for c_str, r in country_rows:
+        for c in parse_and_normalize_countries(c_str):
+            country_total[c] += 1
+            if r >= STRONG_THRESHOLD:
+                country_strong[c] += 1
+
+    strong_countries: set[str] = set()
+    for c, total in country_total.items():
+        if _is_low_quality(c) or total < COUNTRY_MIN_SUPPORT:
+            continue
+        strong_count = country_strong.get(c, 0)
+        rate = strong_count / total if total > 0 else 0
+        lift = rate / global_rate if global_rate > 0 else 0
+        if lift > COUNTRY_LIFT_MIN:
+            strong_countries.add(c)
 
     # Merge favorite_list patterns (curated canon) into strong signals
     fl_rows = (
@@ -79,10 +111,31 @@ def load_taste_signals(db: Session) -> dict:
 
     favorite_list_ids = {r.imdb_title_id for r in db.query(FavoriteListItem.imdb_title_id).all()}
 
+    # Strong directors: from 8+ ratings, min N titles (support-aware)
+    director_counts: Counter = Counter()
+    dir_rows = (
+        db.query(TitleMetadata.directors)
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(
+            TitleMetadata.directors.isnot(None),
+            TitleMetadata.directors != "",
+            IMDbRating.user_rating >= STRONG_THRESHOLD,
+        )
+        .all()
+    )
+    for (directors_str,) in dir_rows:
+        for d in _parse_directors(directors_str):
+            director_counts[d] += 1
+    strong_directors = {
+        d for d, count in director_counts.items()
+        if count >= DIRECTOR_MIN_SUPPORT and not _is_low_quality(d)
+    }
+
     return {
         "strong_genres": strong_genres,
         "strong_countries": strong_countries,
         "strong_decades": strong_decades,
+        "strong_directors": strong_directors,
         "favorite_list_ids": favorite_list_ids,
     }
 
@@ -131,6 +184,7 @@ def score_watchlist_item(
     genres: str | None,
     country: str | None,
     year: int | None,
+    directors: str | None,
     favorite_matches: list[dict],
     signals: dict,
 ) -> tuple[int, dict]:
@@ -139,6 +193,7 @@ def score_watchlist_item(
     item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
     item_countries = parse_and_normalize_countries(country) if country else set()
     item_decade = _decade(year)
+    item_directors_display = [n.strip() for n in (directors or "").split(",") if n.strip() and not _is_low_quality(n.strip())]
 
     in_favorite_list = imdb_title_id in signals.get("favorite_list_ids", set())
 
@@ -165,6 +220,16 @@ def score_watchlist_item(
     for p in matched_people:
         score += ROLE_SCORE_WEIGHT.get(p["role"], 1)
 
+    # Strong directors from rating history (exclude favorite directors to avoid redundancy)
+    favorite_director_lower = {m.get("name", "").lower() for m in favorite_matches if m.get("role") == "director"}
+    strong_directors = signals.get("strong_directors", set())
+    matched_strong_directors = [
+        d for d in item_directors_display
+        if d.lower() in strong_directors and d.lower() not in favorite_director_lower
+    ][:2]
+    for _ in matched_strong_directors:
+        score += 2
+
     top_reasons: list[str] = []
     if in_favorite_list:
         top_reasons.append("In your curated favorites list")
@@ -177,6 +242,8 @@ def score_watchlist_item(
     for p in matched_people:
         role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(p["role"], p["role"])
         top_reasons.append(f"Favorite {role_label}: {p['name']}")
+    for d in matched_strong_directors:
+        top_reasons.append(f"Strong director: {d}")
 
     explanation = {
         "in_favorite_list": in_favorite_list,
@@ -184,6 +251,7 @@ def score_watchlist_item(
         "matched_countries": matched_countries,
         "matched_decade": matched_decade,
         "matched_people": matched_people,
+        "matched_strong_directors": matched_strong_directors,
         "top_reasons": top_reasons[:5],
     }
     return score, explanation

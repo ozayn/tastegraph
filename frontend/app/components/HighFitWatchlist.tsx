@@ -5,10 +5,12 @@ import { API_URL } from "../lib/api";
 import { HighFitCard } from "./HighFitCard";
 
 type HighFitExplanation = {
+  in_favorite_list?: boolean;
   matched_genres: string[];
   matched_countries: string[];
   matched_decade: string | null;
   matched_people: { name: string; role: string }[];
+  matched_strong_directors?: string[];
   top_reasons: string[];
 };
 

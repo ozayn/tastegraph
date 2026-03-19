@@ -8,6 +8,7 @@ type HighFitExplanation = {
   matched_countries: string[];
   matched_decade: string | null;
   matched_people: { name: string; role: string }[];
+  matched_strong_directors?: string[];
   top_reasons: string[];
 };
 
@@ -24,12 +25,14 @@ const chipBase =
   "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium";
 
 function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
+  const strongDirs = explanation.matched_strong_directors ?? [];
   const hasAny =
     explanation.in_favorite_list ||
     explanation.matched_genres.length > 0 ||
     explanation.matched_countries.length > 0 ||
     explanation.matched_decade ||
-    explanation.matched_people.length > 0;
+    explanation.matched_people.length > 0 ||
+    strongDirs.length > 0;
 
   if (!hasAny) return null;
 
@@ -74,6 +77,14 @@ function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
           </span>
         );
       })}
+      {strongDirs.map((d) => (
+        <span
+          key={d}
+          className={`${chipBase} bg-[var(--accent-muted)]/25 text-[var(--accent)]`}
+        >
+          Strong director: {d}
+        </span>
+      ))}
     </div>
   );
 }
