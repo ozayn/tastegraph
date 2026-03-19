@@ -20,6 +20,23 @@ type HighFitItem = {
 
 const LIMIT = 15;
 
+function formatProb(p: number): string {
+  if (p >= 0.995) return ">99%";
+  if (p >= 0.99) return "99%";
+  return `${Math.round(p * 100)}%`;
+}
+
+function shortenReason(reason: string): string {
+  if (!reason) return reason;
+  const m = reason.match(/^Strong genre[s]?: (.+)$/);
+  if (m) {
+    const genres = m[1].split(", ");
+    return genres.length > 1 ? `Strong genres: ${genres[0]}, ${genres[1]}` : reason;
+  }
+  if (reason.length > 45) return `${reason.slice(0, 42)}…`;
+  return reason;
+}
+
 function Row({
   id,
   title,
@@ -31,19 +48,19 @@ function Row({
 }) {
   const display = title ?? id;
   return (
-    <li className="flex items-baseline justify-between gap-3 py-1 text-[13px]">
+    <li className="block py-2 text-[13px]">
       <a
         href={`https://www.imdb.com/title/${id}/`}
         target="_blank"
         rel="noopener noreferrer"
-        className="min-w-0 truncate text-[var(--foreground)] underline decoration-[var(--muted-subtle)] underline-offset-2 hover:text-[var(--accent)]"
+        className="font-medium text-[var(--foreground)] underline decoration-[var(--muted-subtle)] underline-offset-2 hover:text-[var(--accent)]"
       >
         {display}
       </a>
       {hint && (
-        <span className="shrink-0 truncate max-w-[12rem] text-right text-[12px] text-[var(--muted-soft)]">
+        <p className="mt-0.5 text-[12px] leading-snug text-[var(--muted-soft)]">
           {hint}
-        </span>
+        </p>
       )}
     </li>
   );
@@ -98,7 +115,7 @@ export function RecommendationComparison() {
     >
       <summary className="cursor-pointer list-none px-4 py-3 text-[13px] font-medium text-[var(--muted-soft)] hover:text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
-          Compare ML vs High-Fit
+          Compare ML vs High-Fit (top 15 from each)
           {data && (
             <span className="text-[12px] font-normal">
               ({overlapIds.length} overlap · {mlOnlyIds.length} ML-only · {highfitOnlyIds.length} High-Fit–only)
@@ -122,7 +139,7 @@ export function RecommendationComparison() {
                   overlapIds.map((id) => {
                     const ml = mlById.get(id);
                     const hf = highfitById.get(id);
-                    const hint = ml ? `${(ml.prob_8plus * 100).toFixed(0)}%` : undefined;
+                    const hint = ml ? formatProb(ml.prob_8plus) : undefined;
                     return (
                       <Row
                         key={id}
@@ -143,11 +160,11 @@ export function RecommendationComparison() {
                 ) : (
                   mlOnlyIds.map((id) => {
                     const ml = mlById.get(id);
-                    const feat = ml?.top_features?.[0];
+                    const feats = (ml?.top_features ?? []).slice(0, 2).map((f) => f.replace(/^[^:]+:/, ""));
                     const hint = ml
-                      ? feat
-                        ? `${(ml.prob_8plus * 100).toFixed(0)}% · ${feat.replace(/^[^:]+:/, "")}`
-                        : `${(ml.prob_8plus * 100).toFixed(0)}%`
+                      ? feats.length > 0
+                        ? `${formatProb(ml.prob_8plus)} · ${feats.join(", ")}`
+                        : formatProb(ml.prob_8plus)
                       : undefined;
                     return (
                       <Row
@@ -175,7 +192,7 @@ export function RecommendationComparison() {
                         key={id}
                         id={id}
                         title={hf?.title ?? null}
-                        hint={reason}
+                        hint={reason ? shortenReason(reason) : undefined}
                       />
                     );
                   })

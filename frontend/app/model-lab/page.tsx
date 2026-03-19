@@ -50,6 +50,23 @@ function formatFeat(name: string): string {
   return m ? m[1] : name;
 }
 
+function formatProb(p: number): string {
+  if (p >= 0.995) return ">99%";
+  if (p >= 0.99) return "99%";
+  return `${Math.round(p * 100)}%`;
+}
+
+function shortenReason(reason: string): string {
+  if (!reason) return reason;
+  const m = reason.match(/^Strong genre[s]?: (.+)$/);
+  if (m) {
+    const genres = m[1].split(", ");
+    return genres.length > 1 ? `Strong genres: ${genres[0]}, ${genres[1]}` : reason;
+  }
+  if (reason.length > 50) return `${reason.slice(0, 47)}…`;
+  return reason;
+}
+
 export default function ModelLabPage() {
   const [diag, setDiag] = useState<Diagnostics | null>(null);
   const [comparison, setComparison] = useState<{ ml: MLItem[]; highfit: HighFitItem[]; modelAvailable: boolean } | null>(null);
@@ -404,71 +421,88 @@ export default function ModelLabPage() {
           {/* 6. Prediction inspection & recommender comparison */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              6. Prediction inspection & recommender comparison
+              6. Compare ML vs High-Fit
             </h2>
-            <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
-              Top 15 watchlist items from each strategy. Overlap: {overlap} · ML-only: {mlOnly} · High-Fit–only: {hfOnly}
+            <p className="mb-3 text-[13px] text-[var(--muted-soft)]">
+              ML learns weighted patterns from past ratings; High-Fit uses explicit taste-signal overlap. Disagreement is expected and useful.
             </p>
-            <div className="mb-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
-              <p className="text-[12px] font-medium text-[var(--foreground)]">Why ML and High-Fit can disagree</p>
-              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
-                <strong>High-Fit</strong> = explicit rule-based ranking by overlap with your 8+ taste signals (genres, countries, creators). <strong>ML</strong> = learned weighted pattern ranking from past ratings. They use different logic—disagreement is expected and useful. Items in &quot;ML only&quot; or &quot;High-Fit only&quot; highlight where each strategy sees something the other doesn&apos;t.
-              </p>
-            </div>
+            <p className="mb-4 text-[12px] text-[var(--overview-muted)]">
+              Overlap: {overlap} · ML-only: {mlOnly} · High-Fit-only: {hfOnly}
+            </p>
             <div className="grid gap-6 sm:grid-cols-3">
               <div>
-                <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Overlap</p>
-                <ul className="space-y-1 text-[13px]">
-                  {[...mlIds].filter((id) => hfIds.has(id)).slice(0, 8).map((id) => {
-                    const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
-                    return (
-                      <li key={id}>
-                        <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--accent)]">
-                          {ml?.title ?? id}
-                        </a>
-                        {ml && <span className="ml-1 text-[var(--muted-soft)]">{(ml.prob_8plus * 100).toFixed(0)}%</span>}
-                      </li>
-                    );
-                  })}
-                  {overlap === 0 && <li className="text-[var(--muted-soft)]">—</li>}
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">Overlap</p>
+                <ul className="space-y-3 text-[13px]">
+                  {overlap === 0 ? (
+                    <li className="rounded-md border border-dashed border-[var(--section-border)] bg-[var(--card-bg)]/30 px-3 py-2.5 text-[12px] text-[var(--muted-soft)]">
+                      No overlap — ML and High-Fit picked different top items.
+                    </li>
+                  ) : (
+                    [...mlIds].filter((id) => hfIds.has(id)).slice(0, 8).map((id) => {
+                      const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
+                      const reason = comparison?.highfit?.find((h) => h.imdb_title_id === id)?.explanation?.top_reasons?.[0];
+                      return (
+                        <li key={id} className="block">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                            {ml?.title ?? id}
+                          </a>
+                          <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                            {ml && formatProb(ml.prob_8plus)}
+                            {reason && ` · ${shortenReason(reason)}`}
+                          </p>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
               </div>
               <div>
-                <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">ML only</p>
-                <ul className="space-y-1 text-[13px]">
-                  {[...mlIds].filter((id) => !hfIds.has(id)).slice(0, 8).map((id) => {
-                    const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
-                    const feat = ml?.top_features?.[0];
-                    return (
-                      <li key={id}>
-                        <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--accent)]">
-                          {ml?.title ?? id}
-                        </a>
-                        <span className="ml-1 text-[var(--muted-soft)]">
-                          {(ml?.prob_8plus ?? 0) * 100}%{feat ? ` · ${formatFeat(feat)}` : ""}
-                        </span>
-                      </li>
-                    );
-                  })}
-                  {mlOnly === 0 && <li className="text-[var(--muted-soft)]">—</li>}
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">ML only</p>
+                <ul className="space-y-3 text-[13px]">
+                  {mlOnly === 0 ? (
+                    <li className="text-[12px] text-[var(--muted-soft)]">—</li>
+                  ) : (
+                    [...mlIds].filter((id) => !hfIds.has(id)).slice(0, 8).map((id) => {
+                      const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
+                      const feats = (ml?.top_features ?? []).slice(0, 2).map(formatFeat);
+                      return (
+                        <li key={id} className="block">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                            {ml?.title ?? id}
+                          </a>
+                          <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                            {ml && formatProb(ml.prob_8plus)}
+                            {feats.length > 0 && ` · ${feats.join(", ")}`}
+                          </p>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
               </div>
               <div>
-                <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">High-Fit only</p>
-                <ul className="space-y-1 text-[13px]">
-                  {[...hfIds].filter((id) => !mlIds.has(id)).slice(0, 8).map((id) => {
-                    const hf = comparison?.highfit?.find((m) => m.imdb_title_id === id);
-                    const reason = hf?.explanation?.top_reasons?.[0];
-                    return (
-                      <li key={id}>
-                        <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--accent)]">
-                          {hf?.title ?? id}
-                        </a>
-                        {reason && <span className="ml-1 text-[var(--muted-soft)]">· {reason}</span>}
-                      </li>
-                    );
-                  })}
-                  {hfOnly === 0 && <li className="text-[var(--muted-soft)]">—</li>}
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">High-Fit only</p>
+                <ul className="space-y-3 text-[13px]">
+                  {hfOnly === 0 ? (
+                    <li className="text-[12px] text-[var(--muted-soft)]">—</li>
+                  ) : (
+                    [...hfIds].filter((id) => !mlIds.has(id)).slice(0, 8).map((id) => {
+                      const hf = comparison?.highfit?.find((m) => m.imdb_title_id === id);
+                      const reason = hf?.explanation?.top_reasons?.[0];
+                      return (
+                        <li key={id} className="block">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                            {hf?.title ?? id}
+                          </a>
+                          {reason && (
+                            <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                              {shortenReason(reason)}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
               </div>
             </div>

@@ -41,9 +41,7 @@ export function RecommendationsContainer() {
           {mode === "ml" && (
             <MLModeContent />
           )}
-          {(mode === "ml" || mode === "high-fit") && (
-            <RecommendationComparison />
-          )}
+          {mode === "ml" && <RecommendationComparison />}
         </div>
       </div>
     </section>
