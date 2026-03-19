@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
-import { HighFitWatchlist } from "../components/HighFitWatchlist";
 import { SectionHelp } from "../components/SectionHelp";
 
 type GenreShift = {
@@ -374,32 +373,7 @@ export default function StudiesPage() {
             </div>
           </section>
 
-          {/* 3. Underwatched high-fit watchlist */}
-          <section>
-            <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Underwatched but high-fit watchlist
-              <SectionHelp title="How to read this">
-                <p>Items you saved but haven&apos;t rated, ranked by overlap with your <strong>8+ taste signals</strong>: genres, countries, decades, and creators that appear in titles you loved.</p>
-                <p>Each card explains <em>why</em> it fits—e.g. matched genres, favorite director. Higher overlap suggests stronger fit, but it&apos;s heuristic: your next favorite might surprise you.</p>
-              </SectionHelp>
-            </h2>
-            <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
-              Unrated watchlist items ranked by alignment with your strongest taste signals—genres, countries, release decades, and favorite creators that appear in your 8+ ratings. Each item shows why it fits.
-            </p>
-            <div className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
-                Best-fit items to watch next
-              </p>
-              <p className="mt-0.5 text-[11px] text-[var(--muted-subtle)]">
-                Ranked by feature overlap with your 8+ history · excludes rated titles
-              </p>
-              <div className="mt-4">
-                <HighFitWatchlist />
-              </div>
-            </div>
-          </section>
-
-          {/* 4. Watchlist taste alignment */}
+          {/* 3. Watchlist taste alignment */}
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Watchlist taste alignment
@@ -441,7 +415,7 @@ export default function StudiesPage() {
             </div>
           </section>
 
-          {/* 5. Curated favorites list */}
+          {/* 4. Curated favorites list */}
           {favorite_list_summary && favorite_list_summary.count > 0 && (
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
@@ -486,7 +460,7 @@ export default function StudiesPage() {
             </section>
           )}
 
-          {/* 6. Genre combination analysis */}
+          {/* 5. Genre combination analysis */}
           {genre_combinations && genre_combinations.pairs.length > 0 && (
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
@@ -512,7 +486,7 @@ export default function StudiesPage() {
             </section>
           )}
 
-          {/* 7. Favorite creators (min support) */}
+          {/* 6. Favorite creators (min support) */}
           {best_creators && (best_creators.directors.length > 0 || best_creators.actors.length > 0 || best_creators.writers.length > 0) && (
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">

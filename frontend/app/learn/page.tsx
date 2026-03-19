@@ -26,7 +26,7 @@ export default function LearnPage() {
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Heuristic content-overlap only. Simple recommendations filter from your 8+ ratings by genre, country, and year. High-fit watchlist ranks unrated watchlist items by overlap with your strongest taste signals.
+                <strong>Active recommendation methods:</strong> Heuristic content-overlap only. Explore your favorites lets you browse titles you&apos;ve already rated 8+ (exploration, not discovery). High-fit watchlist ranks unrated watchlist items by overlap with your strongest taste signals.
               </p>
               <p>
                 <strong>Signals & data sources:</strong> Your IMDb ratings (8+ as strong signal), watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.

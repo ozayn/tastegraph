@@ -26,7 +26,7 @@ type Item = {
   reasons?: string[];
 };
 
-export function WatchlistRecommendations() {
+export function WatchlistRecommendations({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -116,8 +116,16 @@ export function WatchlistRecommendations() {
   const filterInput =
     "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
 
-  return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+  const header = embedded ? (
+    <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+      Titles you saved, filtered by your taste
+      <SectionHelp title="How this works">
+        <p>Titles you saved, filtered by genre/country/year. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
+        <p>Unrated items only by default. &quot;Include rated&quot; shows what you&apos;ve already seen for comparison.</p>
+      </SectionHelp>
+    </p>
+  ) : (
+    <>
       <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
         From your watchlist
         <SectionHelp title="How this works">
@@ -128,8 +136,13 @@ export function WatchlistRecommendations() {
       <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
         Titles you saved, filtered by your taste
       </p>
+    </>
+  );
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
+  const content = (
+    <>
+      {header}
+      <div className={embedded ? "flex flex-wrap items-center gap-3 sm:gap-4" : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"}>
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -185,12 +198,12 @@ export function WatchlistRecommendations() {
       </div>
 
       {loading ? (
-        <div className="mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]">
+        <div className={embedded ? "mt-5 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]" : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]"}>
           <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
           Loading…
         </div>
       ) : items.length > 0 ? (
-        <ul className="mt-6 grid gap-4 sm:mt-7 sm:gap-5">
+        <ul className={embedded ? "mt-5 grid gap-4 sm:gap-5" : "mt-6 grid gap-4 sm:mt-7 sm:gap-5"}>
           {items.map((r) => (
             <li key={r.imdb_title_id}>
               <RecommendationCard
@@ -206,10 +219,18 @@ export function WatchlistRecommendations() {
           ))}
         </ul>
       ) : (
-        <p className="mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6">
+        <p className={embedded ? "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]" : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6"}>
           No poster-backed results for these filters yet.
         </p>
       )}
+    </>
+  );
+
+  return embedded ? (
+    <div>{content}</div>
+  ) : (
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+      {content}
     </section>
   );
 }

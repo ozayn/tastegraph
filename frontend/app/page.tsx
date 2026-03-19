@@ -7,8 +7,7 @@ import { RatingsSummary } from "./components/RatingsSummary";
 import { RatingsTimeline } from "./components/RatingsTimeline";
 import { RecentRatings } from "./components/RecentRatings";
 import { SectionHelp } from "./components/SectionHelp";
-import { SimpleRecommendations } from "./components/SimpleRecommendations";
-import { WatchlistRecommendations } from "./components/WatchlistRecommendations";
+import { RecommendationsContainer } from "./components/RecommendationsContainer";
 import { StrongPositiveSample } from "./components/StrongPositiveSample";
 import { TasteHints } from "./components/TasteHints";
 
@@ -76,9 +75,8 @@ export default function Home() {
           </section>
         </div>
 
-        <div className="mt-16 space-y-16 sm:mt-20 md:mt-24 md:space-y-20">
-          <SimpleRecommendations />
-          <WatchlistRecommendations />
+        <div className="mt-16 sm:mt-20 md:mt-24">
+          <RecommendationsContainer />
         </div>
 
         <section className="mt-16 sm:mt-20 md:mt-24">

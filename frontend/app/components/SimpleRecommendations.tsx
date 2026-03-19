@@ -25,7 +25,7 @@ type Item = {
   reasons?: string[];
 };
 
-export function SimpleRecommendations() {
+export function SimpleRecommendations({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,20 +108,33 @@ export function SimpleRecommendations() {
   const filterInput =
     "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
 
-  return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+  const helpContent = (
+    <>
+      <p>Browse and filter titles you&apos;ve already rated 8+ by genre, country, and year. Exploration of your favorites—not recommendations for unseen titles.</p>
+    </>
+  );
+
+  const header = embedded ? (
+    <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+      Browse titles you&apos;ve already rated 8+
+      <SectionHelp title="How this works">{helpContent}</SectionHelp>
+    </p>
+  ) : (
+    <>
       <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
-        Recommendations for you
-        <SectionHelp title="How this works">
-          <p>Filtered from your <strong>rated 8+</strong> titles by genre, country, and year. Uses overlap with your taste profile—not collaborative filtering.</p>
-          <p>Heuristic-based today; ML/LLM models will add personalized scoring when integrated.</p>
-        </SectionHelp>
+        Explore your favorites
+        <SectionHelp title="How this works">{helpContent}</SectionHelp>
       </h2>
       <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        Based on your ratings and taste profile
+        Browse titles you&apos;ve already rated 8+
       </p>
+    </>
+  );
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
+  const content = (
+    <>
+      {header}
+      <div className={embedded ? "flex flex-wrap items-center gap-3 sm:gap-4" : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"}>
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -164,25 +177,19 @@ export function SimpleRecommendations() {
       </div>
 
       {loading ? (
-        <div className="mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]">
+        <div className={embedded ? "mt-5 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]" : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]"}>
           <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
           Loading recommendations…
         </div>
       ) : (
         <>
           {explanation && (
-            <p className="mt-5 text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:mt-6">
+            <p className={embedded ? "mt-5 text-[14px] leading-[1.6] text-[var(--muted-soft)]" : "mt-5 text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:mt-6"}>
               {explanation}
             </p>
           )}
           {items.length > 0 ? (
-            <ul
-              className={
-                explanation
-                  ? "mt-5 grid gap-4 sm:mt-6 sm:gap-5"
-                  : "mt-6 grid gap-4 sm:mt-7 sm:gap-5"
-              }
-            >
+            <ul className={embedded ? "mt-5 grid gap-4 sm:gap-5" : (explanation ? "mt-5 grid gap-4 sm:mt-6 sm:gap-5" : "mt-6 grid gap-4 sm:mt-7 sm:gap-5")}>
               {items.map((r) => (
                 <li key={r.imdb_title_id}>
                   <RecommendationCard
@@ -200,9 +207,11 @@ export function SimpleRecommendations() {
           ) : (
             <p
               className={
-                explanation
-                  ? "mt-4 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-5"
-                  : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6"
+                embedded
+                  ? "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]"
+                  : (explanation
+                    ? "mt-4 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-5"
+                    : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6")
               }
             >
               No poster-backed results for these filters yet.
@@ -210,6 +219,14 @@ export function SimpleRecommendations() {
           )}
         </>
       )}
+    </>
+  );
+
+  return embedded ? (
+    <div>{content}</div>
+  ) : (
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+      {content}
     </section>
   );
 }
