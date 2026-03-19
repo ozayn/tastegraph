@@ -13,6 +13,7 @@ type Item = {
   year: number | null;
   your_rating: number | null;
   date_rated: string | null;
+  poster?: string | null;
 };
 
 export function WatchlistRecommendations() {
@@ -153,6 +154,7 @@ export function WatchlistRecommendations() {
                 year={r.year}
                 title_type={r.title_type}
                 your_rating={r.your_rating}
+                poster={r.poster}
               />
             </li>
           ))}

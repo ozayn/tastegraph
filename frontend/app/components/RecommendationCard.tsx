@@ -6,6 +6,7 @@ type RecommendationCardProps = {
   genres?: string | null;
   user_rating?: number | null;
   your_rating?: number | null;
+  poster?: string | null;
 };
 
 export function RecommendationCard({
@@ -16,52 +17,75 @@ export function RecommendationCard({
   genres,
   user_rating,
   your_rating,
+  poster,
 }: RecommendationCardProps) {
   const rating = user_rating ?? your_rating;
   const displayTitle = title ?? imdb_title_id;
+  const hasPoster = poster && poster.trim() && poster !== "N/A";
 
   return (
     <a
       href={`https://www.imdb.com/title/${imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] px-5 py-4 transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm sm:px-6 sm:py-5"
+      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
-            {displayTitle}
-          </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {year != null && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
-                {year}
-              </span>
-            )}
-            {title_type && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                {title_type}
-              </span>
-            )}
-            {genres &&
-              genres
-                .split(",")
-                .slice(0, 3)
-                .map((g) => (
-                  <span
-                    key={g}
-                    className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]"
-                  >
-                    {g.trim()}
-                  </span>
-                ))}
-          </div>
+      <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
+        <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+          {hasPoster ? (
+            <>
+              <img
+                src={poster!}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const fallback = e.currentTarget.nextElementSibling;
+                  if (fallback) (fallback as HTMLElement).classList.remove("hidden");
+                }}
+              />
+              <div className="hidden h-full w-full bg-[var(--section-bg)]" aria-hidden />
+            </>
+          ) : (
+            <div className="h-full w-full bg-[var(--section-bg)]" aria-hidden />
+          )}
         </div>
-        {rating != null && (
-          <span className="shrink-0 rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">
-            {rating}
-          </span>
-        )}
+        <div className="min-w-0 flex-1 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
+              {displayTitle}
+            </h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              {year != null && (
+                <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
+                  {year}
+                </span>
+              )}
+              {title_type && (
+                <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                  {title_type}
+                </span>
+              )}
+              {genres &&
+                genres
+                  .split(",")
+                  .slice(0, 3)
+                  .map((g) => (
+                    <span
+                      key={g}
+                      className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]"
+                    >
+                      {g.trim()}
+                    </span>
+                  ))}
+            </div>
+          </div>
+          {rating != null && (
+            <span className="shrink-0 rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">
+              {rating}
+            </span>
+          )}
+        </div>
       </div>
     </a>
   );

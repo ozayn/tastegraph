@@ -83,7 +83,11 @@ def recommendations_simple(
     """Your favorites: titles you rated 8+. Uses IMDbRating (CSV) data; country filter requires TitleMetadata."""
     db = SessionLocal()
     try:
-        q = db.query(IMDbRating).filter(IMDbRating.user_rating >= 8)
+        q = (
+            db.query(IMDbRating, TitleMetadata.poster)
+            .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            .filter(IMDbRating.user_rating >= 8)
+        )
 
         if genres:
             genre_filters = [
@@ -92,7 +96,6 @@ def recommendations_simple(
             if genre_filters:
                 q = q.filter(or_(*genre_filters))
         if countries:
-            q = q.join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
             country_filters = [
                 TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
             ]
@@ -122,8 +125,9 @@ def recommendations_simple(
                 "year": r.year,
                 "genres": r.genres,
                 "user_rating": r.user_rating,
+                "poster": poster if poster and poster != "N/A" else None,
             }
-            for r in rows
+            for r, poster in rows
         ]
     finally:
         db.close()
@@ -185,19 +189,18 @@ def recommendations_watchlist_simple(
     """Things to watch from watchlist. By default excludes already-rated titles."""
     db = SessionLocal()
     try:
+        q = db.query(IMDbWatchlistItem, TitleMetadata.poster).outerjoin(
+            TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id
+        )
+
         if genres:
             genre_filters = [
                 IMDbWatchlistItem.genres.ilike(f"%{g.strip()}%") for g in genres if g.strip()
             ]
             if genre_filters:
-                q = db.query(IMDbWatchlistItem).filter(or_(*genre_filters))
-            else:
-                q = db.query(IMDbWatchlistItem)
-        else:
-            q = db.query(IMDbWatchlistItem)
+                q = q.filter(or_(*genre_filters))
 
         if countries:
-            q = q.join(TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
             country_filters = [
                 TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
             ]
@@ -237,8 +240,9 @@ def recommendations_watchlist_simple(
                 "year": r.year,
                 "your_rating": r.your_rating,
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
+                "poster": poster if poster and poster != "N/A" else None,
             }
-            for r in rows
+            for r, poster in rows
         ]
     finally:
         db.close()
