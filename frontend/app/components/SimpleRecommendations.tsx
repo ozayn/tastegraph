@@ -48,7 +48,7 @@ export function SimpleRecommendations() {
       }
 
       const recParams = new URLSearchParams(baseParams);
-      recParams.set("limit", "10");
+      recParams.set("limit", "5");
 
       Promise.all([
         fetch(`${API_URL}/recommendations/simple?${recParams}`).then((res) =>

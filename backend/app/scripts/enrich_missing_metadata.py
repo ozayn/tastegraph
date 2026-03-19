@@ -12,7 +12,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.metadata_enrichment_failure import MetadataEnrichmentFailure
 from app.models.title_metadata import TitleMetadata
 from app.scripts.enrich_one_title import upsert_metadata_result
-from app.services.omdb import fetch_title_metadata_with_error
+from app.services.omdb import fetch_title_metadata_with_error, is_global_omdb_unavailable
 
 _DEFAULT_LIMIT = 10
 _DELAY_SECONDS = 1.0
@@ -160,13 +160,15 @@ def main() -> None:
         attempted += 1
 
         if result is None:
+            reason = error_msg or "unknown"
+            if is_global_omdb_unavailable(reason):
+                print(f"OMDb unavailable ({reason}). Stopping run.")
+                break
             failed += 1
             title = title_lookup.get(imdb_id)
-            reason = error_msg or "unknown"
             failed_cases.append((imdb_id, title, reason))
             title_part = f" {title}" if title else ""
             print(f"  failed: {imdb_id}{title_part} — {reason}")
-            # Record failure for skip logic
             _record_failure(imdb_id, reason)
         else:
             _clear_failure(imdb_id)

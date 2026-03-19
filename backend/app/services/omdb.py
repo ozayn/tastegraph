@@ -80,6 +80,26 @@ def _is_retryable_error(data: dict) -> bool:
     return any(x in err for x in ("key", "limit", "quota", "401"))
 
 
+def is_global_omdb_unavailable(error_msg: str | None) -> bool:
+    """True if error indicates OMDb is globally unavailable (auth/key/quota). Do not record as title-specific."""
+    if not error_msg:
+        return False
+    err = error_msg.lower()
+    return any(
+        x in err
+        for x in (
+            "omdb_api_key not set",
+            "http 401",
+            "http 403",
+            "invalid api key",
+            "invalid key",
+            "quota",
+            "limit exceeded",
+            "query limit",
+        )
+    )
+
+
 def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResult | None, dict | None]:
     """Fetch from OMDb with given key. Returns (result, raw_data) or (None, {"Error": msg}) on error."""
     url = "https://www.omdbapi.com/"
