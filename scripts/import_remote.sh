@@ -72,6 +72,6 @@ if [[ ! -f "$FILE" ]]; then
 fi
 
 URL="${REMOTE_API_URL%/}${ENDPOINT}"
-curl -sS -X POST "$URL" \
+curl -sS -f -X POST "$URL" \
   -H "X-Admin-Import-Token: $ADMIN_IMPORT_TOKEN" \
   -F "file=@$FILE"
