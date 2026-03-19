@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.models.favorite_person import FavoritePerson
 
-_BOOST_PER_MATCH = 0.5
+# Role importance: director > writer > actor for taste explanation
+ROLE_ORDER = {"director": 0, "writer": 1, "actor": 2}  # 0 = highest priority
+ROLE_WEIGHT = {"director": 1.5, "writer": 1.0, "actor": 0.5}  # for boost scoring
+ROLE_SCORE_WEIGHT = {"director": 3, "writer": 2, "actor": 1}  # for fit score (high-fit watchlist)
 
 
 def _parse_names(s: str | None) -> set[str]:
@@ -30,7 +33,7 @@ def compute_favorite_boost(
     writer: str | None,
     favorites_by_role: dict[str, set[str]],
 ) -> tuple[float, list[dict[str, str]]]:
-    """Return (boost_score, matches) for a title. Matches: [{role, name}, ...]."""
+    """Return (boost_score, matches) for a title. Matches sorted by role importance (director > writer > actor)."""
     if not any(favorites_by_role.values()):
         return 0.0, []
 
@@ -52,5 +55,6 @@ def compute_favorite_boost(
             if fav in names:
                 matches.append({"role": role, "name": fav})
 
-    boost = _BOOST_PER_MATCH * len(matches)
+    matches.sort(key=lambda m: ROLE_ORDER.get(m["role"], 99))
+    boost = sum(ROLE_WEIGHT.get(m["role"], 0.5) for m in matches)
     return boost, matches

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.imdb_rating import IMDbRating
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
+from app.services.favorite_boost import ROLE_SCORE_WEIGHT
 
 STRONG_THRESHOLD = 8
 
@@ -96,7 +97,7 @@ def build_reasons(
     if item_decade and item_decade in signals["strong_decades"]:
         reasons.append(f"aligns with a strong release decade: {item_decade}")
 
-    for m in favorite_matches[:3]:
+    for m in sorted(favorite_matches[:3], key=lambda x: ROLE_SCORE_WEIGHT.get(x.get("role", ""), 0), reverse=True):
         role = m.get("role", "")
         name = m.get("name", "")
         if name:
@@ -112,31 +113,49 @@ def score_watchlist_item(
     year: int | None,
     favorite_matches: list[dict],
     signals: dict,
-) -> tuple[int, list[str]]:
-    """Score a watchlist item by matching taste signals. Returns (score, matching_signals)."""
+) -> tuple[int, dict]:
+    """Score a watchlist item by matching taste signals. Returns (score, explanation)."""
     score = 0
-    matching: list[str] = []
     item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
     item_countries = parse_and_normalize_countries(country) if country else set()
     item_decade = _decade(year)
 
-    for g in item_genres & signals["strong_genres"]:
-        score += 2  # Genre match
-        matching.append(g)
-
-    for c in item_countries & signals["strong_countries"]:
+    matched_genres = sorted(item_genres & signals["strong_genres"])[:3]
+    for _ in matched_genres:
         score += 2
-        matching.append(c)
 
-    if item_decade and item_decade in signals["strong_decades"]:
+    matched_countries = sorted(item_countries & signals["strong_countries"])[:2]
+    for _ in matched_countries:
+        score += 2
+
+    matched_decade = item_decade if (item_decade and item_decade in signals["strong_decades"]) else None
+    if matched_decade:
         score += 1
-        matching.append(item_decade)
 
-    for m in favorite_matches:
-        name = m.get("name", "")
-        if name:
-            score += 2
-            role = m.get("role", "creator")
-            matching.append(f"{name} ({role})")
+    matched_people = [
+        {"name": m.get("name", ""), "role": m.get("role", "creator")}
+        for m in favorite_matches[:3]
+        if m.get("name")
+    ]
+    for p in matched_people:
+        score += ROLE_SCORE_WEIGHT.get(p["role"], 1)
 
-    return score, matching[:8]  # Cap matching signals
+    top_reasons: list[str] = []
+    if matched_genres:
+        top_reasons.append(f"Strong genre{'s' if len(matched_genres) > 1 else ''}: {', '.join(matched_genres)}")
+    if matched_countries:
+        top_reasons.append(f"From country you rate highly: {matched_countries[0]}")
+    if matched_decade:
+        top_reasons.append(f"Strong decade: {matched_decade}")
+    for p in matched_people:
+        role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(p["role"], p["role"])
+        top_reasons.append(f"Favorite {role_label}: {p['name']}")
+
+    explanation = {
+        "matched_genres": matched_genres,
+        "matched_countries": matched_countries,
+        "matched_decade": matched_decade,
+        "matched_people": matched_people,
+        "top_reasons": top_reasons[:5],
+    }
+    return score, explanation
