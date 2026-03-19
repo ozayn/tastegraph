@@ -15,6 +15,13 @@ export const MODES: { id: RecommendationMode; label: string }[] = [
   { id: "ml", label: "ML" },
 ];
 
+const MODE_ACCENT: Record<RecommendationMode, string> = {
+  "for-you": "var(--mondrian-yellow)",
+  watchlist: "var(--mondrian-yellow)",
+  "high-fit": "var(--mondrian-red)",
+  ml: "var(--mondrian-blue)",
+};
+
 export function RecommendationModeSwitcher({
   mode,
   onChange,
@@ -39,6 +46,11 @@ export function RecommendationModeSwitcher({
               ? "bg-[var(--card-bg)] text-[var(--foreground)] shadow-sm"
               : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
           }`}
+          style={
+            mode === id
+              ? { boxShadow: `inset 0 -2px 0 0 ${MODE_ACCENT[id]}` }
+              : undefined
+          }
         >
           {label}
         </button>

@@ -14,27 +14,17 @@ import { TasteHints } from "./components/TasteHints";
 export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-12 sm:px-8 sm:pt-16 sm:pb-32 md:max-w-3xl md:px-10 md:pt-[10vh] md:pb-40 lg:max-w-4xl lg:px-12">
-        <header className="mb-14 sm:mb-16 md:mb-20">
-          <h1>
-            <img
-              src="/logo-horizontal.svg"
-              alt="TasteGraph"
-              className="h-9 w-auto sm:h-10 md:h-11"
-            />
-          </h1>
-          <p className="mt-5 max-w-lg text-[16px] leading-[1.6] text-[var(--muted)] sm:mt-6 sm:text-[17px] md:mt-7 md:text-[18px]">
-            Discover what to watch based on your IMDb ratings and watchlist.
-          </p>
-          <p className="mt-2 text-[13px] text-[var(--muted-subtle)] sm:text-[14px]">
-            Personalized recommendations, filtered by genre, country, and year.
+      <main className="mx-auto max-w-2xl px-4 pb-28 pt-8 sm:px-8 sm:pt-10 sm:pb-32 md:max-w-3xl md:px-10 md:pt-12 md:pb-40 lg:max-w-4xl lg:px-12">
+        <header className="mb-8 sm:mb-10">
+          <p className="max-w-xl text-[15px] leading-[1.55] text-[var(--muted)] sm:text-[16px]">
+            Discover what to watch from your IMDb ratings and watchlist—personalized recommendations by genre, country, and year.
           </p>
         </header>
 
-        <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-5 sm:space-y-6">
           <RatingsSummary />
           <section
-            className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6"
+            className="rounded-xl border border-[var(--section-border)] bg-[var(--card-bg)] px-5 py-4 sm:px-6 sm:py-5 shadow-sm"
             aria-label="Data overview"
           >
             <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
@@ -44,31 +34,31 @@ export default function Home() {
                 <p>More ratings and metadata improve recommendations. Studies and high-fit watchlist use these signals.</p>
               </SectionHelp>
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+            <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <ImportStatus />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <WatchlistImportStatus />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <MetadataCoverage />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <RatingsTimeline />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <TasteHints />
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4">
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+            <div className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-3 sm:gap-3">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
                 <StrongPositiveSample />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
                 <EnrichedSample />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
                 <RecentRatings />
               </div>
             </div>

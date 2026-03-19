@@ -280,7 +280,7 @@ export default function StudiesPage() {
 
         <div className="space-y-16 sm:space-y-20 md:space-y-24">
           {/* 1. Taste evolution */}
-          <section>
+          <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-4">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Taste evolution over time
               <SectionHelp title="How to read this">

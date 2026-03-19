@@ -39,11 +39,11 @@ export function RatingsSummary() {
   if (!summary) return null;
 
   return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-7">
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--card-bg)] px-5 py-4 sm:px-6 sm:py-5 shadow-sm">
       <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
         Your ratings
       </p>
-      <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 sm:mt-5 sm:gap-x-8">
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2 sm:mt-4 sm:gap-x-8">
         <div>
           <span className="text-[28px] font-semibold tabular-nums tracking-tight text-[var(--foreground)] sm:text-[32px]">
             {summary.total_ratings.toLocaleString()}
@@ -63,7 +63,7 @@ export function RatingsSummary() {
         )}
       </div>
       {distribution?.most_common_rating != null && (
-        <p className="mt-4 text-[12px] leading-[1.5] text-[var(--overview-muted)] sm:mt-5">
+        <p className="mt-3 text-[12px] leading-[1.5] text-[var(--overview-muted)] sm:mt-4">
           Most common: {distribution.most_common_rating} · {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus
         </p>
       )}

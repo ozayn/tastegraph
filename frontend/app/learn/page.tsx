@@ -23,7 +23,7 @@ export default function LearnPage() {
 
         <div className="space-y-12 sm:space-y-16">
           {/* 0. How the pipeline works — flowchart */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-8">
+          <section className="rounded-xl border border-[var(--section-border)] border-t-2 border-t-[var(--mondrian-yellow)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-8">
             <h2 className="mb-6 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               How the pipeline works
             </h2>
