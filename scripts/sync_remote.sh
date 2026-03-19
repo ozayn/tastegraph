@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Import ratings, watchlist, and metadata to deployed backend, then verify.
+# Import ratings, watchlist, and metadata to deployed backend.
 # Run from project root: ./scripts/sync_remote.sh
 # Loads REMOTE_API_URL and ADMIN_IMPORT_TOKEN from .env.sync, .env, or shell. No sourcing needed.
 
@@ -26,7 +26,7 @@ _load_env "${ROOT}/.env"
 usage() {
   echo "Usage: $0"
   echo ""
-  echo "Imports ratings, watchlist, and metadata to deployed backend and verifies. Requires:"
+  echo "Imports ratings, watchlist, and metadata to deployed backend. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
@@ -39,37 +39,24 @@ usage() {
 
 export REMOTE_API_URL ADMIN_IMPORT_TOKEN
 
-echo "--- Importing ratings ---"
+echo "Importing ratings..."
 "${ROOT}/scripts/import_remote.sh" ratings
 echo ""
-echo "--- Importing watchlist ---"
+echo "Importing watchlist..."
 "${ROOT}/scripts/import_remote.sh" watchlist
 echo ""
-echo "--- Exporting local metadata ---"
+echo "Exporting local metadata..."
 "${ROOT}/scripts/export_metadata_local.sh"
 echo ""
-echo "--- Importing metadata ---"
+echo "Importing metadata..."
 "${ROOT}/scripts/import_remote.sh" metadata
 echo ""
 if [[ -f "${ROOT}/data/favorite_people.csv" ]]; then
-  echo "--- Importing favorites ---"
+  echo "Importing favorites..."
   "${ROOT}/scripts/import_remote.sh" favorites
   echo ""
+else
+  echo "Skipping favorites (data/favorite_people.csv not found)."
+  echo ""
 fi
-echo "--- Verification ---"
-URL="${REMOTE_API_URL%/}"
-echo "ratings/import-status:"
-curl -sS "$URL/ratings/import-status"
-echo ""
-echo ""
-echo "watchlist/import-status:"
-curl -sS "$URL/watchlist/import-status"
-echo ""
-echo ""
-echo "recommendations/simple?limit=3:"
-curl -sS "$URL/recommendations/simple?limit=3"
-echo ""
-echo ""
-echo "recommendations/watchlist-simple?limit=3:"
-curl -sS "$URL/recommendations/watchlist-simple?limit=3"
-echo ""
+echo "Sync complete."
