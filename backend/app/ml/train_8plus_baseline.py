@@ -72,7 +72,9 @@ def main() -> None:
     # Brief sensibility check
     top_pos = [n for n, _ in ranked[:15]]
     if any("Short" in n or "Documentary" in n or "Animation" in n for n in top_pos):
-        print("\n  Note: Documentary/Short/Animation appear in top positive features. Top predictions may skew toward these types.")
+        print("\n  Note: Documentary/Short/Animation in top positive features. Top predictions may skew toward these types.")
+    else:
+        print("\n  Sparse categories filtered by min-support. Model coefficients should be more stable.")
 
     # Save
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"

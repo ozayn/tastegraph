@@ -1,12 +1,13 @@
 """Feature pipeline for 8+ likelihood model.
 
 Supports:
-- Multi-hot for genres, countries, languages
+- Multi-hot for genres, countries (with min-support to reduce sparse noise)
 - One-hot / categorical for decade, title_type
 - Binary taste features (favorite_people_match, in_favorite_list)
 - Extensible for future expansion
 """
 
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,12 @@ from sklearn.preprocessing import MultiLabelBinarizer
 ML_ROOT = Path(__file__).resolve().parent.parent.parent / "data" / "ml"
 MODELS_DIR = ML_ROOT / "models"
 OUTPUTS_DIR = ML_ROOT / "outputs"
+
+# Min support: only include categories with at least this many titles (reduces sparse/noisy coefficients)
+MIN_COUNTRY_SUPPORT = 5
+MIN_GENRE_SUPPORT = 3
+MIN_DECADE_SUPPORT = 3
+MIN_TITLE_TYPE_SUPPORT = 3
 
 
 def _parse_multi(s: str) -> list[str]:
@@ -53,9 +60,15 @@ def build_feature_matrix(
     Returns (X, artifacts) where artifacts contains fitted objects for reuse.
     When fit=False, filters unseen categories to avoid transform warnings.
     """
-    # Genres: multi-hot
+    # Genres: multi-hot (min-support to reduce sparse noise)
     genres_list = df["genres"].apply(lambda x: _parse_multi(x) if pd.notna(x) else []).tolist()
     if fit or genre_mlb is None:
+        genre_counts = Counter()
+        for g in genres_list:
+            for x in g:
+                genre_counts[x] += 1
+        supported_genres = {g for g, c in genre_counts.items() if c >= MIN_GENRE_SUPPORT}
+        genres_list = [[x for x in g if x in supported_genres] for g in genres_list]
         genre_mlb = MultiLabelBinarizer(sparse_output=False)
         genre_mat = genre_mlb.fit_transform(genres_list)
     else:
@@ -63,9 +76,15 @@ def build_feature_matrix(
         genres_list = [_filter_to_known(g, known_genres) for g in genres_list]
         genre_mat = genre_mlb.transform(genres_list)
 
-    # Countries: multi-hot (from metadata)
+    # Countries: multi-hot (min-support to reduce sparse/noisy country coefficients)
     countries_list = df["country"].apply(lambda x: _parse_countries(x) if pd.notna(x) else []).tolist()
     if fit or country_mlb is None:
+        country_counts = Counter()
+        for c in countries_list:
+            for x in c:
+                country_counts[x] += 1
+        supported_countries = {c for c, n in country_counts.items() if n >= MIN_COUNTRY_SUPPORT}
+        countries_list = [[x for x in c if x in supported_countries] for c in countries_list]
         country_mlb = MultiLabelBinarizer(sparse_output=False)
         country_mat = country_mlb.fit_transform(countries_list)
     else:
@@ -73,16 +92,18 @@ def build_feature_matrix(
         countries_list = [_filter_to_known(c, known_countries) for c in countries_list]
         country_mat = country_mlb.transform(countries_list)
 
-    # Decade: one-hot
+    # Decade: one-hot (min-support)
     decades = df["decade"].fillna("").astype(str)
     if decade_categories is None:
-        decade_categories = sorted([d for d in decades.unique() if d])
+        dec_counts = decades.value_counts()
+        decade_categories = sorted([d for d in dec_counts.index if d and dec_counts[d] >= MIN_DECADE_SUPPORT])
     decade_mat = np.array([[1 if d == c else 0 for c in decade_categories] for d in decades])
 
-    # Title type: one-hot
+    # Title type: one-hot (min-support)
     tt = df["title_type"].fillna("").astype(str)
     if title_type_categories is None:
-        title_type_categories = sorted([t for t in tt.unique() if t])
+        tt_counts = tt.value_counts()
+        title_type_categories = sorted([t for t in tt_counts.index if t and tt_counts[t] >= MIN_TITLE_TYPE_SUPPORT])
     tt_mat = np.array([[1 if t == c else 0 for c in title_type_categories] for t in tt])
 
     # Binary taste features
