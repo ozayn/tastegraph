@@ -38,6 +38,15 @@ make status   # Check whether ports 3000 and 8000 are in use
 
 For separate logs, use `make run-backend` and `make run-frontend` in two terminals.
 
+**Migrations + metadata enrichment (local):**
+
+```bash
+./scripts/enrich_metadata_local.sh
+./scripts/enrich_metadata_local.sh 25
+```
+
+Runs `alembic upgrade head` and `enrich_missing_metadata`. Optional batch size (default 10). Requires `backend/.venv` and `OMDB_API_KEY` in `backend/.env`.
+
 ## Docker (local development)
 
 ```bash
