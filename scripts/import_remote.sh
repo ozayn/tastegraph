@@ -19,7 +19,7 @@ _load_env() {
     fi
   done < "$f"
 }
-_load_env "${ROOT}/backend/.env"
+_load_env "${ROOT}/.env.sync"
 _load_env "${ROOT}/.env"
 
 RATINGS_FILE="${ROOT}/data/imdb/ratings.csv"
@@ -32,7 +32,7 @@ usage() {
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
-  echo "Default files: data/imdb/ratings.csv, data/imdb/watchlist.csv"
+  echo "Set in shell, or add to .env.sync or .env at project root. Default files: data/imdb/ratings.csv, data/imdb/watchlist.csv"
   exit 1
 }
 
