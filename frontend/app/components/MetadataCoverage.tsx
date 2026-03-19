@@ -26,8 +26,11 @@ export function MetadataCoverage() {
   const total = data.total_ratings.toLocaleString();
 
   return (
-    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      <span className="font-medium text-[var(--muted-soft)]">{withMeta}</span>/{total} enriched
-    </p>
+    <div>
+      <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
+        {withMeta}/{total}
+      </p>
+      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">enriched</p>
+    </div>
   );
 }

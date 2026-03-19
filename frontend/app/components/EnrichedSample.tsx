@@ -25,10 +25,11 @@ export function EnrichedSample() {
   if (items.length === 0) return null;
 
   return (
-    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      <span className="font-medium text-[var(--muted-soft)]">Enriched</span>
-      <span className="text-[var(--overview-muted)]"> · </span>
-      <span className="break-words">
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-[var(--overview-muted)]">
+        Enriched
+      </p>
+      <p className="mt-1.5 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
         {items.map((r, i) => (
           <span key={r.imdb_title_id}>
             {i > 0 && " · "}
@@ -36,7 +37,7 @@ export function EnrichedSample() {
             {r.year != null ? ` (${r.year})` : ""}
           </span>
         ))}
-      </span>
-    </p>
+      </p>
+    </div>
   );
 }

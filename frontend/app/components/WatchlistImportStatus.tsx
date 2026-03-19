@@ -32,9 +32,13 @@ export function WatchlistImportStatus() {
     : null;
 
   return (
-    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      <span className="font-medium text-[var(--muted-soft)]">{count}</span> watchlist
-      {lastImported && <span className="text-[var(--overview-muted)]"> · {lastImported}</span>}
-    </p>
+    <div>
+      <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
+        {count}
+      </p>
+      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">
+        watchlist{lastImported && ` · ${lastImported}`}
+      </p>
+    </div>
   );
 }

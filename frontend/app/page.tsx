@@ -34,21 +34,39 @@ export default function Home() {
         <div className="space-y-6 sm:space-y-8">
           <RatingsSummary />
           <section
-            className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-4 sm:px-6 sm:py-5"
+            className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6"
             aria-label="Data overview"
           >
             <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
               Your library
             </p>
-            <div className="mt-3 grid gap-x-8 gap-y-2 sm:mt-4 sm:grid-cols-2 sm:gap-y-2.5 lg:grid-cols-3">
-              <ImportStatus />
-              <WatchlistImportStatus />
-              <MetadataCoverage />
-              <RatingsTimeline />
-              <TasteHints />
-              <StrongPositiveSample />
-              <EnrichedSample />
-              <RecentRatings />
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+                <ImportStatus />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+                <WatchlistImportStatus />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+                <MetadataCoverage />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+                <RatingsTimeline />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+                <TasteHints />
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4">
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+                <StrongPositiveSample />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+                <EnrichedSample />
+              </div>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+                <RecentRatings />
+              </div>
             </div>
           </section>
         </div>

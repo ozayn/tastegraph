@@ -23,17 +23,18 @@ export function RecentRatings() {
   if (items.length === 0) return null;
 
   return (
-    <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      <span className="font-medium text-[var(--muted-soft)]">Recent</span>
-      <span className="text-[var(--overview-muted)]"> · </span>
-      <span className="break-words">
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-[var(--overview-muted)]">
+        Recent
+      </p>
+      <p className="mt-1.5 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
         {items.map((r, i) => (
           <span key={r.imdb_title_id}>
             {i > 0 && " · "}
             {r.title ?? r.imdb_title_id} {r.user_rating ?? "—"}
           </span>
         ))}
-      </span>
-    </p>
+      </p>
+    </div>
   );
 }
