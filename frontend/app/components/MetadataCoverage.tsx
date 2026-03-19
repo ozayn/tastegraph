@@ -30,7 +30,8 @@ export function MetadataCoverage() {
       <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
         {withMeta}/{total}
       </p>
-      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">enriched</p>
+      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">titles with metadata</p>
+      <p className="mt-0.5 text-[11px] text-[var(--overview-muted)] opacity-80">field completeness varies</p>
     </div>
   );
 }
