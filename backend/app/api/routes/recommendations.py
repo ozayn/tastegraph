@@ -26,6 +26,29 @@ def _title_type_matches(tt: str) -> list:
     return [IMDbRating.title_type.ilike(f"%{tt}%")]
 
 
+@router.get("/countries")
+def recommendations_countries():
+    """Available countries from TitleMetadata.country (ratings 8+ with metadata)."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(TitleMetadata.country)
+            .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            .filter(IMDbRating.user_rating >= 8)
+            .filter(TitleMetadata.country.isnot(None))
+            .all()
+        )
+        countries: set[str] = set()
+        for (c,) in rows:
+            for part in (c or "").split(","):
+                s = part.strip()
+                if s:
+                    countries.add(s)
+        return sorted(countries)
+    finally:
+        db.close()
+
+
 @router.get("/genres")
 def recommendations_genres():
     """Available genres from ratings (rated 8+) using IMDbRating.genres."""
@@ -51,12 +74,13 @@ def recommendations_genres():
 @router.get("/simple")
 def recommendations_simple(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
+    countries: list[str] | None = Query(default=None, description="Filter by countries (OR), uses TitleMetadata"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
     limit: int = Query(default=10, ge=1, le=50),
 ):
-    """Your favorites: titles you rated 8+. Uses IMDbRating (CSV) data; no TitleMetadata required."""
+    """Your favorites: titles you rated 8+. Uses IMDbRating (CSV) data; country filter requires TitleMetadata."""
     db = SessionLocal()
     try:
         q = db.query(IMDbRating).filter(IMDbRating.user_rating >= 8)
@@ -67,6 +91,13 @@ def recommendations_simple(
             ]
             if genre_filters:
                 q = q.filter(or_(*genre_filters))
+        if countries:
+            q = q.join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+            country_filters = [
+                TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
+            ]
+            if country_filters:
+                q = q.filter(or_(*country_filters))
         tt_filters = _title_type_matches(title_type or "")
         if tt_filters:
             q = q.filter(or_(*tt_filters))
@@ -184,6 +215,7 @@ def recommendations_watchlist_simple(
 
 def _build_simple_explanation(
     genres: list[str] | None,
+    countries: list[str] | None,
     title_type: str | None,
     year_from: int | None,
     year_to: int | None,
@@ -201,6 +233,16 @@ def _build_simple_explanation(
                 parts.append(f"in {cleaned[0]} or {cleaned[1]}")
             else:
                 parts.append(f"in {', '.join(cleaned[:-1])}, or {cleaned[-1]}")
+
+    if countries:
+        cleaned = [c.strip() for c in countries if c.strip()]
+        if cleaned:
+            if len(cleaned) == 1:
+                parts.append(f"from {cleaned[0]}")
+            elif len(cleaned) == 2:
+                parts.append(f"from {cleaned[0]} or {cleaned[1]}")
+            else:
+                parts.append(f"from {', '.join(cleaned[:-1])}, or {cleaned[-1]}")
 
     if title_type:
         type_labels = {"movie": "movies", "series": "series", "episode": "episodes"}
@@ -222,10 +264,11 @@ def _build_simple_explanation(
 @router.get("/simple-explanation")
 def recommendations_simple_explanation(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
+    countries: list[str] | None = Query(default=None, description="Filter by countries (OR)"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
 ):
     """Plain-text explanation of the current simple recommendation filters."""
-    explanation = _build_simple_explanation(genres, title_type, year_from, year_to)
+    explanation = _build_simple_explanation(genres, countries, title_type, year_from, year_to)
     return {"explanation": explanation}

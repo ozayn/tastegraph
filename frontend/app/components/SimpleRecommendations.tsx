@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 
 type Item = {
@@ -17,15 +18,17 @@ export function SimpleRecommendations() {
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
 
   const fetchWithFilters = useCallback(
-    (genres: string[], tt: string, yf: string, yt: string) => {
+    (genres: string[], countries: string[], tt: string, yf: string, yt: string) => {
       setLoading(true);
       const baseParams = new URLSearchParams();
       genres.forEach((g) => baseParams.append("genres", g));
+      countries.forEach((c) => baseParams.append("countries", c));
       if (tt) baseParams.set("title_type", tt);
       const yfNum = Number(yf.trim());
       if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
@@ -61,12 +64,12 @@ export function SimpleRecommendations() {
   );
 
   useEffect(() => {
-    fetchWithFilters([], "", "", "");
+    fetchWithFilters([], [], "", "", "");
   }, [fetchWithFilters]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo);
+    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo);
   };
 
   return (
@@ -82,6 +85,11 @@ export function SimpleRecommendations() {
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
+          disabled={loading}
+        />
+        <CountryMultiSelect
+          selected={selectedCountries}
+          onChange={setSelectedCountries}
           disabled={loading}
         />
         <select
