@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
+
+const DEBOUNCE_MS = 350;
 
 type Item = {
   imdb_title_id: string;
@@ -24,9 +26,13 @@ export function SimpleRecommendations() {
   const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRun = useRef(true);
+  const requestIdRef = useRef(0);
 
   const fetchWithFilters = useCallback(
     (genres: string[], countries: string[], tt: string, yf: string, yt: string) => {
+      const id = ++requestIdRef.current;
       setLoading(true);
       const baseParams = new URLSearchParams();
       genres.forEach((g) => baseParams.append("genres", g));
@@ -53,26 +59,42 @@ export function SimpleRecommendations() {
         ),
       ])
         .then(([recs, expl]) => {
+          if (id !== requestIdRef.current) return;
           setItems(recs);
           setExplanation(expl.explanation ?? null);
         })
         .catch(() => {
+          if (id !== requestIdRef.current) return;
           setItems([]);
           setExplanation(null);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (id !== requestIdRef.current) return;
+          setLoading(false);
+        });
     },
     []
   );
 
   useEffect(() => {
-    fetchWithFilters([], [], "", "", "");
-  }, [fetchWithFilters]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo);
-  };
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const delay = isFirstRun.current ? 0 : DEBOUNCE_MS;
+    isFirstRun.current = false;
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo);
+    }, delay);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [
+    fetchWithFilters,
+    selectedGenres,
+    selectedCountries,
+    titleType,
+    yearFrom,
+    yearTo,
+  ]);
 
   const filterInput =
     "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
@@ -86,10 +108,7 @@ export function SimpleRecommendations() {
         Based on your ratings and taste profile
       </p>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"
-      >
+      <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -129,14 +148,7 @@ export function SimpleRecommendations() {
           className={`${filterInput} w-24`}
           aria-label="Year to"
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-[var(--foreground)] px-5 py-2.5 text-[14px] font-medium text-[var(--background)] transition-all hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--muted-soft)] focus:ring-offset-2 focus:ring-offset-[var(--background)] disabled:opacity-60"
-        >
-          {loading ? "…" : "Apply"}
-        </button>
-      </form>
+      </div>
 
       {loading ? (
         <div className="mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]">

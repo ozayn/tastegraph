@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
+
+const DEBOUNCE_MS = 350;
 
 type Item = {
   imdb_title_id: string;
@@ -25,9 +27,13 @@ export function WatchlistRecommendations() {
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
   const [includeRated, setIncludeRated] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRun = useRef(true);
+  const requestIdRef = useRef(0);
 
   const fetchWithFilters = useCallback(
     (genres: string[], countries: string[], tt: string, yf: string, yt: string, incRated: boolean) => {
+      const id = ++requestIdRef.current;
       setLoading(true);
       const params = new URLSearchParams();
       params.set("limit", "5");
@@ -46,21 +52,49 @@ export function WatchlistRecommendations() {
 
       fetch(`${API_URL}/recommendations/watchlist-simple?${params}`)
         .then((res) => (res.ok ? res.json() : Promise.reject()))
-        .then(setItems)
-        .catch(() => setItems([]))
-        .finally(() => setLoading(false));
+        .then((data) => {
+          if (id !== requestIdRef.current) return;
+          setItems(data);
+        })
+        .catch(() => {
+          if (id !== requestIdRef.current) return;
+          setItems([]);
+        })
+        .finally(() => {
+          if (id !== requestIdRef.current) return;
+          setLoading(false);
+        });
     },
     []
   );
 
   useEffect(() => {
-    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated);
-  }, [fetchWithFilters, includeRated]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated);
-  };
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const delay = isFirstRun.current ? 0 : DEBOUNCE_MS;
+    isFirstRun.current = false;
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      fetchWithFilters(
+        selectedGenres,
+        selectedCountries,
+        titleType,
+        yearFrom,
+        yearTo,
+        includeRated
+      );
+    }, delay);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [
+    fetchWithFilters,
+    selectedGenres,
+    selectedCountries,
+    titleType,
+    yearFrom,
+    yearTo,
+    includeRated,
+  ]);
 
   const filterInput =
     "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
@@ -74,10 +108,7 @@ export function WatchlistRecommendations() {
         Titles you saved, filtered by your taste
       </p>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"
-      >
+      <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4">
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -130,14 +161,7 @@ export function WatchlistRecommendations() {
           />
           <span>Include rated</span>
         </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-[var(--foreground)] px-5 py-2.5 text-[14px] font-medium text-[var(--background)] transition-all hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--muted-soft)] focus:ring-offset-2 focus:ring-offset-[var(--background)] disabled:opacity-60"
-        >
-          {loading ? "…" : "Apply"}
-        </button>
-      </form>
+      </div>
 
       {loading ? (
         <div className="mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]">
