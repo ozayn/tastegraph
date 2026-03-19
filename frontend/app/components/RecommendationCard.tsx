@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 type RecommendationCardProps = {
   imdb_title_id: string;
   title: string | null;
@@ -21,7 +25,14 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   const rating = user_rating ?? your_rating;
   const displayTitle = title ?? imdb_title_id;
-  const hasPoster = poster && poster.trim() && poster !== "N/A";
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasUsablePoster = poster && poster.trim() && poster !== "N/A";
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [poster]);
+
+  const showPoster = hasUsablePoster && !imageFailed;
 
   return (
     <a
@@ -31,25 +42,16 @@ export function RecommendationCard({
       className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
     >
       <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
-        <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
-          {hasPoster ? (
-            <>
-              <img
-                src={poster!}
-                alt=""
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const fallback = e.currentTarget.nextElementSibling;
-                  if (fallback) (fallback as HTMLElement).classList.remove("hidden");
-                }}
-              />
-              <div className="hidden h-full w-full bg-[var(--section-bg)]" aria-hidden />
-            </>
-          ) : (
-            <div className="h-full w-full bg-[var(--section-bg)]" aria-hidden />
-          )}
-        </div>
+        {showPoster && (
+          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+            <img
+              src={poster!}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          </div>
+        )}
         <div className="min-w-0 flex-1 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
