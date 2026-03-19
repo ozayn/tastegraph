@@ -31,7 +31,19 @@ export function StrongPositiveSample() {
         {items.map((r, i) => (
           <span key={r.imdb_title_id}>
             {i > 0 && " · "}
-            {r.title ?? r.imdb_title_id} {r.user_rating ?? "—"}
+            {r.imdb_title_id ? (
+              <a
+                href={`https://www.imdb.com/title/${r.imdb_title_id}/`}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[var(--muted-soft)] underline decoration-[var(--muted-subtle)] underline-offset-2 transition-colors hover:text-[var(--foreground)] hover:decoration-[var(--muted-soft)]"
+              >
+                {r.title ?? r.imdb_title_id}
+              </a>
+            ) : (
+              <span>{r.title ?? "—"}</span>
+            )}{" "}
+            {r.user_rating ?? "—"}
           </span>
         ))}
       </p>
