@@ -21,24 +21,76 @@ export default function LearnPage() {
         </header>
 
         <div className="space-y-12 sm:space-y-16">
-          {/* 0. Pipeline overview */}
+          {/* 0. How the pipeline works */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               How the pipeline works
             </h2>
-            <div className="flex flex-wrap gap-2 text-[13px]">
-              <span className="font-medium text-[var(--overview-muted)]">Data:</span>
-              <span className="text-[var(--muted-soft)]">ratings · watchlist · favorite people · favorite list · metadata</span>
-              <span className="w-full shrink-0 sm:w-auto" />
-              <span className="font-medium text-[var(--overview-muted)]">→</span>
-              <span className="text-[var(--muted-soft)]">Features (genres, countries, decades, taste flags)</span>
-              <span className="font-medium text-[var(--overview-muted)]">→</span>
-              <span className="text-[var(--muted-soft)]">High-Fit (rule-based) + ML (P(8+))</span>
-              <span className="font-medium text-[var(--overview-muted)]">→</span>
-              <span className="text-[var(--muted-soft)]">Homepage · Insights · Studies</span>
+            <div className="space-y-0">
+              {/* 1. Data sources */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">1. Data</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["ratings", "watchlist", "favorite people", "favorite list", "title metadata"].map((label) => (
+                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
+              {/* 2. Features */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">2. Features</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["genres", "countries", "decades", "title type", "favorite matches", "strong directors", "support-thresholded"].map((label) => (
+                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
+              {/* 3. Recommendation paths */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">3. Paths</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--foreground)]">High-Fit: rule-based</span>
+                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--foreground)]">ML: P(8+)</span>
+                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1 text-[12px] text-[var(--muted-soft)]">Explore favorites</span>
+                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1 text-[12px] text-[var(--muted-soft)]">Watchlist</span>
+                </div>
+              </div>
+              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
+              {/* 4. Comparison */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">4. Compare</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["overlap", "ML-only", "High-Fit-only", "coefficients", "explanations", "studies"].map((label) => (
+                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
+              {/* 5. Outputs */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">5. Outputs</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["homepage modes", "insights", "studies", "model lab"].map((label) => (
+                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="mt-3 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
-              The same data feeds both heuristic and ML paths. <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> has the full pipeline diagram and coefficient inspection.
+            <p className="mt-4 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
+              The same data feeds both heuristic and ML paths, which surface in different parts of the product—homepage recommendations, Insights, Studies, and Model Lab. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings.
+            </p>
+            <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
+              Future: similarity model, blended heuristic + ML, grounded LLM watchlist search.
             </p>
           </section>
 
