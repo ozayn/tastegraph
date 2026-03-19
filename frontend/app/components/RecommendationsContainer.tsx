@@ -6,9 +6,11 @@ import {
   RecommendationModeSwitcher,
 } from "./RecommendationModeSwitcher";
 import { SectionHelp } from "./SectionHelp";
+import { HighFitWatchlist } from "./HighFitWatchlist";
+import { MLRecommendations } from "./MLRecommendations";
+import { RecommendationComparison } from "./RecommendationComparison";
 import { SimpleRecommendations } from "./SimpleRecommendations";
 import { WatchlistRecommendations } from "./WatchlistRecommendations";
-import { HighFitWatchlist } from "./HighFitWatchlist";
 
 export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
@@ -20,8 +22,7 @@ export function RecommendationsContainer() {
           <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
             Recommendations
             <SectionHelp title="How this works">
-              <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals.</p>
-              <p>More modes (ML, similarity, AI search) will appear here as they&apos;re added.</p>
+              <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood.</p>
             </SectionHelp>
           </h2>
           <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
@@ -36,6 +37,12 @@ export function RecommendationsContainer() {
           {mode === "watchlist" && <WatchlistRecommendations embedded />}
           {mode === "high-fit" && (
             <HighFitModeContent />
+          )}
+          {mode === "ml" && (
+            <MLModeContent />
+          )}
+          {(mode === "ml" || mode === "high-fit") && (
+            <RecommendationComparison />
           )}
         </div>
       </div>
@@ -54,6 +61,21 @@ function HighFitModeContent() {
         </SectionHelp>
       </p>
       <HighFitWatchlist />
+    </div>
+  );
+}
+
+function MLModeContent() {
+  return (
+    <div>
+      <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+        Ranked by estimated probability you would rate these 8+. Logistic-regression baseline on metadata and taste-derived features.
+        <SectionHelp title="How this works">
+          <p>Watchlist items scored by a model trained on your rated titles. <strong>Probability</strong> = estimated P(rate 8+ | title). Interpret as likelihood, not a guarantee.</p>
+          <p>Requires a trained model. Run <code>python -m app.ml.train_8plus_baseline</code> in the backend if the model isn&apos;t available.</p>
+        </SectionHelp>
+      </p>
+      <MLRecommendations />
     </div>
   );
 }
