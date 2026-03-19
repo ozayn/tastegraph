@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
-import { RecommendationCard } from "./RecommendationCard";
+import { HighFitCard } from "./HighFitCard";
+
+type HighFitExplanation = {
+  matched_genres: string[];
+  matched_countries: string[];
+  matched_decade: string | null;
+  matched_people: { name: string; role: string }[];
+  top_reasons: string[];
+};
 
 type HighFitItem = {
   imdb_title_id: string;
@@ -10,7 +18,7 @@ type HighFitItem = {
   title_type: string | null;
   year: number | null;
   poster: string | null;
-  matching_signals: string[];
+  explanation: HighFitExplanation;
 };
 
 export function HighFitWatchlist() {
@@ -37,7 +45,7 @@ export function HighFitWatchlist() {
   if (!items.length) {
     return (
       <p className="text-[14px] text-[var(--muted-soft)]">
-        No unrated watchlist items with strong taste alignment. Add more titles or rate some to refresh.
+        No unrated watchlist items with strong taste alignment yet. Add titles to your watchlist and rate more 8+ to build signals.
       </p>
     );
   }
@@ -46,13 +54,13 @@ export function HighFitWatchlist() {
     <ul className="space-y-3">
       {items.map((item) => (
         <li key={item.imdb_title_id}>
-          <RecommendationCard
+          <HighFitCard
             imdb_title_id={item.imdb_title_id}
             title={item.title}
-            year={item.year}
             title_type={item.title_type}
+            year={item.year}
             poster={item.poster}
-            reasons={item.matching_signals}
+            explanation={item.explanation}
           />
         </li>
       ))}

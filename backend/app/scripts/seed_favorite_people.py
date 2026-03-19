@@ -17,7 +17,7 @@ from app.core.database import SessionLocal
 from app.imports.favorite_people import import_favorite_people_from_csv
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
-_DEFAULT_PATH = _BACKEND_ROOT.parent / "data" / "favorite_people.csv"
+_DEFAULT_PATH = _BACKEND_ROOT.parent / "data" / "imdb" / "favorite_people.csv"
 
 
 def main() -> None:

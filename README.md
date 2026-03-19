@@ -128,7 +128,7 @@ curl -X POST http://localhost:8000/admin/import/watchlist \
 
 curl -X POST http://localhost:8000/admin/import/favorite-people \
   -H "X-Admin-Import-Token: YOUR_TOKEN" \
-  -F "file=@data/favorite_people.csv"
+  -F "file=@data/imdb/favorite_people.csv"
 ```
 
 **Deployed (Railway backend URL):**
@@ -144,7 +144,7 @@ curl -X POST https://YOUR-BACKEND.railway.app/admin/import/watchlist \
 
 curl -X POST https://YOUR-BACKEND.railway.app/admin/import/favorite-people \
   -H "X-Admin-Import-Token: YOUR_TOKEN" \
-  -F "file=@path/to/favorite_people.csv"
+  -F "file=@data/imdb/favorite_people.csv"
 ```
 
 Response: `{"inserted": N, "skipped": M, "errors": K}` (ratings), `{"inserted": N, "updated": M, "errors": K}` (watchlist), or `{"inserted": N, "deleted": M, "errors": K, "format": "simple"|"imdb"}` (favorite-people).
@@ -164,13 +164,13 @@ Or import individually:
 ./scripts/import_remote.sh favorites
 ```
 
-Uses `data/imdb/ratings.csv`, `data/imdb/watchlist.csv`, `data/imdb/title_metadata.csv`, and `data/favorite_people.csv` by default. Sync includes favorites if `data/favorite_people.csv` exists. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
+Uses `data/imdb/ratings.csv`, `data/imdb/watchlist.csv`, `data/imdb/title_metadata.csv`, and `data/imdb/favorite_people.csv` by default. Sync includes favorites if `data/imdb/favorite_people.csv` exists. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
 
 **Favorite people import** supports two CSV formats:
 - **Custom name,role CSV:** `name,role` (actor, director, or writer). Example: `Christopher Nolan,director`
 - **IMDb-style people export:** Use your IMDb people list export directly. Must include `Name` and at least one of `Description`, `Known For`, `Const`, or `Position`. Role is inferred from Description/Known For (director > writer > actor; defaults to actor if unclear).
 
-Local CLI: `python -m app.scripts.seed_favorite_people` or `python -m app.scripts.seed_favorite_people path/to/file.csv` (default: `data/favorite_people.csv`).
+Local CLI: `python -m app.scripts.seed_favorite_people` or `python -m app.scripts.seed_favorite_people path/to/file.csv` (default: `data/imdb/favorite_people.csv`).
 
 Local CLI scripts (`python -m app.imports.ratings`, `python -m app.imports.watchlist`) remain unchanged for local development.
 

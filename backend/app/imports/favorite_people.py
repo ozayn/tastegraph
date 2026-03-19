@@ -7,6 +7,7 @@ Identity: (name, role) normalized case-insensitively. Inserts missing, deletes r
 """
 
 import csv
+import io
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -14,7 +15,8 @@ from sqlalchemy.orm import Session
 from app.models.favorite_person import FavoritePerson
 
 _VALID_ROLES = {"actor", "director", "writer"}
-_IMDB_MARKER_COLUMNS = {"description", "known for", "const", "position"}
+_IMDB_MARKER_COLUMNS = {"description", "known for", "knownfor", "const", "position"}
+_CSV_ENCODING = "utf-8-sig"  # Handles BOM (Excel, some exports)
 
 
 def _key(name: str, role: str) -> tuple[str, str]:
@@ -22,17 +24,26 @@ def _key(name: str, role: str) -> tuple[str, str]:
     return (name.strip().lower(), role)
 
 
+def _read_first_row(path: Path) -> tuple[list[str], str]:
+    """Read first CSV row and detect delimiter. Returns (headers, delimiter)."""
+    with path.open(newline="", encoding=_CSV_ENCODING) as f:
+        first_line = f.readline()
+    row = next(csv.reader(io.StringIO(first_line)))
+    if len(row) == 1 and ";" in row[0]:
+        row = [c.strip() for c in row[0].split(";")]
+        return row, ";"
+    return row, ","
+
+
 def _detect_format(path: Path) -> str:
     """Return 'simple' or 'imdb' based on CSV structure."""
-    with path.open(newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        first = next(reader, None)
-        if not first:
-            return "simple"
-        headers = {h.strip().lower() for h in first}
-        if "name" in headers and headers & _IMDB_MARKER_COLUMNS:
-            return "imdb"
+    first, _ = _read_first_row(path)
+    if not first:
         return "simple"
+    headers = {h.strip().lower() for h in first}
+    if "name" in headers and headers & _IMDB_MARKER_COLUMNS:
+        return "imdb"
+    return "simple"
 
 
 def _infer_role_from_imdb(description: str, known_for: str) -> str:
@@ -47,10 +58,11 @@ def _infer_role_from_imdb(description: str, known_for: str) -> str:
 
 def _parse_simple_csv(path: Path) -> tuple[dict[tuple[str, str], str], int]:
     """Parse simple name,role CSV. Returns (incoming, errors)."""
+    _, delimiter = _read_first_row(path)
     incoming: dict[tuple[str, str], str] = {}
     errors = 0
-    with path.open(newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
+    with path.open(newline="", encoding=_CSV_ENCODING) as f:
+        reader = csv.reader(f, delimiter=delimiter)
         for row in reader:
             if len(row) < 2:
                 continue
@@ -68,13 +80,18 @@ def _parse_simple_csv(path: Path) -> tuple[dict[tuple[str, str], str], int]:
 
 def _parse_imdb_csv(path: Path) -> tuple[dict[tuple[str, str], str], int]:
     """Parse IMDb-style people export. Uses Name; infers role from Description/Known For."""
+    _, delimiter = _read_first_row(path)
     incoming: dict[tuple[str, str], str] = {}
     errors = 0
-    with path.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+    with path.open(newline="", encoding=_CSV_ENCODING) as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
         name_col = next((c for c in reader.fieldnames or [] if c.strip().lower() == "name"), None)
         desc_col = next((c for c in reader.fieldnames or [] if c.strip().lower() == "description"), None)
-        known_col = next((c for c in reader.fieldnames or [] if c.strip().lower() == "known for"), None)
+        known_col = next(
+            (c for c in reader.fieldnames or []
+             if c.strip().lower() in ("known for", "knownfor")),
+            None,
+        )
         if not name_col:
             return incoming, 1
 

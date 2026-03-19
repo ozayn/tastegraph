@@ -362,14 +362,14 @@ export default function StudiesPage() {
               Underwatched but high-fit watchlist
             </h2>
             <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
-              Unrated watchlist items ranked by taste alignment—genres, countries, decades, and favorite creators from your 8+ ratings.
+              Unrated watchlist items ranked by alignment with your strongest taste signals—genres, countries, release decades, and favorite creators that appear in your 8+ ratings. Each item shows why it fits.
             </p>
             <div className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
               <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
                 Best-fit items to watch next
               </p>
               <p className="mt-0.5 text-[11px] text-[var(--muted-subtle)]">
-                Excludes already-rated titles
+                Ranked by feature overlap with your 8+ history · excludes rated titles
               </p>
               <div className="mt-4">
                 <HighFitWatchlist />

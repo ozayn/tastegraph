@@ -202,7 +202,7 @@ def recommendations_watchlist_high_fit(
                 actors, directors, writer, favorites_by_role
             )
             genres_str = meta_genres or r.genres
-            fit_score, matching_signals = score_watchlist_item(
+            fit_score, explanation = score_watchlist_item(
                 genres_str, country, r.year, matches, signals
             )
             total_score = fit_score + boost * 2  # Favorites add to fit
@@ -210,7 +210,7 @@ def recommendations_watchlist_high_fit(
                 total_score,
                 r,
                 poster if poster and poster != "N/A" else None,
-                matching_signals[:6],
+                explanation,
             ))
 
         scored_items.sort(key=lambda x: -x[0])
@@ -223,9 +223,9 @@ def recommendations_watchlist_high_fit(
                 "title_type": r.title_type,
                 "year": r.year,
                 "poster": poster,
-                "matching_signals": matching_signals,
+                "explanation": explanation,
             }
-            for _, r, poster, matching_signals in top
+            for _, r, poster, explanation in top
         ]
     finally:
         db.close()

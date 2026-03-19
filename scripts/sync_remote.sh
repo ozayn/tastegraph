@@ -51,12 +51,12 @@ echo ""
 echo "Importing metadata..."
 "${ROOT}/scripts/import_remote.sh" metadata
 echo ""
-if [[ -f "${ROOT}/data/favorite_people.csv" ]]; then
+if [[ -f "${ROOT}/data/imdb/favorite_people.csv" ]]; then
   echo "Importing favorites..."
   "${ROOT}/scripts/import_remote.sh" favorites
   echo ""
 else
-  echo "Skipping favorites (data/favorite_people.csv not found)."
+  echo "Skipping favorites (data/imdb/favorite_people.csv not found)."
   echo ""
 fi
 echo "Sync complete."
