@@ -5,9 +5,26 @@
  * For builder/portfolio use. Not part of normal user flow.
  */
 
-import { useEffect, useState } from "react";
+import katex from "katex";
+import { useEffect, useRef, useState } from "react";
 import { API_URL } from "../lib/api";
 import Link from "next/link";
+import "katex/dist/katex.min.css";
+
+function MathBlock({ tex, className = "" }: { tex: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !tex) return;
+    try {
+      katex.render(tex, containerRef.current, { displayMode: true, throwOnError: false });
+    } catch {
+      containerRef.current.textContent = tex;
+    }
+  }, [tex]);
+
+  return <div ref={containerRef} className={`overflow-x-auto py-0.5 ${className}`} />;
+}
 
 type Diagnostics = {
   available: boolean;
@@ -78,7 +95,7 @@ export default function ModelLabPage() {
   const hfOnly = [...hfIds].filter((id) => !mlIds.has(id)).length;
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="model-lab min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
         <header className="mb-10 sm:mb-12">
           <div className="flex items-center justify-between gap-4">
@@ -187,11 +204,60 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 3. Coefficient inspection */}
+          {/* 3. How prediction works */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              3. How prediction works
+            </h2>
+            <div className="space-y-5 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Candidate input</p>
+                <p className="mt-1">
+                  ML mode starts from your watchlist titles (unrated items). Each title is represented by available metadata—genres, country, decade, title type—plus taste-derived flags like favorite_people_match and in_favorite_list.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Feature construction at prediction time</p>
+                <p className="mt-1">
+                  The same pipeline used in training: genres and countries become multi-hot (0/1 per category), decade and title type become categorical features. Taste flags are included when applicable. Unknown or rare categories not seen during training contribute little or nothing—they&apos;re filtered out.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Scoring</p>
+                <p className="mt-1">
+                  Logistic regression combines the feature values with learned weights (coefficients). Positive weights push the predicted probability up; negative weights push it down. Features are scaled the same way as in training. The final result is a predicted probability of rating 8+.
+                </p>
+                <div className="mt-3 space-y-3 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-3">
+                  <div className="space-y-1">
+                    <MathBlock tex={String.raw`P(y=1 \mid x) = \sigma(w^\top x + b)`} />
+                    <p className="text-[12px] leading-snug text-[var(--muted-soft)]">Probability of 8+ given features: weighted sum passed through the logistic function.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <MathBlock tex={String.raw`\sigma(z) = \frac{1}{1 + e^{-z}}`} />
+                    <p className="text-[12px] leading-snug text-[var(--muted-soft)]">Logistic function squashes the score into a probability between 0 and 1.</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Ranking</p>
+                <p className="mt-1">
+                  Watchlist titles are sorted by predicted 8+ probability. Highest probabilities appear first in ML mode. The top contributing features per title can be shown for interpretability.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Interpretation caveats</p>
+                <p className="mt-1">
+                  This is an estimate, not a guarantee. Missing metadata can weaken the score (fewer features contribute). The model reflects your past history, not universal quality—it learns what you tend to rate 8+, not what is objectively good.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* 4. Coefficient inspection */}
           {diag?.available && (diag.top_positive?.length || diag.top_negative?.length) && (
             <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-                3. Coefficient inspection
+                4. Coefficient inspection
               </h2>
               <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
                 Positive coefficient = more associated with 8+ (strong favorite) ratings. Negative = less associated. 7 is still a good rating—not a negative. Post-scaler; magnitude reflects relative importance.
@@ -242,10 +308,10 @@ export default function ModelLabPage() {
             </section>
           )}
 
-          {/* 4. Prediction inspection & 5. Recommender comparison */}
+          {/* 5. Prediction inspection & 6. Recommender comparison */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              4. Prediction inspection & 5. Recommender comparison
+              5. Prediction inspection & 6. Recommender comparison
             </h2>
             <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
               Top 15 watchlist items from each strategy. Overlap: {overlap} · ML-only: {mlOnly} · High-Fit–only: {hfOnly}
@@ -309,10 +375,10 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 6. Learning-oriented explanations */}
+          {/* 7. Learning-oriented explanations */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              6. Learning notes
+              7. Learning notes
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
               <div>
@@ -322,6 +388,10 @@ export default function ModelLabPage() {
               <div>
                 <p className="font-medium text-[var(--foreground)]">Lift (Studies)</p>
                 <p>Lift = (8+ rate for a feature) ÷ (global 8+ rate). Lift &gt; 1 = you rate higher when this feature is present. Used in heuristic analysis, not in the ML model.</p>
+                <div className="mt-2 space-y-1 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-2.5">
+                  <MathBlock tex={String.raw`\text{lift} = \frac{P(8+ \mid \text{feature})}{P(8+)}`} />
+                  <p className="text-[12px] leading-snug text-[var(--muted-soft)]">How much more often you rate 8+ when the feature is present vs. overall.</p>
+                </div>
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Heuristic vs ML</p>
@@ -338,10 +408,10 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 7. Future-ready structure */}
+          {/* 8. Future-ready structure */}
           <section className="rounded-xl border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/50 px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              7. Future models (placeholder)
+              8. Future models (placeholder)
             </h2>
             <ul className="space-y-1.5 text-[14px] text-[var(--muted-soft)]">
               <li>7+ model for &quot;likely to like&quot; (broader than strong favorites)</li>
