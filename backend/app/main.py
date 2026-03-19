@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, health, insights, ratings, recommendations, studies, watchlist
+from app.api.routes import admin, health, insights, model_lab, ratings, recommendations, studies, watchlist
 from app.core.config import get_cors_origins, settings
 
 app = FastAPI(title=settings.APP_NAME)
@@ -15,6 +15,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(admin.router)
+app.include_router(model_lab.router)
 app.include_router(insights.router)
 app.include_router(studies.router)
 app.include_router(ratings.router)
