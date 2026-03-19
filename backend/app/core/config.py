@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     DATABASE_URL: str = "postgresql://localhost:5432/tastegraph"
     OMDB_API_KEY: str = ""
+    OMDB_API_KEY_FALLBACK: str = ""
     # CORS: comma-separated origins, e.g. "http://localhost:3000,https://myapp.railway.app"
     CORS_ORIGINS: str = "http://localhost:3000"
     PORT: int = 8000

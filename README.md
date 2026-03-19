@@ -45,7 +45,7 @@ For separate logs, use `make run-backend` and `make run-frontend` in two termina
 ./scripts/enrich_metadata_local.sh 25
 ```
 
-Runs `alembic upgrade head` and `enrich_missing_metadata`. Enriches TitleMetadata for rated titles and watchlist-only titles missing from metadata. Optional batch size (default 10). Requires `backend/.venv` and `OMDB_API_KEY` in `backend/.env`.
+Runs `alembic upgrade head` and `enrich_missing_metadata`. Enriches TitleMetadata for rated titles and watchlist-only titles missing from metadata. Optional batch size (default 10). Requires `backend/.venv` and `OMDB_API_KEY` in `backend/.env`. Optional `OMDB_API_KEY_FALLBACK` retries on key/quota errors.
 
 **Remote metadata enrichment (Railway):**
 

@@ -60,7 +60,7 @@ python -m app.scripts.enrich_missing_metadata
 python -m app.scripts.enrich_missing_metadata 25
 ```
 
-Requires `OMDB_API_KEY` in `backend/.env`. Outputs JSON (fetch), success/failure message (enrich one), or summary counts (enrich batch).
+Requires `OMDB_API_KEY` in `backend/.env`. Optional `OMDB_API_KEY_FALLBACK` retries on key/quota/rate-limit errors. Outputs JSON (fetch), success/failure message (enrich one), or summary counts (enrich batch).
 
 Import from CSV (columns: imdb_title_id, title, title_type, year, genres, runtime_mins, release_date, directors, imdb_rating, num_votes, url):
 

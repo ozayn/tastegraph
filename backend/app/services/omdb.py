@@ -67,31 +67,29 @@ def _parse_runtime(s: str | None) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def fetch_title_metadata(imdb_title_id: str) -> TitleMetadataResult | None:
-    """Fetch title metadata from OMDb by IMDb ID.
+def _is_retryable_error(data: dict) -> bool:
+    """True if OMDb error suggests key/quota/rate-limit (worth retrying with fallback)."""
+    err = (data.get("Error") or "").lower()
+    return any(x in err for x in ("key", "limit", "quota"))
 
-    Input: imdb_title_id (e.g. tt1234567)
-    Output: TitleMetadataResult or None if not found / invalid response.
-    """
-    if not settings.OMDB_API_KEY:
-        return None
 
+def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResult | None, dict | None]:
+    """Fetch from OMDb with given key. Returns (result, raw_data) or (None, data) on error."""
     url = "https://www.omdbapi.com/"
-    params = {"apikey": settings.OMDB_API_KEY, "i": imdb_title_id.strip()}
-
+    params = {"apikey": apikey, "i": imdb_title_id.strip()}
     try:
         with httpx.Client(timeout=10.0) as client:
             resp = client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
     except (httpx.HTTPError, ValueError):
-        return None
+        return None, None
 
     if data.get("Response") == "False" or "Error" in data:
-        return None
+        return None, data
 
     year = _parse_year(data.get("Year"))
-    return TitleMetadataResult(
+    result = TitleMetadataResult(
         imdb_title_id=data.get("imdbID") or imdb_title_id,
         title=data.get("Title") or None,
         title_type=data.get("Type") or None,
@@ -106,3 +104,22 @@ def fetch_title_metadata(imdb_title_id: str) -> TitleMetadataResult | None:
         num_votes=_parse_int(data.get("imdbVotes")),
         url=f"https://www.imdb.com/title/{data.get('imdbID', imdb_title_id)}/" if data.get("imdbID") else None,
     )
+    return result, None
+
+
+def fetch_title_metadata(imdb_title_id: str) -> TitleMetadataResult | None:
+    """Fetch title metadata from OMDb by IMDb ID.
+
+    Uses OMDB_API_KEY first; on key/quota/rate-limit error, retries once with
+    OMDB_API_KEY_FALLBACK if set.
+    """
+    if not settings.OMDB_API_KEY:
+        return None
+
+    result, err_data = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY)
+    if result is not None:
+        return result
+    if err_data and _is_retryable_error(err_data) and settings.OMDB_API_KEY_FALLBACK:
+        result, _ = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY_FALLBACK)
+        return result
+    return None
