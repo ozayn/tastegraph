@@ -195,9 +195,12 @@ def recommendations_watchlist_high_fit(
 
         favorites_by_role = _load_favorites_by_role(db)
         signals = load_taste_signals(db)
+        favorite_list_ids = signals.get("favorite_list_ids", set())
 
         scored_items = []
         for r, poster, actors, directors, writer, country, meta_genres in rows:
+            if r.imdb_title_id in favorite_list_ids:
+                continue  # exclude favorite_list titles from underwatched candidates
             boost, matches = compute_favorite_boost(
                 actors, directors, writer, favorites_by_role
             )
