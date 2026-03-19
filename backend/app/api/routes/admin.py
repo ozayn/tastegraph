@@ -119,7 +119,7 @@ async def admin_import_favorite_people(
     file: UploadFile,
     _: None = Depends(_require_admin_token),
 ):
-    """Import favorite people from uploaded CSV. Replaces existing. Requires X-Admin-Import-Token header."""
+    """Import favorite people from uploaded CSV. Idempotent sync: inserts missing, deletes removed. Requires X-Admin-Import-Token header."""
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Upload must be a CSV file")
 
@@ -133,8 +133,8 @@ async def admin_import_favorite_people(
     try:
         db = SessionLocal()
         try:
-            inserted, errors = import_favorite_people_from_csv(db, tmp_path)
-            return {"inserted": inserted, "errors": errors}
+            inserted, deleted, errors = import_favorite_people_from_csv(db, tmp_path)
+            return {"inserted": inserted, "deleted": deleted, "errors": errors}
         finally:
             db.close()
     finally:

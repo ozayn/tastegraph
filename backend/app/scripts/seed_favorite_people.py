@@ -30,8 +30,15 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        inserted, errors = import_favorite_people_from_csv(db, path)
-        print(f"Seeded {inserted} favorite people from {path}" + (f" ({errors} skipped)" if errors else ""))
+        inserted, deleted, errors = import_favorite_people_from_csv(db, path)
+        parts = []
+        if inserted:
+            parts.append(f"{inserted} inserted")
+        if deleted:
+            parts.append(f"{deleted} deleted")
+        if not parts:
+            parts.append("no changes")
+        print(f"Seeded favorites from {path}: {', '.join(parts)}" + (f" ({errors} skipped)" if errors else ""))
     finally:
         db.close()
 
