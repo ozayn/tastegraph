@@ -13,6 +13,8 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from app.ml.datasets import build_rated_dataset
 from app.ml.features import MODELS_DIR, OUTPUTS_DIR, build_feature_matrix
@@ -40,7 +42,10 @@ def main() -> None:
     )
 
     print("Training logistic regression...")
-    model = LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced")
+    model = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(max_iter=2000, random_state=42, class_weight="balanced")),
+    ])
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
@@ -51,6 +56,23 @@ def main() -> None:
     print(f"\nMetrics (test set):")
     print(f"  Accuracy: {acc:.3f}")
     print(f"  AUC-ROC:  {auc:.3f}")
+
+    # Coefficient inspection (use underlying LR; coefs are post-scaler)
+    lr = model.named_steps["clf"]
+    coef = lr.coef_[0]
+    names = artifacts["feature_names"]
+    ranked = sorted(zip(names, coef), key=lambda x: x[1], reverse=True)
+    print(f"\nTop 10 positive coefficients (predict 8+):")
+    for name, c in ranked[:10]:
+        print(f"  {c:+.3f}  {name}")
+    print(f"\nTop 10 negative coefficients (predict <8):")
+    for name, c in ranked[-10:]:
+        print(f"  {c:+.3f}  {name}")
+
+    # Brief sensibility check
+    top_pos = [n for n, _ in ranked[:15]]
+    if any("Short" in n or "Documentary" in n or "Animation" in n for n in top_pos):
+        print("\n  Note: Documentary/Short/Animation appear in top positive features. Top predictions may skew toward these types.")
 
     # Save
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"

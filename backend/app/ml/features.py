@@ -35,6 +35,11 @@ def _parse_countries(country_str: str | None) -> list[str]:
     return list(parse_and_normalize_countries(country_str))
 
 
+def _filter_to_known(items: list[str], known: set[str]) -> list[str]:
+    """Filter items to only those seen during fit. Avoids unknown-class warnings."""
+    return [x for x in items if x in known]
+
+
 def build_feature_matrix(
     df: pd.DataFrame,
     genre_mlb: MultiLabelBinarizer | None = None,
@@ -46,6 +51,7 @@ def build_feature_matrix(
     """Build feature matrix from dataset DataFrame.
 
     Returns (X, artifacts) where artifacts contains fitted objects for reuse.
+    When fit=False, filters unseen categories to avoid transform warnings.
     """
     # Genres: multi-hot
     genres_list = df["genres"].apply(lambda x: _parse_multi(x) if pd.notna(x) else []).tolist()
@@ -53,6 +59,8 @@ def build_feature_matrix(
         genre_mlb = MultiLabelBinarizer(sparse_output=False)
         genre_mat = genre_mlb.fit_transform(genres_list)
     else:
+        known_genres = set(genre_mlb.classes_)
+        genres_list = [_filter_to_known(g, known_genres) for g in genres_list]
         genre_mat = genre_mlb.transform(genres_list)
 
     # Countries: multi-hot (from metadata)
@@ -61,6 +69,8 @@ def build_feature_matrix(
         country_mlb = MultiLabelBinarizer(sparse_output=False)
         country_mat = country_mlb.fit_transform(countries_list)
     else:
+        known_countries = set(country_mlb.classes_)
+        countries_list = [_filter_to_known(c, known_countries) for c in countries_list]
         country_mat = country_mlb.transform(countries_list)
 
     # Decade: one-hot
@@ -85,10 +95,18 @@ def build_feature_matrix(
 
     X = np.hstack([genre_mat, country_mat, decade_mat, tt_mat, fav_people, in_fav_list, year])
 
+    # Feature names for interpretability (same order as columns)
+    genre_names = [f"genre:{c}" for c in genre_mlb.classes_]
+    country_names = [f"country:{c}" for c in country_mlb.classes_]
+    decade_names = [f"decade:{c}" for c in decade_categories]
+    tt_names = [f"title_type:{c}" for c in title_type_categories]
+    feature_names = genre_names + country_names + decade_names + tt_names + ["favorite_people_match", "in_favorite_list", "year"]
+
     artifacts = {
         "genre_mlb": genre_mlb,
         "country_mlb": country_mlb,
         "decade_categories": decade_categories,
         "title_type_categories": title_type_categories,
+        "feature_names": feature_names,
     }
     return X, artifacts
