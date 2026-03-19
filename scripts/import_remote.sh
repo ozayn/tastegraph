@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Load REMOTE_API_URL and ADMIN_IMPORT_TOKEN from env files (avoids sourcing values with spaces)
 _load_env() {
   local f="$1" v
-  [[ -f "$f" ]] || return
+  [[ -f "$f" ]] || return 0
   while IFS= read -r line; do
     if [[ "$line" =~ ^REMOTE_API_URL= ]]; then
       v="${line#REMOTE_API_URL=}"; v="${v%\"}"; v="${v#\"}"

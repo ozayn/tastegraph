@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Import ratings + watchlist to deployed backend, then verify. Run from project root.
-# Env: REMOTE_API_URL, ADMIN_IMPORT_TOKEN
+# Import ratings + watchlist to deployed backend, then verify.
+# Run from project root: ./scripts/sync_remote.sh
+# Loads REMOTE_API_URL and ADMIN_IMPORT_TOKEN from .env.sync, .env, or shell. No sourcing needed.
 
 set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# Load REMOTE_API_URL and ADMIN_IMPORT_TOKEN from env files
+# Load REMOTE_API_URL and ADMIN_IMPORT_TOKEN from env files (missing files are ignored)
 _load_env() {
   local f="$1" v
-  [[ -f "$f" ]] || return
+  [[ -f "$f" ]] || return 0
   while IFS= read -r line; do
     if [[ "$line" =~ ^REMOTE_API_URL= ]]; then
       v="${line#REMOTE_API_URL=}"; v="${v%\"}"; v="${v#\"}"
@@ -29,7 +30,7 @@ usage() {
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
-  echo "Set in shell, or add to .env.sync or .env at project root. Run from project root."
+  echo "Add to .env.sync or .env at project root, or set in shell. No sourcing needed."
   exit 1
 }
 

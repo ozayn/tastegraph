@@ -124,17 +124,17 @@ curl -X POST https://YOUR-BACKEND.railway.app/admin/import/watchlist \
 
 Response: `{"inserted": N, "skipped": M, "errors": K}` (ratings) or `{"inserted": N, "updated": M, "errors": K}` (watchlist).
 
-**Local script (no token in command):** Set `REMOTE_API_URL` and `ADMIN_IMPORT_TOKEN` in shell, or add to `.env.sync` or `.env` at project root (scripts load them automatically). Then:
+**Local scripts (self-contained, no sourcing):** Add `REMOTE_API_URL` and `ADMIN_IMPORT_TOKEN` to `.env.sync` or `.env` at project root. Then run:
+
+```bash
+./scripts/sync_remote.sh
+```
+
+Or import individually:
 
 ```bash
 ./scripts/import_remote.sh ratings
 ./scripts/import_remote.sh watchlist
-```
-
-**Full sync + verify:** Import both and verify with status/recommendation endpoints:
-
-```bash
-./scripts/sync_remote.sh
 ```
 
 Uses `data/imdb/ratings.csv` and `data/imdb/watchlist.csv` by default. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
