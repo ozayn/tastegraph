@@ -129,6 +129,28 @@ def recommendations_simple(
         db.close()
 
 
+@router.get("/watchlist-countries")
+def recommendations_watchlist_countries():
+    """Available countries from TitleMetadata.country for watchlist items."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(TitleMetadata.country)
+            .join(IMDbWatchlistItem, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
+            .filter(TitleMetadata.country.isnot(None))
+            .all()
+        )
+        countries: set[str] = set()
+        for (c,) in rows:
+            for part in (c or "").split(","):
+                s = part.strip()
+                if s:
+                    countries.add(s)
+        return sorted(countries)
+    finally:
+        db.close()
+
+
 @router.get("/watchlist-genres")
 def recommendations_watchlist_genres():
     """Available genres from watchlist items (from IMDbWatchlistItem.genres)."""
@@ -153,6 +175,7 @@ def recommendations_watchlist_genres():
 @router.get("/watchlist-simple")
 def recommendations_watchlist_simple(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
+    countries: list[str] | None = Query(default=None, description="Filter by countries (OR), uses TitleMetadata"),
     title_type: str | None = Query(default=None, description="movie, TV Series, etc."),
     year_from: int | None = Query(default=None, ge=1900, le=2100),
     year_to: int | None = Query(default=None, ge=1900, le=2100),
@@ -172,6 +195,14 @@ def recommendations_watchlist_simple(
                 q = db.query(IMDbWatchlistItem)
         else:
             q = db.query(IMDbWatchlistItem)
+
+        if countries:
+            q = q.join(TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
+            country_filters = [
+                TitleMetadata.country.ilike(f"%{c.strip()}%") for c in countries if c.strip()
+            ]
+            if country_filters:
+                q = q.filter(or_(*country_filters))
 
         if not include_rated:
             q = q.filter(IMDbWatchlistItem.your_rating.is_(None))

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 
 type Item = {
@@ -17,17 +18,19 @@ export function WatchlistRecommendations() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
   const [yearFrom, setYearFrom] = useState("");
   const [yearTo, setYearTo] = useState("");
   const [includeRated, setIncludeRated] = useState(false);
 
   const fetchWithFilters = useCallback(
-    (genres: string[], tt: string, yf: string, yt: string, incRated: boolean) => {
+    (genres: string[], countries: string[], tt: string, yf: string, yt: string, incRated: boolean) => {
       setLoading(true);
       const params = new URLSearchParams();
       params.set("limit", "5");
       genres.forEach((g) => params.append("genres", g));
+      countries.forEach((c) => params.append("countries", c));
       if (tt) params.set("title_type", tt);
       const yfNum = Number(yf.trim());
       if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
@@ -49,12 +52,12 @@ export function WatchlistRecommendations() {
   );
 
   useEffect(() => {
-    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo, includeRated);
+    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated);
   }, [fetchWithFilters, includeRated]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWithFilters(selectedGenres, titleType, yearFrom, yearTo, includeRated);
+    fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated);
   };
 
   return (
@@ -73,6 +76,12 @@ export function WatchlistRecommendations() {
           disabled={loading}
           genresUrl={`${API_URL}/recommendations/watchlist-genres`}
           fallbackGenresUrl={`${API_URL}/recommendations/genres`}
+        />
+        <CountryMultiSelect
+          selected={selectedCountries}
+          onChange={setSelectedCountries}
+          disabled={loading}
+          countriesUrl={`${API_URL}/recommendations/watchlist-countries`}
         />
         <select
           value={titleType}

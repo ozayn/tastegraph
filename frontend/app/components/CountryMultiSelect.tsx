@@ -8,12 +8,15 @@ type CountryMultiSelectProps = {
   selected: string[];
   onChange: (countries: string[]) => void;
   disabled?: boolean;
+  /** Override countries endpoint (e.g. for watchlist). Default: /recommendations/countries */
+  countriesUrl?: string;
 };
 
 export function CountryMultiSelect({
   selected,
   onChange,
   disabled = false,
+  countriesUrl = `${API_URL}/recommendations/countries`,
 }: CountryMultiSelectProps) {
   const [countries, setCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,13 +28,13 @@ export function CountryMultiSelect({
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_URL}/recommendations/countries`)
+    fetch(countriesUrl)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => (Array.isArray(data) ? data : []))
       .then(setCountries)
       .catch(() => setCountries([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [countriesUrl]);
 
   useEffect(() => {
     if (open && buttonRef.current) {
