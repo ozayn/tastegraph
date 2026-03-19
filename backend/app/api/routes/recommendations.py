@@ -203,7 +203,7 @@ def recommendations_watchlist_high_fit(
             )
             genres_str = meta_genres or r.genres
             fit_score, explanation = score_watchlist_item(
-                genres_str, country, r.year, matches, signals
+                r.imdb_title_id, genres_str, country, r.year, matches, signals
             )
             total_score = fit_score + boost * 2  # Favorites add to fit
             scored_items.append((

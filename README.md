@@ -162,9 +162,12 @@ Or import individually:
 ./scripts/import_remote.sh watchlist
 ./scripts/import_remote.sh metadata
 ./scripts/import_remote.sh favorites
+./scripts/import_remote.sh favorite-list
 ```
 
-Uses `data/imdb/ratings.csv`, `data/imdb/watchlist.csv`, `data/imdb/title_metadata.csv`, and `data/imdb/favorite_people.csv` by default. Sync includes favorites if `data/imdb/favorite_people.csv` exists. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
+Uses `data/imdb/*.csv` by default. Sync includes favorites and favorite-list when those files exist. Run from project root. Use `.env.sync` for sync vars (gitignored) to keep backend `.env` backend-only.
+
+**Favorite list** is a curated collection of titles you'd recommend to friends. Import from IMDb list export (same format as watchlist: Const, Position, Title, Title Type, Year, Genres). Used as a strong taste signal for high-fit watchlist ranking. Local CLI: `python -m app.scripts.seed_favorite_list` (default: `data/imdb/favorite_list.csv`).
 
 **Favorite people import** supports two CSV formats:
 - **Custom name,role CSV:** `name,role` (actor, director, or writer). Example: `Christopher Nolan,director`

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 type HighFitExplanation = {
+  in_favorite_list?: boolean;
   matched_genres: string[];
   matched_countries: string[];
   matched_decade: string | null;
@@ -24,6 +25,7 @@ const chipBase =
 
 function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
   const hasAny =
+    explanation.in_favorite_list ||
     explanation.matched_genres.length > 0 ||
     explanation.matched_countries.length > 0 ||
     explanation.matched_decade ||
@@ -33,6 +35,11 @@ function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {explanation.in_favorite_list && (
+        <span className={`${chipBase} bg-[var(--accent-muted)]/40 text-[var(--accent)]`}>
+          Curated favorite
+        </span>
+      )}
       {explanation.matched_genres.map((g) => (
         <span
           key={g}

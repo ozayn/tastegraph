@@ -5,6 +5,7 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.models.favorite_list_item import FavoriteListItem
 from app.models.imdb_rating import IMDbRating
 from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
@@ -57,12 +58,17 @@ def studies_summary():
         watchlist_taste_alignment = _build_watchlist_taste_alignment(db)
         genre_combinations = _build_genre_combinations(db)
         best_creators = _build_best_creators(db)
+        try:
+            favorite_list_summary = _build_favorite_list_summary(db)
+        except Exception:
+            favorite_list_summary = {"count": 0, "top_genres": [], "top_countries": [], "overlap_with_rated": 0}
         return {
             "taste_evolution": taste_evolution,
             "predictors_8plus": predictors_8plus,
             "watchlist_taste_alignment": watchlist_taste_alignment,
             "genre_combinations": genre_combinations,
             "best_creators": best_creators,
+            "favorite_list_summary": favorite_list_summary,
         }
     finally:
         db.close()
@@ -475,4 +481,51 @@ def _build_best_creators(db: Session) -> dict:
         "directors": _top_creators(director_ratings, CREATOR_MIN_SUPPORT),
         "actors": _top_creators(actor_ratings, CREATOR_MIN_SUPPORT),
         "writers": _top_creators(writer_ratings, CREATOR_MIN_SUPPORT),
+    }
+
+
+def _build_favorite_list_summary(db: Session) -> dict:
+    """Summary of curated favorite list: genres, countries, overlap with rated."""
+    fl_items = db.query(FavoriteListItem).all()
+    count = len(fl_items)
+    if count == 0:
+        return {"count": 0, "top_genres": [], "top_countries": [], "overlap_with_rated": 0}
+
+    genre_counts: Counter = Counter()
+    country_counts: Counter = Counter()
+    fl_ids = {r.imdb_title_id for r in fl_items}
+
+    for r in fl_items:
+        for g in _parse_genres(r.genres):
+            genre_counts[g] += 1
+
+    country_rows = (
+        db.query(TitleMetadata.country)
+        .join(FavoriteListItem, FavoriteListItem.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(TitleMetadata.country.isnot(None))
+        .all()
+    )
+    for (c_str,) in country_rows:
+        for c in parse_and_normalize_countries(c_str):
+            country_counts[c] += 1
+
+    rated_ids = {r.imdb_title_id for r in db.query(IMDbRating.imdb_title_id).all()}
+    overlap = len(fl_ids & rated_ids)
+
+    top_genres = [
+        {"genre": g, "count": c}
+        for g, c in genre_counts.most_common(10)
+        if not _is_low_quality(g)
+    ]
+    top_countries = [
+        {"country": c, "count": n}
+        for c, n in country_counts.most_common(10)
+        if not _is_low_quality(c)
+    ]
+
+    return {
+        "count": count,
+        "top_genres": top_genres,
+        "top_countries": top_countries,
+        "overlap_with_rated": overlap,
     }

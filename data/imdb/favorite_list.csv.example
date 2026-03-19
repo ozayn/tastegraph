@@ -1,0 +1,3 @@
+Position,Const,Created,Modified,Title,Title Type,Year,Genres,URL,IMDb Rating,Runtime (mins),Directors,Your Rating,Date Rated
+1,tt1234567,,,Example Movie,Movie,2020,Drama,Sci-Fi,https://imdb.com/title/tt1234567/,8.5,120,Director Name,,,
+2,tt7654321,,,Another Title,Movie,2019,Comedy,https://imdb.com/title/tt7654321/,7.8,95,Other Director,,,

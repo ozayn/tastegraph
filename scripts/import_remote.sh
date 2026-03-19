@@ -26,15 +26,16 @@ RATINGS_FILE="${ROOT}/data/imdb/ratings.csv"
 WATCHLIST_FILE="${ROOT}/data/imdb/watchlist.csv"
 METADATA_FILE="${ROOT}/data/imdb/title_metadata.csv"
 FAVORITES_FILE="${ROOT}/data/imdb/favorite_people.csv"
+FAVORITE_LIST_FILE="${ROOT}/data/imdb/favorite_list.csv"
 
 usage() {
-  echo "Usage: $0 ratings|watchlist|metadata|favorites [path/to/favorites.csv]"
+  echo "Usage: $0 ratings|watchlist|metadata|favorites|favorite-list [path]"
   echo ""
   echo "Uploads CSV to deployed backend. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
-  echo "Set in shell, or add to .env.sync or .env at project root. Default files: data/imdb/ratings.csv, data/imdb/watchlist.csv, data/imdb/title_metadata.csv, data/imdb/favorite_people.csv"
+  echo "Set in shell, or add to .env.sync or .env at project root. Default files: data/imdb/*.csv"
   exit 1
 }
 
@@ -65,8 +66,12 @@ case "${1:-}" in
     FILE="${2:-$FAVORITES_FILE}"
     ENDPOINT="/admin/import/favorite-people"
     ;;
+  favorite-list)
+    FILE="${2:-$FAVORITE_LIST_FILE}"
+    ENDPOINT="/admin/import/favorite-list"
+    ;;
   *)
-    echo "Error: invalid argument '${1:-}'. Use 'ratings', 'watchlist', 'metadata', or 'favorites'"
+    echo "Error: invalid argument '${1:-}'. Use 'ratings', 'watchlist', 'metadata', 'favorites', or 'favorite-list'"
     usage
     ;;
 esac

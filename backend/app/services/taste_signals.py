@@ -3,6 +3,7 @@
 from collections import Counter
 from sqlalchemy.orm import Session
 
+from app.models.favorite_list_item import FavoriteListItem
 from app.models.imdb_rating import IMDbRating
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
@@ -29,7 +30,7 @@ def _decade(year: int | None) -> str | None:
 
 
 def load_taste_signals(db: Session) -> dict:
-    """Load strong genres, countries, decades from 8+ ratings. Returns sets for fast lookup."""
+    """Load strong genres, countries, decades from 8+ ratings and favorite_list. Returns sets for fast lookup."""
     rows = (
         db.query(IMDbRating.genres, TitleMetadata.country, IMDbRating.year)
         .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
@@ -61,10 +62,28 @@ def load_taste_signals(db: Session) -> dict:
         if d and not _is_low_quality(d)
     }
 
+    # Merge favorite_list patterns (curated canon) into strong signals
+    fl_rows = (
+        db.query(FavoriteListItem.genres, TitleMetadata.country, FavoriteListItem.year)
+        .outerjoin(TitleMetadata, FavoriteListItem.imdb_title_id == TitleMetadata.imdb_title_id)
+        .all()
+    )
+    for genres, country, year in fl_rows:
+        for g in _parse_genres(genres):
+            strong_genres.add(g)
+        for c in parse_and_normalize_countries(country):
+            strong_countries.add(c)
+        d = _decade(year)
+        if d:
+            strong_decades.add(d)
+
+    favorite_list_ids = {r.imdb_title_id for r in db.query(FavoriteListItem.imdb_title_id).all()}
+
     return {
         "strong_genres": strong_genres,
         "strong_countries": strong_countries,
         "strong_decades": strong_decades,
+        "favorite_list_ids": favorite_list_ids,
     }
 
 
@@ -108,6 +127,7 @@ def build_reasons(
 
 
 def score_watchlist_item(
+    imdb_title_id: str,
     genres: str | None,
     country: str | None,
     year: int | None,
@@ -119,6 +139,8 @@ def score_watchlist_item(
     item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
     item_countries = parse_and_normalize_countries(country) if country else set()
     item_decade = _decade(year)
+
+    in_favorite_list = imdb_title_id in signals.get("favorite_list_ids", set())
 
     matched_genres = sorted(item_genres & signals["strong_genres"])[:3]
     for _ in matched_genres:
@@ -132,6 +154,9 @@ def score_watchlist_item(
     if matched_decade:
         score += 1
 
+    if in_favorite_list:
+        score += 5
+
     matched_people = [
         {"name": m.get("name", ""), "role": m.get("role", "creator")}
         for m in favorite_matches[:3]
@@ -141,6 +166,8 @@ def score_watchlist_item(
         score += ROLE_SCORE_WEIGHT.get(p["role"], 1)
 
     top_reasons: list[str] = []
+    if in_favorite_list:
+        top_reasons.append("In your curated favorites list")
     if matched_genres:
         top_reasons.append(f"Strong genre{'s' if len(matched_genres) > 1 else ''}: {', '.join(matched_genres)}")
     if matched_countries:
@@ -152,6 +179,7 @@ def score_watchlist_item(
         top_reasons.append(f"Favorite {role_label}: {p['name']}")
 
     explanation = {
+        "in_favorite_list": in_favorite_list,
         "matched_genres": matched_genres,
         "matched_countries": matched_countries,
         "matched_decade": matched_decade,

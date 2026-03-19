@@ -76,12 +76,20 @@ type BestCreators = {
   writers: Creator[];
 };
 
+type FavoriteListSummary = {
+  count: number;
+  top_genres: { genre: string; count: number }[];
+  top_countries: { country: string; count: number }[];
+  overlap_with_rated: number;
+};
+
 type StudiesData = {
   taste_evolution: TasteEvolution;
   predictors_8plus: Predictors8Plus;
   watchlist_taste_alignment: WatchlistTasteAlignment;
   genre_combinations?: GenreCombinations;
   best_creators?: BestCreators;
+  favorite_list_summary?: FavoriteListSummary;
 };
 
 function StatCard({
@@ -239,7 +247,7 @@ export default function StudiesPage() {
     );
   }
 
-  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators } = data;
+  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, favorite_list_summary } = data;
 
   const yearsWithData = Object.keys(taste_evolution.avg_rating_by_year)
     .map(Number)
@@ -415,7 +423,48 @@ export default function StudiesPage() {
             </div>
           </section>
 
-          {/* 5. Genre combination analysis */}
+          {/* 5. Curated favorites list */}
+          {favorite_list_summary && favorite_list_summary.count > 0 && (
+            <section>
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                Curated favorites list
+              </h2>
+              <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                Titles you&apos;d recommend to friends. Used as a strong taste signal for high-fit ranking.
+              </p>
+              <div className="grid gap-6 sm:grid-cols-3">
+                <StatCard
+                  title="Total titles"
+                  subtitle="in your curated list"
+                >
+                  <p className="text-[24px] font-semibold tabular-nums text-[var(--foreground)]">
+                    {favorite_list_summary.count}
+                  </p>
+                </StatCard>
+                <StatCard
+                  title="Overlap with rated"
+                  subtitle="titles you&apos;ve also rated"
+                >
+                  <p className="text-[24px] font-semibold tabular-nums text-[var(--foreground)]">
+                    {favorite_list_summary.overlap_with_rated}
+                  </p>
+                </StatCard>
+                <StatCard
+                  title="Top genres"
+                  subtitle="in curated list"
+                >
+                  <BarList
+                    items={favorite_list_summary.top_genres}
+                    getValue={(x) => x.count}
+                    renderLabel={(x) => x.genre}
+                    renderSub={(x) => `${x.count}`}
+                  />
+                </StatCard>
+              </div>
+            </section>
+          )}
+
+          {/* 6. Genre combination analysis */}
           {genre_combinations && genre_combinations.pairs.length > 0 && (
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
@@ -437,7 +486,7 @@ export default function StudiesPage() {
             </section>
           )}
 
-          {/* 6. Favorite creators (min support) */}
+          {/* 7. Favorite creators (min support) */}
           {best_creators && (best_creators.directors.length > 0 || best_creators.actors.length > 0 || best_creators.writers.length > 0) && (
             <section>
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.imports.favorite_list import import_favorite_list_from_csv
 from app.imports.favorite_people import import_favorite_people_from_csv
 from app.imports.ratings import import_ratings_from_csv
 from app.imports.title_metadata import import_title_metadata_from_csv
@@ -108,6 +109,33 @@ async def admin_import_title_metadata(
         try:
             inserted, updated = import_title_metadata_from_csv(db, tmp_path)
             return {"inserted": inserted, "updated": updated, "errors": 0}
+        finally:
+            db.close()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@router.post("/import/favorite-list")
+async def admin_import_favorite_list(
+    file: UploadFile,
+    _: None = Depends(_require_admin_token),
+):
+    """Import favorite list from uploaded CSV. Replaces entire list. IMDb list export format. Requires X-Admin-Import-Token header."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Upload must be a CSV file")
+
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(
+        mode="wb", suffix=".csv", delete=False
+    ) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+
+    try:
+        db = SessionLocal()
+        try:
+            inserted, errors = import_favorite_list_from_csv(db, tmp_path)
+            return {"inserted": inserted, "errors": errors}
         finally:
             db.close()
     finally:

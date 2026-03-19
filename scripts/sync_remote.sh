@@ -59,4 +59,12 @@ else
   echo "Skipping favorites (data/imdb/favorite_people.csv not found)."
   echo ""
 fi
+if [[ -f "${ROOT}/data/imdb/favorite_list.csv" ]]; then
+  echo "Importing favorite list..."
+  "${ROOT}/scripts/import_remote.sh" favorite-list
+  echo ""
+else
+  echo "Skipping favorite list (data/imdb/favorite_list.csv not found)."
+  echo ""
+fi
 echo "Sync complete."
