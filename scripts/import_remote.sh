@@ -24,15 +24,16 @@ _load_env "${ROOT}/.env"
 
 RATINGS_FILE="${ROOT}/data/imdb/ratings.csv"
 WATCHLIST_FILE="${ROOT}/data/imdb/watchlist.csv"
+METADATA_FILE="${ROOT}/data/imdb/title_metadata.csv"
 
 usage() {
-  echo "Usage: $0 ratings|watchlist"
+  echo "Usage: $0 ratings|watchlist|metadata"
   echo ""
   echo "Uploads IMDb CSV to deployed backend. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
-  echo "Set in shell, or add to .env.sync or .env at project root. Default files: data/imdb/ratings.csv, data/imdb/watchlist.csv"
+  echo "Set in shell, or add to .env.sync or .env at project root. Default files: data/imdb/ratings.csv, data/imdb/watchlist.csv, data/imdb/title_metadata.csv"
   exit 1
 }
 
@@ -55,8 +56,12 @@ case "${1:-}" in
     FILE="$WATCHLIST_FILE"
     ENDPOINT="/admin/import/watchlist"
     ;;
+  metadata)
+    FILE="$METADATA_FILE"
+    ENDPOINT="/admin/import/title-metadata"
+    ;;
   *)
-    echo "Error: invalid argument '${1:-}'. Use 'ratings' or 'watchlist'"
+    echo "Error: invalid argument '${1:-}'. Use 'ratings', 'watchlist', or 'metadata'"
     usage
     ;;
 esac

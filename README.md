@@ -47,6 +47,15 @@ For separate logs, use `make run-backend` and `make run-frontend` in two termina
 
 Runs `alembic upgrade head` and `enrich_missing_metadata`. Optional batch size (default 10). Requires `backend/.venv` and `OMDB_API_KEY` in `backend/.env`.
 
+**Remote metadata enrichment (Railway):**
+
+```bash
+./scripts/enrich_metadata_remote.sh
+./scripts/enrich_metadata_remote.sh 50
+```
+
+Runs `enrich_missing_metadata` on Railway against the deployed database. Populates TitleMetadata (country, languages, genres, etc.) via OMDb. Requires Railway CLI (`railway link`), `OMDB_API_KEY` set on Railway backend.
+
 ## Docker (local development)
 
 ```bash

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.imports.ratings import import_ratings_from_csv
+from app.imports.title_metadata import import_title_metadata_from_csv
 from app.imports.watchlist import import_watchlist_from_csv
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -79,6 +80,33 @@ async def admin_import_watchlist(
         try:
             inserted, updated, errors = import_watchlist_from_csv(db, tmp_path)
             return {"inserted": inserted, "updated": updated, "errors": errors}
+        finally:
+            db.close()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@router.post("/import/title-metadata")
+async def admin_import_title_metadata(
+    file: UploadFile,
+    _: None = Depends(_require_admin_token),
+):
+    """Import title metadata from uploaded CSV. Requires X-Admin-Import-Token header."""
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Upload must be a CSV file")
+
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(
+        mode="wb", suffix=".csv", delete=False
+    ) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+
+    try:
+        db = SessionLocal()
+        try:
+            inserted, updated = import_title_metadata_from_csv(db, tmp_path)
+            return {"inserted": inserted, "updated": updated, "errors": 0}
         finally:
             db.close()
     finally:

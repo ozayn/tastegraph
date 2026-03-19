@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Import ratings + watchlist to deployed backend, then verify.
+# Import ratings, watchlist, and metadata to deployed backend, then verify.
 # Run from project root: ./scripts/sync_remote.sh
 # Loads REMOTE_API_URL and ADMIN_IMPORT_TOKEN from .env.sync, .env, or shell. No sourcing needed.
 
@@ -26,7 +26,7 @@ _load_env "${ROOT}/.env"
 usage() {
   echo "Usage: $0"
   echo ""
-  echo "Imports ratings + watchlist to deployed backend and verifies. Requires:"
+  echo "Imports ratings, watchlist, and metadata to deployed backend and verifies. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
   echo "  ADMIN_IMPORT_TOKEN - Token from backend env"
   echo ""
@@ -45,6 +45,12 @@ echo ""
 echo "--- Importing watchlist ---"
 "${ROOT}/scripts/import_remote.sh" watchlist
 echo ""
+echo "--- Exporting local metadata ---"
+"${ROOT}/scripts/export_metadata_local.sh"
+echo ""
+echo "--- Importing metadata ---"
+"${ROOT}/scripts/import_remote.sh" metadata
+echo ""
 echo "--- Verification ---"
 URL="${REMOTE_API_URL%/}"
 echo "ratings/import-status:"
@@ -61,4 +67,8 @@ echo ""
 echo ""
 echo "recommendations/watchlist-simple?limit=3:"
 curl -sS "$URL/recommendations/watchlist-simple?limit=3"
+echo ""
+echo ""
+echo "recommendations/countries (metadata coverage):"
+curl -sS "$URL/recommendations/countries"
 echo ""
