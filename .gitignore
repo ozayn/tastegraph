@@ -56,6 +56,9 @@ yarn-error.log*
 data/imdb/*.csv
 !data/imdb/title_metadata.template.csv
 
+# Favorite people (personal)
+data/favorite_people.csv
+
 # Misc
 *.tgz
 .turbo

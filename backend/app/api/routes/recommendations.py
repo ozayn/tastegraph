@@ -8,6 +8,7 @@ from app.core.database import SessionLocal
 from app.models.imdb_rating import IMDbRating
 from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
+from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -84,7 +85,13 @@ def recommendations_simple(
     db = SessionLocal()
     try:
         q = (
-            db.query(IMDbRating, TitleMetadata.poster)
+            db.query(
+                IMDbRating,
+                TitleMetadata.poster,
+                TitleMetadata.actors,
+                TitleMetadata.directors,
+                TitleMetadata.writer,
+            )
             .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
             .filter(IMDbRating.user_rating >= 8)
         )
@@ -109,14 +116,32 @@ def recommendations_simple(
         if year_to is not None:
             q = q.filter(IMDbRating.year <= year_to)
 
+        fetch_limit = min(100, max(limit * 5, 50))
         rows = (
             q.order_by(
                 desc(IMDbRating.user_rating),
                 nulls_last(desc(IMDbRating.date_rated)),
             )
-            .limit(limit)
+            .limit(fetch_limit)
             .all()
         )
+
+        favorites_by_role = _load_favorites_by_role(db)
+        scored = []
+        for r, poster, actors, directors, writer in rows:
+            boost, matches = compute_favorite_boost(
+                actors, directors, writer, favorites_by_role
+            )
+            score = (r.user_rating or 0) + boost
+            scored.append((score, r.date_rated, r, poster, matches))
+
+        def _sort_key(x):
+            score, date_rated, *_ = x
+            date_ord = date_rated.toordinal() if date_rated else 0
+            return (-score, -date_ord)
+
+        scored.sort(key=_sort_key)
+        top = scored[:limit]
 
         return [
             {
@@ -126,8 +151,9 @@ def recommendations_simple(
                 "genres": r.genres,
                 "user_rating": r.user_rating,
                 "poster": poster if poster and poster != "N/A" else None,
+                "favorite_matches": matches,
             }
-            for r, poster in rows
+            for _, _, r, poster, matches in top
         ]
     finally:
         db.close()
@@ -189,7 +215,13 @@ def recommendations_watchlist_simple(
     """Things to watch from watchlist. By default excludes already-rated titles."""
     db = SessionLocal()
     try:
-        q = db.query(IMDbWatchlistItem, TitleMetadata.poster).outerjoin(
+        q = db.query(
+            IMDbWatchlistItem,
+            TitleMetadata.poster,
+            TitleMetadata.actors,
+            TitleMetadata.directors,
+            TitleMetadata.writer,
+        ).outerjoin(
             TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id
         )
 
@@ -226,11 +258,29 @@ def recommendations_watchlist_simple(
         )
         meta_first = case((has_meta, 0), else_=1)
 
+        fetch_limit = min(200, max(limit * 5, 50))
         rows = (
             q.order_by(meta_first.asc(), IMDbWatchlistItem.position.asc())
-            .limit(limit)
+            .limit(fetch_limit)
             .all()
         )
+
+        favorites_by_role = _load_favorites_by_role(db)
+        scored = []
+        for r, poster, actors, directors, writer in rows:
+            boost, matches = compute_favorite_boost(
+                actors, directors, writer, favorites_by_role
+            )
+            has_meta = bool(r.title and r.title_type and r.year is not None)
+            meta_first_val = 0 if has_meta else 1
+            scored.append((boost, meta_first_val, r.position or 0, r, poster, matches))
+
+        def _wl_sort_key(x):
+            boost, mf, pos, *_ = x
+            return (-boost, mf, pos)
+
+        scored.sort(key=_wl_sort_key)
+        top = scored[:limit]
 
         return [
             {
@@ -241,8 +291,9 @@ def recommendations_watchlist_simple(
                 "your_rating": r.your_rating,
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
                 "poster": poster if poster and poster != "N/A" else None,
+                "favorite_matches": matches,
             }
-            for r, poster in rows
+            for _, _, _, r, poster, matches in top
         ]
     finally:
         db.close()
