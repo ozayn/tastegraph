@@ -113,13 +113,26 @@ def fetch_title_metadata(imdb_title_id: str) -> TitleMetadataResult | None:
     Uses OMDB_API_KEY first; on key/quota/rate-limit error, retries once with
     OMDB_API_KEY_FALLBACK if set.
     """
+    result, _ = fetch_title_metadata_with_error(imdb_title_id)
+    return result
+
+
+def fetch_title_metadata_with_error(
+    imdb_title_id: str,
+) -> tuple[TitleMetadataResult | None, str | None]:
+    """Fetch title metadata. Returns (result, error_msg). error_msg is set when result is None."""
     if not settings.OMDB_API_KEY:
-        return None
+        return None, "OMDB_API_KEY not set"
 
     result, err_data = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY)
     if result is not None:
-        return result
+        return result, None
+    last_error = (err_data or {}).get("Error", "Request failed")
+
     if err_data and _is_retryable_error(err_data) and settings.OMDB_API_KEY_FALLBACK:
-        result, _ = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY_FALLBACK)
-        return result
-    return None
+        result, err_data2 = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY_FALLBACK)
+        if result is not None:
+            return result, None
+        last_error = (err_data2 or {}).get("Error", last_error)
+
+    return None, last_error

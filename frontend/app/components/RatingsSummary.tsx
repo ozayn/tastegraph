@@ -39,20 +39,25 @@ export function RatingsSummary() {
   if (!summary) return null;
 
   return (
-    <section>
-      <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--overview-muted)]">
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+      <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
         Your ratings
       </p>
-      <p className="mt-1.5 text-[14px] leading-[1.55] text-[var(--muted-soft)] sm:text-[15px]">
-        {summary.total_ratings} titles · avg {summary.average_rating?.toFixed(1) ?? "—"}
-        {summary.min_rating != null && summary.max_rating != null && (
-          <> · {summary.min_rating}–{summary.max_rating}</>
-        )}
-      </p>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="text-[20px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[22px]">
+          {summary.total_ratings.toLocaleString()}
+        </span>
+        <span className="text-[14px] text-[var(--muted-soft)]">titles</span>
+        <span className="text-[13px] text-[var(--overview-muted)]">
+          · avg {summary.average_rating?.toFixed(1) ?? "—"}
+          {summary.min_rating != null && summary.max_rating != null && (
+            <> · {summary.min_rating}–{summary.max_rating}</>
+          )}
+        </span>
+      </div>
       {distribution?.most_common_rating != null && (
-        <p className="mt-1 text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-          Most common: {distribution.most_common_rating}.{" "}
-          {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus.
+        <p className="mt-2 text-[12px] leading-[1.5] text-[var(--overview-muted)]">
+          Most common: {distribution.most_common_rating} · {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus
         </p>
       )}
     </section>

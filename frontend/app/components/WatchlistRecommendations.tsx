@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
+import { RecommendationCard } from "./RecommendationCard";
 
 type Item = {
   imdb_title_id: string;
@@ -60,15 +61,21 @@ export function WatchlistRecommendations() {
     fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated);
   };
 
+  const filterInput =
+    "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
+
   return (
-    <section className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:px-6 sm:py-6">
-      <h2 className="text-[13px] font-medium uppercase tracking-[0.1em] text-[var(--muted-soft)]">
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+      <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
         From your watchlist
       </h2>
+      <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+        Titles you saved, filtered by your taste
+      </p>
 
       <form
         onSubmit={handleSubmit}
-        className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-3 sm:mt-5 sm:gap-x-6"
+        className="mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"
       >
         <GenreMultiSelect
           selected={selectedGenres}
@@ -86,10 +93,10 @@ export function WatchlistRecommendations() {
         <select
           value={titleType}
           onChange={(e) => setTitleType(e.target.value)}
-          className="min-w-[6rem] border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 pr-6 text-[14px] text-[var(--foreground)] transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none [color-scheme:inherit] sm:min-w-[6.5rem]"
+          className={`${filterInput} min-w-[7rem]`}
           aria-label="Title type"
         >
-          <option value="">All</option>
+          <option value="">All types</option>
           <option value="Movie">Movie</option>
           <option value="TV Series">TV Series</option>
           <option value="TV Mini Series">TV Mini Series</option>
@@ -100,7 +107,7 @@ export function WatchlistRecommendations() {
           placeholder="Year from"
           value={yearFrom}
           onChange={(e) => setYearFrom(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/70 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className={`${filterInput} w-24`}
           aria-label="Year from"
         />
         <input
@@ -109,46 +116,50 @@ export function WatchlistRecommendations() {
           placeholder="Year to"
           value={yearTo}
           onChange={(e) => setYearTo(e.target.value)}
-          className="w-20 border-b border-[var(--muted-subtle)] bg-transparent pb-1.5 pt-0.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)]/70 transition-colors duration-150 focus:border-[var(--muted-soft)] focus:outline-none sm:w-24"
+          className={`${filterInput} w-24`}
           aria-label="Year to"
         />
-        <label className="flex cursor-pointer items-baseline gap-2 pb-1.5 pt-0.5 text-[14px] text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
+        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
           <input
             type="checkbox"
             checked={includeRated}
             onChange={(e) => setIncludeRated(e.target.checked)}
-            className="h-3.5 w-3.5 accent-[var(--foreground)]"
+            className="h-4 w-4 rounded border-[var(--section-border)] accent-[var(--foreground)]"
             aria-label="Include rated"
           />
           <span>Include rated</span>
         </label>
         <button
           type="submit"
-          className="pb-1.5 pt-0.5 text-[13px] font-medium tracking-[0.04em] text-[var(--muted-soft)] transition-colors duration-150 hover:text-[var(--foreground)] focus:outline-none focus:underline active:opacity-70"
+          disabled={loading}
+          className="rounded-lg bg-[var(--foreground)] px-5 py-2.5 text-[14px] font-medium text-[var(--background)] transition-all hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--muted-soft)] focus:ring-offset-2 focus:ring-offset-[var(--background)] disabled:opacity-60"
         >
-          Apply
+          {loading ? "…" : "Apply"}
         </button>
       </form>
 
       {loading ? (
-        <p className="mt-4 text-sm text-[var(--muted-subtle)] sm:mt-5">…</p>
+        <div className="mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+          Loading…
+        </div>
       ) : items.length > 0 ? (
-        <ul className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
+        <ul className="mt-6 grid gap-4 sm:mt-7 sm:gap-5">
           {items.map((r) => (
-            <li
-              key={r.imdb_title_id}
-              className="text-[15px] leading-[1.65] text-[var(--foreground)] break-words sm:text-[15px]"
-            >
-              {r.title ?? r.imdb_title_id}
-              {r.year != null && ` (${r.year})`}
-              {r.title_type && ` · ${r.title_type}`}
-              {r.your_rating != null && ` · ${r.your_rating}`}
+            <li key={r.imdb_title_id}>
+              <RecommendationCard
+                imdb_title_id={r.imdb_title_id}
+                title={r.title}
+                year={r.year}
+                title_type={r.title_type}
+                your_rating={r.your_rating}
+              />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-sm text-[var(--muted-soft)] sm:mt-5">
-          No results.
+        <p className="mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6">
+          No results. Try adjusting your filters.
         </p>
       )}
     </section>

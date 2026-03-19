@@ -14,31 +14,33 @@ import { TasteHints } from "./components/TasteHints";
 export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-12 sm:px-6 sm:pt-16 sm:pb-32 md:pt-[14vh] md:pb-36">
-        <header className="mb-10 sm:mb-12">
+      <main className="mx-auto max-w-2xl px-4 pb-28 pt-12 sm:px-8 sm:pt-16 sm:pb-32 md:max-w-3xl md:px-10 md:pt-[10vh] md:pb-40 lg:max-w-4xl lg:px-12">
+        <header className="mb-14 sm:mb-16 md:mb-20">
           <h1>
             <img
               src="/logo-horizontal.svg"
               alt="TasteGraph"
-              className="h-7 w-auto sm:h-8"
+              className="h-9 w-auto sm:h-10 md:h-11"
             />
           </h1>
-          <p className="mt-5 text-[15px] leading-[1.7] text-[var(--muted)] sm:mt-6 sm:text-base">
-            Recommend what to watch based on your IMDb ratings, watchlist, mood,
-            and platform preferences.
+          <p className="mt-5 max-w-lg text-[16px] leading-[1.6] text-[var(--muted)] sm:mt-6 sm:text-[17px] md:mt-7 md:text-[18px]">
+            Discover what to watch based on your IMDb ratings and watchlist.
+          </p>
+          <p className="mt-2 text-[13px] text-[var(--muted-subtle)] sm:text-[14px]">
+            Personalized recommendations, filtered by genre, country, and year.
           </p>
         </header>
 
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-6 sm:space-y-8">
           <RatingsSummary />
           <section
-            className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-4 sm:px-5 sm:py-4"
+            className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-4 sm:px-6 sm:py-5"
             aria-label="Data overview"
           >
-            <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--overview-muted)]">
-              Overview
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
+              Your library
             </p>
-            <div className="mt-3 space-y-2 sm:mt-3.5 sm:space-y-2.5">
+            <div className="mt-3 grid gap-x-8 gap-y-2 sm:mt-4 sm:grid-cols-2 sm:gap-y-2.5 lg:grid-cols-3">
               <ImportStatus />
               <WatchlistImportStatus />
               <MetadataCoverage />
@@ -51,29 +53,29 @@ export default function Home() {
           </section>
         </div>
 
-        <div className="mt-16 space-y-14 sm:mt-20 sm:space-y-16">
+        <div className="mt-16 space-y-16 sm:mt-20 md:mt-24 md:space-y-20">
           <SimpleRecommendations />
           <WatchlistRecommendations />
         </div>
 
-        <section className="mt-16 sm:mt-20">
-          <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--overview-muted)]">
+        <section className="mt-16 sm:mt-20 md:mt-24">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
             Example queries
           </p>
-          <ul className="mt-3 space-y-2.5 sm:mt-3.5 sm:space-y-3">
-            <li className="text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:text-[15px]">
+          <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
+            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
               &ldquo;What should I watch on BritBox?&rdquo;
             </li>
-            <li className="text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:text-[15px]">
+            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
               &ldquo;What fits my mood from my watchlist?&rdquo;
             </li>
-            <li className="text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:text-[15px]">
+            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
               &ldquo;Recommend a Persian romance movie from my watchlist.&rdquo;
             </li>
           </ul>
         </section>
 
-        <div className="mt-16 pt-2 sm:mt-20">
+        <div className="mt-16 pt-2 sm:mt-20 md:mt-24">
           <BackendHealth />
         </div>
       </main>

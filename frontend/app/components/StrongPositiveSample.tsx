@@ -24,8 +24,8 @@ export function StrongPositiveSample() {
 
   return (
     <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      <span>Strong signals</span>
-      <span className="text-[var(--overview-muted)] opacity-70"> · </span>
+      <span className="font-medium text-[var(--muted-soft)]">Strong signals</span>
+      <span className="text-[var(--overview-muted)]"> · </span>
       <span className="break-words">
         {items.map((r, i) => (
           <span key={r.imdb_title_id}>

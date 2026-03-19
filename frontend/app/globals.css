@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --muted: rgba(23, 23, 23, 0.82);
-  --muted-soft: rgba(23, 23, 23, 0.58);
-  --muted-subtle: rgba(23, 23, 23, 0.42);
-  --section-bg: rgba(0, 0, 0, 0.015);
-  --section-border: rgba(23, 23, 23, 0.05);
-  --overview-muted: rgba(23, 23, 23, 0.48);
+  --background: #f8f8f8;
+  --foreground: #0f0f0f;
+  --muted: rgba(15, 15, 15, 0.78);
+  --muted-soft: rgba(15, 15, 15, 0.55);
+  --muted-subtle: rgba(15, 15, 15, 0.38);
+  --section-bg: rgba(0, 0, 0, 0.025);
+  --section-border: rgba(15, 15, 15, 0.08);
+  --overview-muted: rgba(15, 15, 15, 0.45);
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 15, 15, 0.07);
+  --card-hover: rgba(15, 15, 15, 0.03);
+  --accent: #1d4ed8;
+  --accent-muted: rgba(29, 78, 216, 0.1);
 }
 
 @theme inline {
@@ -18,14 +23,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #09090b;
     --foreground: #fafafa;
-    --muted: rgba(250, 250, 250, 0.82);
-    --muted-soft: rgba(250, 250, 250, 0.58);
-    --muted-subtle: rgba(250, 250, 250, 0.42);
-    --section-bg: rgba(255, 255, 255, 0.02);
-    --section-border: rgba(250, 250, 250, 0.05);
-    --overview-muted: rgba(250, 250, 250, 0.42);
+    --muted: rgba(250, 250, 250, 0.78);
+    --muted-soft: rgba(250, 250, 250, 0.55);
+    --muted-subtle: rgba(250, 250, 250, 0.38);
+    --section-bg: rgba(255, 255, 255, 0.04);
+    --section-border: rgba(250, 250, 250, 0.08);
+    --overview-muted: rgba(250, 250, 250, 0.4);
+    --card-bg: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(250, 250, 250, 0.08);
+    --card-hover: rgba(250, 250, 250, 0.07);
+    --accent: #3b82f6;
+    --accent-muted: rgba(59, 130, 246, 0.14);
   }
 }
 

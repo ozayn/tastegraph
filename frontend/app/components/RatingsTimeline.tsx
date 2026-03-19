@@ -26,8 +26,8 @@ export function RatingsTimeline() {
 
   return (
     <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      Your ratings span {startYear}–{endYear}
-      {span > 1 && ` (${span} years)`}
+      <span className="font-medium text-[var(--muted-soft)]">{startYear}–{endYear}</span>
+      {span > 1 && <span className="text-[var(--overview-muted)]"> ({span} yrs)</span>}
     </p>
   );
 }

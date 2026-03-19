@@ -27,7 +27,7 @@ export function MetadataCoverage() {
 
   return (
     <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      {withMeta} of {total} titles enriched with metadata
+      <span className="font-medium text-[var(--muted-soft)]">{withMeta}</span>/{total} enriched
     </p>
   );
 }

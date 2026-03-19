@@ -33,8 +33,8 @@ export function WatchlistImportStatus() {
 
   return (
     <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      {count} titles in your watchlist
-      {lastImported && ` · updated ${lastImported}`}
+      <span className="font-medium text-[var(--muted-soft)]">{count}</span> watchlist
+      {lastImported && <span className="text-[var(--overview-muted)]"> · {lastImported}</span>}
     </p>
   );
 }

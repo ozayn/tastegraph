@@ -33,8 +33,8 @@ export function ImportStatus() {
 
   return (
     <p className="text-[13px] leading-[1.5] text-[var(--overview-muted)]">
-      {count} ratings in your library
-      {lastImported && ` · updated ${lastImported}`}
+      <span className="font-medium text-[var(--muted-soft)]">{count}</span> ratings
+      {lastImported && <span className="text-[var(--overview-muted)]"> · {lastImported}</span>}
     </p>
   );
 }
