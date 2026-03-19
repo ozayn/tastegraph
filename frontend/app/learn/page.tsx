@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Learn page: living project explanation.
+ * Update when major recommender, ML, or LLM features are added.
+ */
+
 export default function LearnPage() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -9,54 +14,74 @@ export default function LearnPage() {
             How it works
           </h1>
           <p className="mt-3 max-w-lg text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
-            A brief overview of TasteGraph&apos;s recommender logic and analytical studies.
+            TasteGraph&apos;s recommender logic, signals, and how to interpret results. Updated as the system evolves.
           </p>
         </header>
 
         <div className="space-y-12 sm:space-y-16">
+          {/* 1. Current system */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Current recommender (heuristic)
+              1. Current system
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                Recommendations are based on <strong>content overlap</strong> with your 8+ ratings: genres, countries, release decades, and favorite creators. No collaborative filtering—everything derives from your own ratings and watchlist.
+                <strong>Active recommendation methods:</strong> Heuristic content-overlap only. Simple recommendations filter from your 8+ ratings by genre, country, and year. High-fit watchlist ranks unrated watchlist items by overlap with your strongest taste signals.
               </p>
               <p>
-                <strong>Simple recommendations</strong> filter from titles you rated 8+ by genre, country, and year. <strong>High-fit watchlist</strong> scores unrated watchlist items by how much they overlap with your strongest taste signals and explains why each item fits.
-              </p>
-              <p>
-                Support thresholds (min n titles) filter out noisy signals. Association ≠ causation: a high lift for a genre means you tend to rate it higher, not that you will always love it.
+                <strong>Signals & data sources:</strong> Your IMDb ratings (8+ as strong signal), watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
               </p>
             </div>
           </section>
 
+          {/* 2. How to interpret results */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Studies
+              2. How to interpret results
             </h2>
-            <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
-              <p>
-                <strong>Insights</strong> aggregate your viewing history: counts, averages, genres, countries, decades, and people. <strong>Studies</strong> go deeper: taste evolution over time, features associated with 8+ ratings (lift analysis), watchlist taste alignment, genre combinations, and favorite creators.
-              </p>
-              <p>
-                All studies use your data only. Lift is computed as (8+ rate for a feature) ÷ (your global 8+ rate). Genre shifts compare first vs second half of your rating history to detect drift.
-              </p>
+            <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Heuristic recommendations</p>
+                <p className="mt-1">Content overlap with your 8+ history. Higher overlap suggests stronger fit, but it&apos;s not predictive—your next favorite might surprise you.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Studies / lift / support thresholds</p>
+                <p className="mt-1">Lift = (8+ rate for a feature) ÷ (your global 8+ rate). Lift &gt; 1 means you tend to rate higher when that feature is present. Min-support filters out noisy small-n signals. Association ≠ causation.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">ML model outputs</p>
+                <p className="mt-1">Not yet integrated. When present: scores will indicate predicted P(rate 8+ | title). Interpret as likelihood, not certainty.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Future LLM search</p>
+                <p className="mt-1">Natural-language queries and explanations planned. Will supplement, not replace, heuristic and ML signals.</p>
+              </div>
             </div>
           </section>
 
+          {/* 3. Recent additions */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Future: ML and LLM
+              3. Recent additions
             </h2>
-            <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
-              <p>
-                An <strong>8+ likelihood model</strong> (e.g. logistic regression on genre/country/decade features) is in development. It would predict P(rate 8+ | title) for watchlist items and could be used to rank or blend with heuristic scores.
-              </p>
-              <p>
-                LLM-based explanations could generate natural-language &quot;why this fits&quot; summaries. Both would remain optional—the heuristic recommender is interpretable and works without training data.
-              </p>
-            </div>
+            <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
+              <li>Learning layer: &quot;How to read this&quot; help on key sections (Insights, Studies, recommendations)</li>
+              <li>High-fit watchlist with explainable reasons per item</li>
+              <li>Studies: taste evolution, 8+ predictors, genre combinations, favorite creators</li>
+              <li>8+ likelihood model (train/predict scripts) in backend; not yet wired to API</li>
+            </ul>
+          </section>
+
+          {/* 4. What&apos;s next */}
+          <section>
+            <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              4. What&apos;s next
+            </h2>
+            <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
+              <li>Integrate 8+ ML model into watchlist ranking and recommendations</li>
+              <li>LLM search: natural-language queries over your library and watchlist</li>
+              <li>LLM-generated &quot;why this fits&quot; explanations</li>
+            </ul>
           </section>
         </div>
       </main>
