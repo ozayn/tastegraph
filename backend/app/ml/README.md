@@ -1,11 +1,17 @@
 # ML Workspace
 
-First baseline: **8+ likelihood model** — predicts whether you're likely to rate a title 8+.
+First baseline: **8+ likelihood model** — predicts likelihood of a strong favorite (8+).
 
 ## Target
 
 - `target = 1` if `user_rating >= 8`, else `0`
+- 8+ = strong positive / highly likely favorite. 7 is still a good rating—not a negative judgment.
 - Trained on rated titles only
+
+## Future model directions
+
+- 7+ model for "likely to like" (broader than strong favorites)
+- Multi-tier / ordinal rating model
 
 ## Run locally
 

@@ -1,7 +1,7 @@
 """Build modeling datasets from rated titles.
 
-Target: 1 if user_rating >= 8, else 0.
-One row per rated title with raw fields for feature engineering.
+Target: 1 if user_rating >= 8 (strong favorite), else 0.
+8+ = strong positive; 7 is still a good rating. One row per rated title with raw fields for feature engineering.
 """
 
 from pathlib import Path
@@ -33,7 +33,7 @@ def build_rated_dataset(db=None) -> pd.DataFrame:
     """Build dataset of rated titles with target and raw fields.
 
     Returns DataFrame with columns:
-    - imdb_title_id, user_rating, target (1 if >=8 else 0)
+    - imdb_title_id, user_rating, target (1 if >=8 else 0; 8+ = strong favorite, 7 is still good)
     - title_type, year, decade
     - genres, country, languages, directors, actors, writer
     - favorite_people_match (bool), in_favorite_list (bool)

@@ -13,6 +13,7 @@ type Diagnostics = {
   available: boolean;
   model_type?: string;
   target?: string;
+  target_note?: string;
   message?: string;
   dataset_stats?: { n_rows: number; n_positive: number; n_negative: number; positive_rate: number };
   eval_metrics?: { accuracy: number; roc_auc: number };
@@ -114,6 +115,9 @@ export default function ModelLabPage() {
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">Model</p>
                     <p className="mt-1 text-[var(--foreground)]">{diag.model_type} · target: {diag.target}</p>
+                    {diag.target_note && (
+                      <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">{diag.target_note}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">Dataset</p>
@@ -146,7 +150,7 @@ export default function ModelLabPage() {
                 2. Coefficient inspection
               </h2>
               <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
-                Positive coefficient = more associated with 8+ ratings. Negative = less associated. Post-scaler; magnitude reflects relative importance.
+                Positive coefficient = more associated with 8+ (strong favorite) ratings. Negative = less associated. 7 is still a good rating—not a negative. Post-scaler; magnitude reflects relative importance.
               </p>
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
@@ -161,7 +165,7 @@ export default function ModelLabPage() {
                   </ul>
                 </div>
                 <div>
-                  <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top negative (predict &lt;8)</p>
+                  <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top negative (predict &lt;8+; 7 is still good)</p>
                   <ul className="space-y-1">
                     {(diag.top_negative ?? []).map(({ name, coef }, i) => (
                       <li key={i} className="flex justify-between gap-2 text-[13px]">
@@ -296,6 +300,8 @@ export default function ModelLabPage() {
               6. Future models (placeholder)
             </h2>
             <ul className="space-y-1.5 text-[14px] text-[var(--muted-soft)]">
+              <li>7+ model for &quot;likely to like&quot; (broader than strong favorites)</li>
+              <li>Multi-tier / ordinal rating model</li>
               <li>Similarity model (content-based, embedding-based)</li>
               <li>Blended model (heuristic + ML + similarity)</li>
               <li>LLM search / explanation layer</li>

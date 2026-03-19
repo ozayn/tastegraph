@@ -43,6 +43,7 @@ def model_lab_ml_diagnostics():
             "available": False,
             "model_type": "logistic_regression",
             "target": "rating >= 8",
+            "target_note": "8+ = strong favorites; 7 is still a good rating.",
             "message": "No trained model. Run: python -m app.ml.train_8plus_baseline",
         }
 
@@ -77,6 +78,7 @@ def model_lab_ml_diagnostics():
         "available": True,
         "model_type": "logistic_regression",
         "target": "rating >= 8",
+        "target_note": "8+ = strong favorites; 7 is still a good rating.",
         "dataset_stats": loaded.get("dataset_stats"),
         "eval_metrics": loaded.get("eval_metrics"),
         "feature_count": loaded.get("feature_dim", len(names)),

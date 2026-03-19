@@ -28,10 +28,10 @@ export default function LearnPage() {
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict 8+ likelihood for watchlist items.
+                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items.
               </p>
               <p>
-                <strong>Signals & data sources:</strong> Your IMDb ratings (8+ as strong signal), watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
+                <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
               </p>
             </div>
           </section>
@@ -52,7 +52,7 @@ export default function LearnPage() {
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">ML model outputs</p>
-                <p className="mt-1">ML mode shows predicted P(rate 8+ | title) for watchlist items. Logistic-regression baseline on genres, countries, decade, title type, and taste-derived features. Interpret as likelihood, not certainty. Requires trained model (run <code>python -m app.ml.train_8plus_baseline</code>).</p>
+                <p className="mt-1">ML mode shows predicted P(rate 8+ | title) for watchlist items—i.e. likelihood of a strong favorite. 8+ means highly likely favorite; 7 is still a good rating, not a negative. Logistic-regression baseline on genres, countries, decade, title type, and taste-derived features. Interpret as likelihood, not certainty. Requires trained model (run <code>python -m app.ml.train_8plus_baseline</code>).</p>
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Future LLM search</p>
@@ -83,6 +83,7 @@ export default function LearnPage() {
               <li>LLM search: natural-language queries over your library and watchlist</li>
               <li>LLM-generated &quot;why this fits&quot; explanations</li>
               <li>Richer ML model (e.g. XGBoost, more features) and model comparison</li>
+              <li>Alternative targets: 7+ model for &quot;likely to like&quot;; multi-tier / ordinal rating model</li>
             </ul>
           </section>
 
