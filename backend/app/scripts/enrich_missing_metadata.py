@@ -2,18 +2,21 @@
 
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
 
 from app.core.database import SessionLocal
 from app.models.imdb_rating import IMDbRating
 from app.models.imdb_watchlist_item import IMDbWatchlistItem
+from app.models.metadata_enrichment_failure import MetadataEnrichmentFailure
 from app.models.title_metadata import TitleMetadata
 from app.scripts.enrich_one_title import upsert_metadata_result
 from app.services.omdb import fetch_title_metadata_with_error
 
 _DEFAULT_LIMIT = 10
 _DELAY_SECONDS = 1.0
+_SKIP_RECENT_FAILURES_DAYS = 7
 
 # Rows with any of these null/empty are eligible for backfill
 _INCOMPLETE_FILTER = or_(
@@ -29,13 +32,48 @@ _INCOMPLETE_FILTER = or_(
 )
 
 
+def _record_failure(imdb_title_id: str, error: str) -> None:
+    db = SessionLocal()
+    try:
+        row = db.query(MetadataEnrichmentFailure).get(imdb_title_id)
+        err_trunc = (error or "unknown")[:500]
+        if row:
+            row.fail_count += 1
+            row.last_failed_at = datetime.now(timezone.utc)
+            row.last_error = err_trunc
+        else:
+            db.add(
+                MetadataEnrichmentFailure(
+                    imdb_title_id=imdb_title_id,
+                    fail_count=1,
+                    last_error=err_trunc,
+                )
+            )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _clear_failure(imdb_title_id: str) -> None:
+    db = SessionLocal()
+    try:
+        db.query(MetadataEnrichmentFailure).filter(
+            MetadataEnrichmentFailure.imdb_title_id == imdb_title_id
+        ).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
 def main() -> None:
+    args = [a for a in sys.argv[1:] if a != "--retry-failed"]
+    retry_failed = "--retry-failed" in sys.argv
     limit = _DEFAULT_LIMIT
-    if len(sys.argv) > 1:
+    if args:
         try:
-            limit = int(sys.argv[1])
+            limit = int(args[0])
         except ValueError:
-            print("Usage: python -m app.scripts.enrich_missing_metadata [limit]")
+            print("Usage: python -m app.scripts.enrich_missing_metadata [limit] [--retry-failed]")
             raise SystemExit(1)
 
     db = SessionLocal()
@@ -68,6 +106,21 @@ def main() -> None:
         incomplete_candidates = incomplete_ids & (all_rating_ids | all_watchlist_ids)
 
         all_candidates_set = missing_ratings | missing_watchlist | incomplete_candidates
+
+        # Exclude titles that failed within last N days (unless --retry-failed)
+        skipped_recent_failures = 0
+        if not retry_failed:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=_SKIP_RECENT_FAILURES_DAYS)
+            recently_failed = {
+                r[0]
+                for r in db.query(MetadataEnrichmentFailure.imdb_title_id)
+                .filter(MetadataEnrichmentFailure.last_failed_at >= cutoff)
+                .all()
+            }
+            before_skip = len(all_candidates_set)
+            all_candidates_set = all_candidates_set - recently_failed
+            skipped_recent_failures = before_skip - len(all_candidates_set)
+
         all_candidates = list(all_candidates_set)[:limit]
         from_ratings = len(set(all_candidates) & all_rating_ids)
         from_watchlist = len(set(all_candidates) & all_watchlist_ids)
@@ -92,7 +145,8 @@ def main() -> None:
         db.close()
 
     if not all_candidates:
-        print("attempted=0 inserted=0 updated=0 skipped=0 failed=0 (no missing or incomplete from ratings or watchlist)")
+        sf = f" skipped_recent_failures={skipped_recent_failures}" if skipped_recent_failures else ""
+        print(f"attempted=0 inserted=0 updated=0 skipped=0 failed=0{sf} (no missing or incomplete from ratings or watchlist)")
         return
 
     attempted = 0
@@ -112,7 +166,10 @@ def main() -> None:
             failed_cases.append((imdb_id, title, reason))
             title_part = f" {title}" if title else ""
             print(f"  failed: {imdb_id}{title_part} — {reason}")
+            # Record failure for skip logic
+            _record_failure(imdb_id, reason)
         else:
+            _clear_failure(imdb_id)
             db = SessionLocal()
             try:
                 action = upsert_metadata_result(result, db)
@@ -132,8 +189,9 @@ def main() -> None:
         for imdb_id, _, _ in failed_cases:
             print(f"  {imdb_id}")
 
+    sf = f" skipped_recent_failures={skipped_recent_failures}" if skipped_recent_failures else ""
     suffix = f" (ratings: {from_ratings} watchlist: {from_watchlist} candidates)"
-    print(f"attempted={attempted} inserted={inserted} updated={updated} skipped=0 failed={failed}{suffix}")
+    print(f"attempted={attempted} inserted={inserted} updated={updated} skipped=0 failed={failed}{sf}{suffix}")
 
 
 if __name__ == "__main__":
