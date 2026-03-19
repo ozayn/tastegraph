@@ -1,12 +1,11 @@
-"""Enrich a small batch of ratings missing from TitleMetadata via OMDb."""
+"""Enrich a small batch of ratings and watchlist titles missing from TitleMetadata via OMDb."""
 
 import sys
 import time
 
-from sqlalchemy import select
-
 from app.core.database import SessionLocal
 from app.models.imdb_rating import IMDbRating
+from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.scripts.enrich_one_title import upsert_metadata_result
 from app.services.omdb import fetch_title_metadata
@@ -26,20 +25,29 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        existing_ids = select(TitleMetadata.imdb_title_id)
-        missing = (
-            db.query(IMDbRating.imdb_title_id)
-            .filter(IMDbRating.imdb_title_id.notin_(existing_ids))
+        existing_subq = db.query(TitleMetadata.imdb_title_id)
+        missing_ratings = {
+            r[0]
+            for r in db.query(IMDbRating.imdb_title_id)
+            .filter(IMDbRating.imdb_title_id.notin_(existing_subq))
             .distinct()
-            .limit(limit)
             .all()
-        )
-        missing_ids = [r[0] for r in missing]
+        }
+        missing_watchlist = {
+            r[0]
+            for r in db.query(IMDbWatchlistItem.imdb_title_id)
+            .filter(IMDbWatchlistItem.imdb_title_id.notin_(existing_subq))
+            .distinct()
+            .all()
+        }
+        all_missing = list(missing_ratings | missing_watchlist)[:limit]
+        from_ratings = len(missing_ratings)
+        from_watchlist = len(missing_watchlist)
     finally:
         db.close()
 
-    if not missing_ids:
-        print("attempted=0 inserted=0 updated=0 skipped=0 failed=0 (no missing)")
+    if not all_missing:
+        print("attempted=0 inserted=0 updated=0 skipped=0 failed=0 (no missing from ratings or watchlist)")
         return
 
     attempted = 0
@@ -47,7 +55,7 @@ def main() -> None:
     updated = 0
     failed = 0
 
-    for imdb_id in missing_ids:
+    for imdb_id in all_missing:
         result = fetch_title_metadata(imdb_id)
         attempted += 1
 
@@ -64,10 +72,11 @@ def main() -> None:
             finally:
                 db.close()
 
-        if attempted < len(missing_ids):
+        if attempted < len(all_missing):
             time.sleep(_DELAY_SECONDS)
 
-    print(f"attempted={attempted} inserted={inserted} updated={updated} skipped=0 failed={failed}")
+    suffix = f" (ratings: {from_ratings} watchlist: {from_watchlist} candidates)"
+    print(f"attempted={attempted} inserted={inserted} updated={updated} skipped=0 failed={failed}{suffix}")
 
 
 if __name__ == "__main__":
