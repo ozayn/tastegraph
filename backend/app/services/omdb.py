@@ -23,6 +23,13 @@ class TitleMetadataResult:
     runtime_mins: int | None
     release_date: date | None
     directors: str | None
+    actors: str | None
+    writer: str | None
+    plot: str | None
+    poster: str | None
+    metascore: int | None
+    awards: str | None
+    rated: str | None
     imdb_rating: float | None
     num_votes: int | None
     url: str | None
@@ -97,6 +104,7 @@ def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResul
         return None, data
 
     year = _parse_year(data.get("Year"))
+    metascore = _parse_int(data.get("Metascore"))
     result = TitleMetadataResult(
         imdb_title_id=data.get("imdbID") or imdb_title_id,
         title=data.get("Title") or None,
@@ -108,6 +116,13 @@ def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResul
         runtime_mins=_parse_runtime(data.get("Runtime")),
         release_date=_parse_date(data.get("Released")),
         directors=data.get("Director") or None,
+        actors=data.get("Actors") or None,
+        writer=data.get("Writer") or None,
+        plot=data.get("Plot") or None,
+        poster=data.get("Poster") if data.get("Poster") and data.get("Poster") != "N/A" else None,
+        metascore=metascore,
+        awards=data.get("Awards") or None,
+        rated=data.get("Rated") if data.get("Rated") and data.get("Rated") != "N/A" else None,
         imdb_rating=_parse_float(data.get("imdbRating")),
         num_votes=_parse_int(data.get("imdbVotes")),
         url=f"https://www.imdb.com/title/{data.get('imdbID', imdb_title_id)}/" if data.get("imdbID") else None,

@@ -30,6 +30,13 @@ def upsert_metadata_result(result: TitleMetadataResult, db: Session) -> Literal[
         existing.runtime_mins = result.runtime_mins
         existing.release_date = result.release_date
         existing.directors = _truncate(result.directors, 500)
+        existing.actors = _truncate(result.actors, 500)
+        existing.writer = _truncate(result.writer, 500)
+        existing.plot = _truncate(result.plot, 2000)
+        existing.poster = _truncate(result.poster, 500)
+        existing.metascore = result.metascore
+        existing.awards = _truncate(result.awards, 500)
+        existing.rated = _truncate(result.rated, 20)
         existing.imdb_rating = result.imdb_rating
         existing.num_votes = result.num_votes
         existing.url = _truncate(result.url, 500)
@@ -48,6 +55,13 @@ def upsert_metadata_result(result: TitleMetadataResult, db: Session) -> Literal[
                 runtime_mins=result.runtime_mins,
                 release_date=result.release_date,
                 directors=_truncate(result.directors, 500),
+                actors=_truncate(result.actors, 500),
+                writer=_truncate(result.writer, 500),
+                plot=_truncate(result.plot, 2000),
+                poster=_truncate(result.poster, 500),
+                metascore=result.metascore,
+                awards=_truncate(result.awards, 500),
+                rated=_truncate(result.rated, 20),
                 imdb_rating=result.imdb_rating,
                 num_votes=result.num_votes,
                 url=_truncate(result.url, 500),

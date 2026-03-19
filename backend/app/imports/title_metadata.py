@@ -1,7 +1,7 @@
 """Import title metadata from CSV.
 
 Expected columns: imdb_title_id, title, title_type, year, genres, languages, country, runtime_mins,
-release_date, directors, imdb_rating, num_votes, url
+release_date, directors, actors, writer, plot, poster, metascore, awards, rated, imdb_rating, num_votes, url
 Upserts by imdb_title_id. Tolerant of missing fields.
 """
 
@@ -75,6 +75,13 @@ def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, in
                 existing.runtime_mins = _parse_int(row.get("runtime_mins", ""))
                 existing.release_date = _parse_date(row.get("release_date", ""))
                 existing.directors = _parse_str(row.get("directors", ""), 500)
+                existing.actors = _parse_str(row.get("actors", ""), 500)
+                existing.writer = _parse_str(row.get("writer", ""), 500)
+                existing.plot = _parse_str(row.get("plot", ""), 2000)
+                existing.poster = _parse_str(row.get("poster", ""), 500)
+                existing.metascore = _parse_int(row.get("metascore", ""))
+                existing.awards = _parse_str(row.get("awards", ""), 500)
+                existing.rated = _parse_str(row.get("rated", ""), 20)
                 existing.imdb_rating = _parse_float(row.get("imdb_rating", ""))
                 existing.num_votes = _parse_int(row.get("num_votes", ""))
                 existing.url = _parse_str(row.get("url", ""), 500)
@@ -92,6 +99,13 @@ def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, in
                         runtime_mins=_parse_int(row.get("runtime_mins", "")),
                         release_date=_parse_date(row.get("release_date", "")),
                         directors=_parse_str(row.get("directors", ""), 500),
+                        actors=_parse_str(row.get("actors", ""), 500),
+                        writer=_parse_str(row.get("writer", ""), 500),
+                        plot=_parse_str(row.get("plot", ""), 2000),
+                        poster=_parse_str(row.get("poster", ""), 500),
+                        metascore=_parse_int(row.get("metascore", "")),
+                        awards=_parse_str(row.get("awards", ""), 500),
+                        rated=_parse_str(row.get("rated", ""), 20),
                         imdb_rating=_parse_float(row.get("imdb_rating", "")),
                         num_votes=_parse_int(row.get("num_votes", "")),
                         url=_parse_str(row.get("url", ""), 500),
