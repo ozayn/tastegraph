@@ -70,11 +70,11 @@ def _parse_runtime(s: str | None) -> int | None:
 def _is_retryable_error(data: dict) -> bool:
     """True if OMDb error suggests key/quota/rate-limit (worth retrying with fallback)."""
     err = (data.get("Error") or "").lower()
-    return any(x in err for x in ("key", "limit", "quota"))
+    return any(x in err for x in ("key", "limit", "quota", "401"))
 
 
 def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResult | None, dict | None]:
-    """Fetch from OMDb with given key. Returns (result, raw_data) or (None, data) on error."""
+    """Fetch from OMDb with given key. Returns (result, raw_data) or (None, {"Error": msg}) on error."""
     url = "https://www.omdbapi.com/"
     params = {"apikey": apikey, "i": imdb_title_id.strip()}
     try:
@@ -82,8 +82,16 @@ def _fetch_with_key(imdb_title_id: str, apikey: str) -> tuple[TitleMetadataResul
             resp = client.get(url, params=params)
             resp.raise_for_status()
             data = resp.json()
-    except (httpx.HTTPError, ValueError):
-        return None, None
+    except httpx.HTTPStatusError as e:
+        return None, {"Error": f"HTTP {e.response.status_code}"}
+    except httpx.TimeoutException:
+        return None, {"Error": "timeout"}
+    except httpx.ConnectError:
+        return None, {"Error": "connection error"}
+    except httpx.HTTPError:
+        return None, {"Error": "request failed"}
+    except ValueError:
+        return None, {"Error": "invalid JSON"}
 
     if data.get("Response") == "False" or "Error" in data:
         return None, data
@@ -127,12 +135,15 @@ def fetch_title_metadata_with_error(
     result, err_data = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY)
     if result is not None:
         return result, None
-    last_error = (err_data or {}).get("Error", "Request failed")
+    last_error = (err_data or {}).get("Error", "request failed")
 
     if err_data and _is_retryable_error(err_data) and settings.OMDB_API_KEY_FALLBACK:
         result, err_data2 = _fetch_with_key(imdb_title_id, settings.OMDB_API_KEY_FALLBACK)
         if result is not None:
             return result, None
-        last_error = (err_data2 or {}).get("Error", last_error)
+        err2 = (err_data2 or {}).get("Error", last_error)
+        last_error = f"{err2} (fallback key attempted)"
+    elif err_data and _is_retryable_error(err_data) and not settings.OMDB_API_KEY_FALLBACK:
+        last_error = f"{last_error} (no fallback key set)"
 
     return None, last_error
