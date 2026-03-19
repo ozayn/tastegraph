@@ -30,6 +30,20 @@ Concise commands and workflows for local/dev/prod maintenance.
 
 **Enrichment behavior:** Only missing or incomplete fields are updated (poster, actors, plot, rated, metascore). Titles that failed in last 7 days are skipped unless `--retry-failed`.
 
+### After new metadata
+
+Workflow when you've added or improved metadata:
+
+1. Enrich locally: `./scripts/enrich_metadata_local.sh 100`
+2. Report coverage: `./scripts/report_metadata_coverage_local.sh`
+3. Retrain ML model: `cd backend && ./.venv/bin/python -m app.ml.train_8plus_baseline`
+4. (Optional) Inspect predictions: `cd backend && ./.venv/bin/python -m app.ml.predict_8plus_baseline --top 15`
+5. Sync remote: `./scripts/sync_remote.sh`
+
+**Why retrain?** The ML model uses metadata-derived features (genres, countries, decade, title type, favorite-people match). When metadata coverage improves, training data and the feature matrix improve too. Sync updates production data, but retraining updates the saved ML artifacts used by ML mode.
+
+**Rule of thumb:** Small/no metadata change → sync only. Meaningful metadata enrichment → retrain, then sync.
+
 ---
 
 ## 3. Favorites / favorite people
@@ -114,6 +128,8 @@ curl http://localhost:8000/health
 # Metadata
 ./scripts/enrich_metadata_local.sh 100
 ./scripts/report_metadata_coverage_local.sh
+cd backend && ./.venv/bin/python -m app.ml.train_8plus_baseline
+cd backend && ./.venv/bin/python -m app.ml.predict_8plus_baseline --top 15
 cd backend && ./.venv/bin/python -m app.scripts.enrich_missing_metadata --retry-failed 25
 cd backend && ./.venv/bin/python -m app.scripts.list_metadata_enrichment_failures 20
 cd backend && ./.venv/bin/python -m app.scripts.clear_metadata_enrichment_failures --dry-run

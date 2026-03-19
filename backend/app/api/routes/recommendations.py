@@ -10,6 +10,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
+from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import load_taste_signals, build_reasons, score_watchlist_item
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -230,6 +231,34 @@ def recommendations_watchlist_high_fit(
             }
             for _, r, poster, explanation in top
         ]
+    finally:
+        db.close()
+
+
+@router.get("/watchlist-ml")
+def recommendations_watchlist_ml(
+    limit: int = Query(default=15, ge=1, le=50),
+):
+    """ML-ranked watchlist: unrated items scored by predicted 8+ probability. Requires trained model."""
+    db = SessionLocal()
+    try:
+        items = get_ml_watchlist_recommendations(db, limit=limit)
+        if items is None:
+            return {"items": [], "model_available": False}
+
+        ids = [x["imdb_title_id"] for x in items]
+        poster_map = {}
+        if ids:
+            rows = db.query(TitleMetadata.imdb_title_id, TitleMetadata.poster).filter(
+                TitleMetadata.imdb_title_id.in_(ids)
+            ).all()
+            for imdb_id, poster in rows:
+                poster_map[imdb_id] = poster if poster and poster != "N/A" else None
+
+        for item in items:
+            item["poster"] = poster_map.get(item["imdb_title_id"])
+
+        return {"items": items, "model_available": True}
     finally:
         db.close()
 
