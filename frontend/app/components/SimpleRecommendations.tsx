@@ -7,6 +7,12 @@ import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 
 const DEBOUNCE_MS = 350;
+const DISPLAY_LIMIT = 5;
+const FETCH_LIMIT = 50; // Backend max; ratings have lower poster coverage than watchlist
+
+function hasUsablePoster(poster: string | null | undefined): boolean {
+  return !!(poster && poster.trim() && poster !== "N/A");
+}
 
 type Item = {
   imdb_title_id: string;
@@ -48,7 +54,7 @@ export function SimpleRecommendations() {
       }
 
       const recParams = new URLSearchParams(baseParams);
-      recParams.set("limit", "5");
+      recParams.set("limit", String(FETCH_LIMIT));
 
       Promise.all([
         fetch(`${API_URL}/recommendations/simple?${recParams}`).then((res) =>
@@ -60,7 +66,8 @@ export function SimpleRecommendations() {
       ])
         .then(([recs, expl]) => {
           if (id !== requestIdRef.current) return;
-          setItems(recs);
+          const withPoster = (recs as Item[]).filter((r) => hasUsablePoster(r.poster));
+          setItems(withPoster.slice(0, DISPLAY_LIMIT));
           setExplanation(expl.explanation ?? null);
         })
         .catch(() => {
@@ -191,7 +198,7 @@ export function SimpleRecommendations() {
                   : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6"
               }
             >
-              No results. Try adjusting your filters.
+              No poster-backed results for these filters yet.
             </p>
           )}
         </>

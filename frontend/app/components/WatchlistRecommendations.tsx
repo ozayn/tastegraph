@@ -7,6 +7,12 @@ import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 
 const DEBOUNCE_MS = 350;
+const DISPLAY_LIMIT = 5;
+const FETCH_LIMIT = 25;
+
+function hasUsablePoster(poster: string | null | undefined): boolean {
+  return !!(poster && poster.trim() && poster !== "N/A");
+}
 
 type Item = {
   imdb_title_id: string;
@@ -36,7 +42,7 @@ export function WatchlistRecommendations() {
       const id = ++requestIdRef.current;
       setLoading(true);
       const params = new URLSearchParams();
-      params.set("limit", "5");
+      params.set("limit", String(FETCH_LIMIT));
       genres.forEach((g) => params.append("genres", g));
       countries.forEach((c) => params.append("countries", c));
       if (tt) params.set("title_type", tt);
@@ -54,7 +60,16 @@ export function WatchlistRecommendations() {
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
           if (id !== requestIdRef.current) return;
-          setItems(data);
+          const fetched = data as Item[];
+          const withPoster = fetched.filter((r) => hasUsablePoster(r.poster));
+          const final = withPoster.slice(0, DISPLAY_LIMIT);
+          // DEBUG: remove after verifying poster-only filtering
+          console.debug("[WatchlistRecommendations]", {
+            totalFetched: fetched.length,
+            withUsablePoster: withPoster.length,
+            finalTitles: final.map((r) => r.title ?? r.imdb_title_id),
+          });
+          setItems(final);
         })
         .catch(() => {
           if (id !== requestIdRef.current) return;
@@ -185,7 +200,7 @@ export function WatchlistRecommendations() {
         </ul>
       ) : (
         <p className="mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6">
-          No results. Try adjusting your filters.
+          No poster-backed results for these filters yet.
         </p>
       )}
     </section>

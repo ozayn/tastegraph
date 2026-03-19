@@ -206,9 +206,17 @@ export default function InsightsPage() {
   const yearsWatched = Object.keys(trends.ratings_by_year_watched)
     .map(Number)
     .sort();
-  const releaseYears = Object.keys(trends.release_year_distribution)
-    .map(Number)
-    .sort();
+  const releaseDecades = (() => {
+    const byDecade: Record<string, number> = {};
+    for (const [yearStr, count] of Object.entries(trends.release_year_distribution)) {
+      const y = parseInt(yearStr, 10);
+      const decade = `${Math.floor(y / 10) * 10}s`;
+      byDecade[decade] = (byDecade[decade] || 0) + count;
+    }
+    return Object.entries(byDecade)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => parseInt(a.label, 10) - parseInt(b.label, 10));
+  })();
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -394,18 +402,15 @@ export default function InsightsPage() {
                 )}
               </StatCard>
               <StatCard
-                title="Release year distribution"
-                subtitle="when titles were released"
+                title="Release decade distribution"
+                subtitle="titles by release decade (1910s, 1920s, …)"
               >
-                {releaseYears.length > 0 ? (
+                {releaseDecades.length > 0 ? (
                   <BarChart
-                    data={releaseYears.map((y) => ({
-                      label: String(y),
-                      value: trends.release_year_distribution[y],
-                    }))}
+                    data={releaseDecades}
                     getLabel={(d) => d.label}
                     getValue={(d) => d.value}
-                    maxBars={150}
+                    maxBars={20}
                   />
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
