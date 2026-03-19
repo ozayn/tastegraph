@@ -56,6 +56,9 @@ yarn-error.log*
 data/imdb/*.csv
 !data/imdb/title_metadata.template.csv
 
+# ML artifacts (trained models)
+backend/data/ml/models/*.joblib
+
 # Misc
 *.tgz
 .turbo
