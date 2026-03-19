@@ -56,6 +56,14 @@ Runs `alembic upgrade head` and `enrich_missing_metadata`. Enriches TitleMetadat
 
 Runs `enrich_missing_metadata` on Railway against the deployed database. Populates TitleMetadata (country, languages, genres, etc.) via OMDb. Requires Railway CLI (`railway link`), `OMDB_API_KEY` set on Railway backend.
 
+**Metadata coverage report (local):**
+
+```bash
+./scripts/report_metadata_coverage_local.sh
+```
+
+Prints TitleMetadata coverage for country, languages, poster, actors, writer, plot, metascore, awards, rated. Includes separate counts for titles in IMDbRating and IMDbWatchlistItem. Requires `backend/.venv`.
+
 ## Docker (local development)
 
 ```bash
