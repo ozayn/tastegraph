@@ -12,7 +12,7 @@ from app.services.favorite_boost import ROLE_SCORE_WEIGHT
 STRONG_THRESHOLD = 8
 DIRECTOR_MIN_SUPPORT = 2  # min 8+ rated titles for director to be a strong signal
 COUNTRY_MIN_SUPPORT = 5  # min rated titles for country to qualify
-COUNTRY_LIFT_MIN = 1.0  # country 8+ rate must exceed baseline (lift > 1) to be a strong signal
+COUNTRY_LIFT_MIN = 1.01  # country 8+ rate must meaningfully exceed baseline (avoids common-at-baseline like US)
 
 
 def _is_low_quality(s: str) -> bool:
@@ -94,17 +94,15 @@ def load_taste_signals(db: Session) -> dict:
         if lift > COUNTRY_LIFT_MIN:
             strong_countries.add(c)
 
-    # Merge favorite_list patterns (curated canon) into strong signals
+    # Merge favorite_list patterns (curated canon) into strong signals.
+    # Genres and decades: add from favorite_list. Countries: lift-only (do not bypass lift rule).
     fl_rows = (
-        db.query(FavoriteListItem.genres, TitleMetadata.country, FavoriteListItem.year)
-        .outerjoin(TitleMetadata, FavoriteListItem.imdb_title_id == TitleMetadata.imdb_title_id)
+        db.query(FavoriteListItem.genres, FavoriteListItem.year)
         .all()
     )
-    for genres, country, year in fl_rows:
+    for genres, year in fl_rows:
         for g in _parse_genres(genres):
             strong_genres.add(g)
-        for c in parse_and_normalize_countries(country):
-            strong_countries.add(c)
         d = _decade(year)
         if d:
             strong_decades.add(d)
