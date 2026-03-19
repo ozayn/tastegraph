@@ -53,3 +53,20 @@ body {
 .font-display {
   font-family: var(--font-display), Georgia, serif;
 }
+
+/* Model Lab: KaTeX equations use foreground for light/dark compatibility */
+.model-lab .katex {
+  color: var(--foreground);
+  font-size: 1.05em;
+}
+.model-lab .katex .mord,
+.model-lab .katex .mop,
+.model-lab .katex .mbin,
+.model-lab .katex .mrel,
+.model-lab .katex .mopen,
+.model-lab .katex .mclose {
+  color: inherit;
+}
+.model-lab .katex svg {
+  fill: currentColor;
+}

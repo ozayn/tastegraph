@@ -21,6 +21,27 @@ export default function LearnPage() {
         </header>
 
         <div className="space-y-12 sm:space-y-16">
+          {/* 0. Pipeline overview */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              How the pipeline works
+            </h2>
+            <div className="flex flex-wrap gap-2 text-[13px]">
+              <span className="font-medium text-[var(--overview-muted)]">Data:</span>
+              <span className="text-[var(--muted-soft)]">ratings · watchlist · favorite people · favorite list · metadata</span>
+              <span className="w-full shrink-0 sm:w-auto" />
+              <span className="font-medium text-[var(--overview-muted)]">→</span>
+              <span className="text-[var(--muted-soft)]">Features (genres, countries, decades, taste flags)</span>
+              <span className="font-medium text-[var(--overview-muted)]">→</span>
+              <span className="text-[var(--muted-soft)]">High-Fit (rule-based) + ML (P(8+))</span>
+              <span className="font-medium text-[var(--overview-muted)]">→</span>
+              <span className="text-[var(--muted-soft)]">Homepage · Insights · Studies</span>
+            </div>
+            <p className="mt-3 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
+              The same data feeds both heuristic and ML paths. <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> has the full pipeline diagram and coefficient inspection.
+            </p>
+          </section>
+
           {/* 1. Current system */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
