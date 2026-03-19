@@ -28,7 +28,7 @@ METADATA_FILE="${ROOT}/data/imdb/title_metadata.csv"
 FAVORITES_FILE="${ROOT}/data/favorite_people.csv"
 
 usage() {
-  echo "Usage: $0 ratings|watchlist|metadata|favorites"
+  echo "Usage: $0 ratings|watchlist|metadata|favorites [path/to/favorites.csv]"
   echo ""
   echo "Uploads CSV to deployed backend. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
@@ -62,7 +62,7 @@ case "${1:-}" in
     ENDPOINT="/admin/import/title-metadata"
     ;;
   favorites)
-    FILE="$FAVORITES_FILE"
+    FILE="${2:-$FAVORITES_FILE}"
     ENDPOINT="/admin/import/favorite-people"
     ;;
   *)

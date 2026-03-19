@@ -1,13 +1,13 @@
-"""Seed favorite people from CSV. Replaces existing favorites.
+"""Seed favorite people from CSV. Idempotent sync.
 
-CSV format: name,role (one per line). Role: actor, director, or writer.
-Example:
-  Christopher Nolan,director
-  Cillian Murphy,actor
+Accepts:
+- Simple: name,role (actor, director, or writer)
+- IMDb-style people export: Name, Description, Known For, etc. (role inferred)
 
 Usage:
   python -m app.scripts.seed_favorite_people
   python -m app.scripts.seed_favorite_people path/to/favorite_people.csv
+  python -m app.scripts.seed_favorite_people path/to/imdb_people_export.csv
 """
 
 import sys
@@ -30,7 +30,8 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        inserted, deleted, errors = import_favorite_people_from_csv(db, path)
+        inserted, deleted, errors, fmt = import_favorite_people_from_csv(db, path)
+        format_label = "IMDb-style people export" if fmt == "imdb" else "simple favorite CSV"
         parts = []
         if inserted:
             parts.append(f"{inserted} inserted")
@@ -38,7 +39,10 @@ def main() -> None:
             parts.append(f"{deleted} deleted")
         if not parts:
             parts.append("no changes")
-        print(f"Seeded favorites from {path}: {', '.join(parts)}" + (f" ({errors} skipped)" if errors else ""))
+        msg = f"Seeded favorites from {path} ({format_label}): {', '.join(parts)}"
+        if errors:
+            msg += f" ({errors} skipped)"
+        print(msg)
     finally:
         db.close()
 

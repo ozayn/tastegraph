@@ -133,8 +133,13 @@ async def admin_import_favorite_people(
     try:
         db = SessionLocal()
         try:
-            inserted, deleted, errors = import_favorite_people_from_csv(db, tmp_path)
-            return {"inserted": inserted, "deleted": deleted, "errors": errors}
+            inserted, deleted, errors, format_detected = import_favorite_people_from_csv(db, tmp_path)
+            return {
+                "inserted": inserted,
+                "deleted": deleted,
+                "errors": errors,
+                "format": "imdb" if format_detected == "imdb" else "simple",
+            }
         finally:
             db.close()
     finally:
