@@ -21,6 +21,7 @@ class TitleMetadata(Base):
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     genres: Mapped[str | None] = mapped_column(String(500), nullable=True)
     languages: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(500), nullable=True)
     runtime_mins: Mapped[int | None] = mapped_column(Integer, nullable=True)
     release_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     directors: Mapped[str | None] = mapped_column(String(500), nullable=True)

@@ -26,6 +26,7 @@ def upsert_metadata_result(result: TitleMetadataResult, db: Session) -> Literal[
         existing.year = result.year
         existing.genres = _truncate(result.genres, 500)
         existing.languages = _truncate(result.languages, 500)
+        existing.country = _truncate(result.country, 500)
         existing.runtime_mins = result.runtime_mins
         existing.release_date = result.release_date
         existing.directors = _truncate(result.directors, 500)
@@ -43,6 +44,7 @@ def upsert_metadata_result(result: TitleMetadataResult, db: Session) -> Literal[
                 year=result.year,
                 genres=_truncate(result.genres, 500),
                 languages=_truncate(result.languages, 500),
+                country=_truncate(result.country, 500),
                 runtime_mins=result.runtime_mins,
                 release_date=result.release_date,
                 directors=_truncate(result.directors, 500),
