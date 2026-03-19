@@ -143,11 +143,55 @@ export default function ModelLabPage() {
             )}
           </section>
 
-          {/* 2. Coefficient inspection */}
+          {/* 2. How this model was built */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              2. How this model was built
+            </h2>
+            <div className="space-y-5 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Training rows</p>
+                <p className="mt-1">
+                  One row per rated title from your IMDb export. Every title you&apos;ve rated (with a numeric rating) is included. Genres, year, and title type come from your ratings CSV; country and cast/crew come from enriched metadata when available. Titles without metadata still appear—they just have empty or partial features. This run used {diag?.dataset_stats?.n_rows ?? "—"} rows.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Target construction</p>
+                <p className="mt-1">
+                  Target = 1 if rating ≥ 8, else 0. This models &quot;strong favorite / highly likely 8+&quot;—the model predicts whether you&apos;re likely to rate a title 8 or higher. In this system, 7 is still a good rating; it&apos;s not a negative. The binary split is a design choice for interpretability.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Feature construction</p>
+                <p className="mt-1">
+                  Genres and countries are multi-hot (each category is a 0/1 flag). Decade and title type are one-hot. Taste flags: favorite_people_match (title has a director/actor/writer from your favorites) and in_favorite_list. Support thresholds filter rare categories: countries need ≥5 titles, genres ≥3, decades and title types ≥3. This reduces noisy coefficients from sparse categories. {diag?.feature_count != null ? `Total: ${diag.feature_count} features.` : ""}
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Train/test setup</p>
+                <p className="mt-1">
+                  80/20 stratified split (same proportion of 8+ in train and test). <strong>Accuracy</strong> = % of test titles correctly classified as 8+ or not. <strong>ROC-AUC</strong> = area under the ROC curve; it measures how well the model ranks positives above negatives across all thresholds. ROC-AUC is useful here because we care about ranking (which watchlist items to try first), not just a single cutoff.
+                </p>
+                {diag?.eval_metrics && (
+                  <p className="mt-2 text-[13px] text-[var(--foreground)]">
+                    This model: Accuracy {diag.eval_metrics.accuracy} · ROC-AUC {diag.eval_metrics.roc_auc} · positive rate {(diag.dataset_stats?.positive_rate ?? 0) * 100}%
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Modeling caveats</p>
+                <p className="mt-1">
+                  Single-user model (your data only). Content-based features only—no collaborative filtering. Association ≠ causation; features correlate with 8+ but don&apos;t necessarily cause high ratings. Predictions are estimates, not guarantees. Your next favorite might surprise the model.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Coefficient inspection */}
           {diag?.available && (diag.top_positive?.length || diag.top_negative?.length) && (
             <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-                2. Coefficient inspection
+                3. Coefficient inspection
               </h2>
               <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
                 Positive coefficient = more associated with 8+ (strong favorite) ratings. Negative = less associated. 7 is still a good rating—not a negative. Post-scaler; magnitude reflects relative importance.
@@ -198,10 +242,10 @@ export default function ModelLabPage() {
             </section>
           )}
 
-          {/* 3. Prediction inspection & 4. Recommender comparison */}
+          {/* 4. Prediction inspection & 5. Recommender comparison */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              3. Prediction inspection & 4. Recommender comparison
+              4. Prediction inspection & 5. Recommender comparison
             </h2>
             <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
               Top 15 watchlist items from each strategy. Overlap: {overlap} · ML-only: {mlOnly} · High-Fit–only: {hfOnly}
@@ -265,10 +309,10 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 5. Learning-oriented explanations */}
+          {/* 6. Learning-oriented explanations */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              5. Learning notes
+              6. Learning notes
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
               <div>
@@ -294,10 +338,10 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 6. Future-ready structure */}
+          {/* 7. Future-ready structure */}
           <section className="rounded-xl border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/50 px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              6. Future models (placeholder)
+              7. Future models (placeholder)
             </h2>
             <ul className="space-y-1.5 text-[14px] text-[var(--muted-soft)]">
               <li>7+ model for &quot;likely to like&quot; (broader than strong favorites)</li>
