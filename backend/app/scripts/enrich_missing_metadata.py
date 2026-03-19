@@ -35,7 +35,7 @@ _INCOMPLETE_FILTER = or_(
 def _record_failure(imdb_title_id: str, error: str) -> None:
     db = SessionLocal()
     try:
-        row = db.query(MetadataEnrichmentFailure).get(imdb_title_id)
+        row = db.get(MetadataEnrichmentFailure, imdb_title_id)
         err_trunc = (error or "unknown")[:500]
         if row:
             row.fail_count += 1
