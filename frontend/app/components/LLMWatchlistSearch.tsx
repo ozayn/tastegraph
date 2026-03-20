@@ -71,6 +71,7 @@ type SearchResult = {
       has_writers: boolean;
       has_actors: boolean;
       plot_words_count: number;
+      resolved_title_type?: string;
     };
   };
 };

@@ -152,6 +152,27 @@ _PLOT_STOPWORDS = frozenset(
     "when where why how all each every both few more most other some "
     "their her his its our your my".split()
 )
+# Plot words too generic to indicate concept similarity (life, find, etc.)
+_PLOT_GENERIC_WORDS = frozenset(
+    "life find world people story year time take make come go know think see "
+    "want need love death family friend man woman way back home give turn "
+    "begin end become try bring look leave meet start live".split()
+)
+# Distinctive genres (sci-fi, speculative) matter more for concept-heavy refs like Black Mirror
+_REF_GENRE_WEIGHT: dict[str, float] = {
+    "Sci-Fi": 1.6,
+    "Science Fiction": 1.6,
+    "Horror": 1.4,
+    "Animation": 1.3,
+    "Documentary": 1.3,
+    "Thriller": 1.0,
+    "Mystery": 1.1,
+    "Fantasy": 1.2,
+    "Drama": 0.6,
+    "Comedy": 0.6,
+    "Romance": 0.6,
+    "Action": 0.7,
+}
 
 
 def _extract_plot_words(plot: str | None, min_len: int = 4) -> set[str]:
@@ -364,15 +385,17 @@ def _parse_names(s: str | None) -> set[str]:
 
 
 def _plot_overlap_boost(plot: str | None, ref_plot_words: set[str]) -> tuple[float, str | None]:
-    """Boost for plot word overlap with reference. Returns (boost, reason or None). Cap 1.25.
-    Stronger for theme-heavy titles like Black Mirror where plot words matter more than broad genres."""
+    """Boost for plot word overlap with reference. Returns (boost, reason or None). Cap 1.5.
+    Filters out generic words (life, find, etc.) so distinctive concept overlap (tech, dystopia) matters more."""
     if not ref_plot_words or not plot:
         return 0.0, None
     item_words = _extract_plot_words(plot)
-    overlap = item_words & ref_plot_words
+    raw_overlap = item_words & ref_plot_words
+    overlap = raw_overlap - _PLOT_GENERIC_WORDS
     if len(overlap) < 2:
         return 0.0, None
-    boost = min(1.25, 0.25 * len(overlap))  # 2 words=0.5, 5+=1.25
+    # Distinctive words matter more; require 2+ non-generic for boost
+    boost = min(1.5, 0.3 * len(overlap))
     return boost, f"plot overlap: {', '.join(sorted(overlap)[:4])}"
 
 
@@ -396,7 +419,8 @@ def _similar_to_boost(
     ref_genres = set(similar.get("genres", []))
     overlap = item_genres & ref_genres
     if overlap:
-        boost += 1.0 * len(overlap)
+        genre_boost = sum(_REF_GENRE_WEIGHT.get(g, 1.0) for g in overlap)
+        boost += genre_boost
         reasons.append(f"genres like ref: {', '.join(sorted(overlap)[:3])}")
 
     item_countries = parse_and_normalize_countries(country)
@@ -456,40 +480,99 @@ def _similar_to_hint_variants(hint: str) -> list[str]:
     return out
 
 
+def _is_main_title_type(tt: str | None) -> bool:
+    """True if title_type indicates a main series/movie, not an episode."""
+    if not tt:
+        return True
+    t = (tt or "").lower()
+    return "episode" not in t
+
+
+def _similar_to_candidate_score(row, hint_lower: str) -> float:
+    """Score a candidate for similar_to resolution. Higher = prefer this match.
+    Prefer main title over episode, exact over substring, shorter over longer."""
+    title = (getattr(row, "title", None) or "").strip()
+    if not title:
+        return 0.0
+    t_lower = title.lower()
+    tt = getattr(row, "title_type", None) or ""
+
+    score = 0.0
+    # Exact match (normalized): "Black Mirror" vs "black mirror"
+    if t_lower == hint_lower:
+        score += 100.0
+    # Main-part match: "Black Mirror" or "Black Mirror (TV Series)" vs "black mirror"
+    elif t_lower.startswith(hint_lower):
+        main_part = t_lower.split(":")[0].split("(")[0].strip()
+        if main_part == hint_lower:
+            score += 90.0  # "Black Mirror" or "Black Mirror (TV Series)"
+        else:
+            score += 60.0  # "Black Mirror: Hang the DJ" - hint is prefix
+    # Substring match
+    elif hint_lower in t_lower:
+        score += 40.0
+
+    # Prefer main title type over episode
+    if _is_main_title_type(tt):
+        score += 15.0
+    elif "episode" in (tt or "").lower():
+        score -= 25.0
+
+    # Prefer no subtitle (no colon): "Black Mirror" over "Black Mirror: X"
+    if ":" not in title:
+        score += 20.0
+    elif t_lower.startswith(hint_lower + ":"):
+        score -= 10.0  # "Black Mirror: X" when we want "Black Mirror"
+
+    # Prefer shorter when both match (tie-break toward main title)
+    score -= len(title) * 0.01
+    return score
+
+
 def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
-    """Find a title in ratings or watchlist matching hint. Return genres, country, people for similarity signals.
-    Tries hint variants (with leading articles stripped) for better matching."""
+    """Find a title in ratings or watchlist matching hint. Prefer main title over episode/subtitle.
+    Returns genres, country, people for similarity signals."""
     if not title_hint or len(title_hint.strip()) < 2:
         return None
     variants = _similar_to_hint_variants(title_hint)
     if not variants:
         return None
 
-    # Prefer IMDbRating (user has seen it), then WatchlistItem
+    best: tuple[float, object] | None = None
+    source_bonus = 5.0  # prefer IMDbRating (seen) over WatchlistItem when tied
     for model, title_col in [(IMDbRating, IMDbRating.title), (IMDbWatchlistItem, IMDbWatchlistItem.title)]:
         for v in variants:
             hint_part = f"%{v}%"
             q = db.query(model).filter(title_col.ilike(hint_part))
             if model == IMDbRating:
                 q = q.filter(IMDbRating.user_rating.isnot(None))
-            row = q.limit(1).first()
-            if row:
-                imdb_id = row.imdb_title_id
-                meta = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == imdb_id).first()
-                genres = (meta.genres if meta else getattr(row, "genres", None)) or ""
-                country = meta.country if meta else None
-                plot = meta.plot if meta else None
-                resolved_title = row.title or ""
-                return {
-                    "genres": [g.strip() for g in genres.split(",") if g.strip()],
-                    "countries": list(parse_and_normalize_countries(country)) if country else [],
-                    "directors": _parse_names(meta.directors if meta else None),
-                    "writers": _parse_names(meta.writer if meta else None),
-                    "actors": _parse_names(meta.actors if meta else None),
-                    "plot_words": _extract_plot_words(plot),
-                    "resolved_title": resolved_title,
-                }
-    return None
+            rows = q.limit(30).all()
+            bonus = source_bonus if model == IMDbRating else 0.0
+            for row in rows:
+                sc = _similar_to_candidate_score(row, v) + bonus
+                if sc > 0 and (best is None or sc > best[0]):
+                    best = (sc, row)
+
+    if not best:
+        return None
+    row = best[1]
+    imdb_id = row.imdb_title_id
+    meta = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == imdb_id).first()
+    genres = (meta.genres if meta else getattr(row, "genres", None)) or ""
+    country = meta.country if meta else None
+    plot = meta.plot if meta else None
+    resolved_title = row.title or ""
+    resolved_type = getattr(row, "title_type", None) or ""
+    return {
+        "genres": [g.strip() for g in genres.split(",") if g.strip()],
+        "countries": list(parse_and_normalize_countries(country)) if country else [],
+        "directors": _parse_names(meta.directors if meta else None),
+        "writers": _parse_names(meta.writer if meta else None),
+        "actors": _parse_names(meta.actors if meta else None),
+        "plot_words": _extract_plot_words(plot),
+        "resolved_title": resolved_title,
+        "resolved_title_type": resolved_type,
+    }
 
 
 def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
@@ -606,9 +689,11 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        taste_weight = 0.4 if similar_to_signals else 1.0
+        taste_weight = 0.3 if similar_to_signals else 1.0
         total_score = fit_score * taste_weight + boost * 2
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
+        if similar_to_signals:
+            plot_boost *= 0.3  # demote generic mood overlap when similar_to present
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
@@ -688,6 +773,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
                     "has_writers": bool(sig.get("writers")),
                     "has_actors": bool(sig.get("actors")),
                     "plot_words_count": len(sig.get("plot_words", set())),
+                    "resolved_title_type": sig.get("resolved_title_type"),
                 }
         result["debug"] = debug
     return result
@@ -813,9 +899,11 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        taste_weight = 0.4 if similar_to_signals else 1.0
+        taste_weight = 0.3 if similar_to_signals else 1.0
         total_score = fit_score * taste_weight + boost * 2
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
+        if similar_to_signals:
+            plot_boost *= 0.3  # demote generic mood overlap when similar_to present
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
@@ -900,6 +988,7 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
                     "has_writers": bool(sig.get("writers")),
                     "has_actors": bool(sig.get("actors")),
                     "plot_words_count": len(sig.get("plot_words", set())),
+                    "resolved_title_type": sig.get("resolved_title_type"),
                 }
         result["debug"] = debug
     return result
