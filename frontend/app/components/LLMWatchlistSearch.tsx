@@ -26,6 +26,7 @@ function normalizeExplanation(exp: Record<string, unknown>): {
   matched_decade: string | null;
   matched_people: { name: string; role: string }[];
   matched_strong_directors?: string[];
+  plot_matched?: string[];
   top_reasons: string[];
 } {
   const arr = (x: unknown): string[] =>
@@ -44,6 +45,7 @@ function normalizeExplanation(exp: Record<string, unknown>): {
     matched_decade: typeof exp.matched_decade === "string" ? exp.matched_decade : null,
     matched_people: people(exp.matched_people),
     matched_strong_directors: arr(exp.matched_strong_directors),
+    plot_matched: arr(exp.plot_matched),
     top_reasons: arr(exp.top_reasons),
   };
 }

@@ -9,6 +9,7 @@ type HighFitExplanation = {
   matched_decade: string | null;
   matched_people: { name: string; role: string }[];
   matched_strong_directors?: string[];
+  plot_matched?: string[];
   top_reasons: string[];
 };
 
@@ -28,13 +29,15 @@ const chipBase =
 
 function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
   const strongDirs = explanation.matched_strong_directors ?? [];
+  const plotMatched = explanation.plot_matched ?? [];
   const hasAny =
     explanation.in_favorite_list ||
     explanation.matched_genres.length > 0 ||
     explanation.matched_countries.length > 0 ||
     explanation.matched_decade ||
     explanation.matched_people.length > 0 ||
-    strongDirs.length > 0;
+    strongDirs.length > 0 ||
+    plotMatched.length > 0;
 
   if (!hasAny) return null;
 
@@ -85,6 +88,14 @@ function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
           className={`${chipBase} bg-[var(--accent-muted)]/25 text-[var(--accent)]`}
         >
           Strong director: {d}
+        </span>
+      ))}
+      {plotMatched.map((m) => (
+        <span
+          key={m}
+          className={`${chipBase} bg-[var(--muted-subtle)]/20 text-[var(--muted-soft)]`}
+        >
+          Plot: {m}
         </span>
       ))}
     </div>

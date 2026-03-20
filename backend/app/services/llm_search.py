@@ -145,6 +145,21 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
     )
 
 
+_PLOT_MATCH_BOOST = 0.5  # per mood_keyword found in plot; soft signal
+
+
+def _plot_match_score(plot: str | None, mood_keywords: list[str]) -> tuple[float, list[str]]:
+    """Soft score for mood keywords in plot. Returns (boost, matched_keywords). Grounded: plot from TitleMetadata only."""
+    if not plot or not mood_keywords:
+        return 0.0, []
+    plot_lower = plot.lower()
+    matched = [kw for kw in mood_keywords if kw and kw.strip() and kw.strip().lower() in plot_lower]
+    if not matched:
+        return 0.0, []
+    boost = min(len(matched) * _PLOT_MATCH_BOOST, 2.0)  # cap at 2
+    return boost, matched
+
+
 def _infer_title_type_from_query_prefix(query: str) -> str | None:
     """When user explicitly starts with a title-type word, use it. Overrides LLM confusion."""
     q = (query or "").strip().lower()
@@ -188,6 +203,7 @@ Allowed keys: {allowed_keys}."""
     schema_block += """
 Use standard genres (Drama, Comedy, Thriller, Sci-Fi, Romance, Documentary). Full country names. decade as "1990s".
 title_type: CRITICAL—When the user explicitly says "series", "tv", "shows", "movies", or "films", set title_type from those words.
+mood_keywords: Mood/theme words (slow, dark, psychological, atmospheric, romantic, tense) that describe feel—used to soft-match against plot.
 For "similar to X", set similar_to to the title. For "for me"/"my taste", set emphasize_high_fit true."""
     if is_watched:
         schema_block += """
@@ -243,6 +259,43 @@ Schema (output this shape only): {schema_block}"""
         return SearchIntent(), debug_info
 
 
+def _similar_to_boost(
+    genres_str: str | None,
+    country: str | None,
+    year: int | None,
+    similar: dict,
+) -> tuple[float, list[str]]:
+    """Soft ranking boost for overlap with reference title. Returns (boost, matched_reasons)."""
+    if not similar:
+        return 0.0, []
+    reasons: list[str] = []
+    boost = 0.0
+    item_genres = {g.strip() for g in (genres_str or "").split(",") if g.strip()}
+    ref_genres = set(similar.get("genres", []))
+    overlap = item_genres & ref_genres
+    if overlap:
+        boost += 0.5 * len(overlap)
+        reasons.append(f"genres like ref: {', '.join(sorted(overlap)[:3])}")
+
+    item_countries = parse_and_normalize_countries(country)
+    ref_countries = set(similar.get("countries", []))
+    if item_countries & ref_countries:
+        boost += 0.5
+        reasons.append("country like ref")
+
+    ref_decade = similar.get("decade")
+    if ref_decade and year:
+        try:
+            decade_num = int(ref_decade.replace("s", ""))
+            if decade_num <= year <= decade_num + 9:
+                boost += 0.5
+                reasons.append("decade like ref")
+        except (ValueError, TypeError):
+            pass
+
+    return min(boost, 2.0), reasons  # cap
+
+
 def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
     """Find a title in ratings or watchlist matching hint. Return genres, country, decade to use as signals."""
     if not title_hint or len(title_hint.strip()) < 2:
@@ -285,17 +338,12 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
     if prefix_type is not None:
         intent.title_type = prefix_type
 
-    # Enrich intent from "similar_to" only when grounded: title must exist in ratings or watchlist
+    # similar_to: use only for soft ranking; do NOT merge into intent (borrowed metadata stays soft)
+    similar_to_signals: dict | None = None
     if intent.similar_to:
-        similar = _lookup_similar_title(db, intent.similar_to)
-        if similar:
-            intent.genres = list(set(intent.genres) | set(similar.get("genres", [])))
-            intent.countries = list(set(intent.countries) | set(similar.get("countries", [])))
-            if not intent.decade and similar.get("decade"):
-                intent.decade = similar["decade"]
-        # If not found: do not use similar_to for enrichment; keep validated genre/country hints from intent only
+        similar_to_signals = _lookup_similar_title(db, intent.similar_to)
 
-    # Build base query: watchlist items, unrated, with metadata
+    # Build base query: watchlist items, unrated, with metadata (including plot for soft mood matching)
     q = (
         db.query(
             IMDbWatchlistItem,
@@ -305,6 +353,7 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
             TitleMetadata.writer,
             TitleMetadata.country,
             TitleMetadata.genres,
+            TitleMetadata.plot,
         )
         .outerjoin(TitleMetadata, IMDbWatchlistItem.imdb_title_id == TitleMetadata.imdb_title_id)
         .filter(IMDbWatchlistItem.your_rating.is_(None))
@@ -381,7 +430,7 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
     rows = q.limit(fetch_limit).all()
 
     scored = []
-    for r, poster, actors, directors, writer, country, meta_genres in rows:
+    for r, poster, actors, directors, writer, country, meta_genres, plot in rows:
         if r.imdb_title_id in favorite_list_ids:
             continue
         boost, matches = compute_favorite_boost(actors, directors, writer, favorites_by_role)
@@ -390,6 +439,15 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
         total_score = fit_score + boost * 2
+        plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
+        total_score += plot_boost
+        if plot_matched:
+            explanation["plot_matched"] = plot_matched
+        if similar_to_signals:
+            sim_boost, sim_reasons = _similar_to_boost(genres_str, country, r.year, similar_to_signals)
+            total_score += sim_boost
+            if sim_reasons:
+                explanation["similar_to_matched"] = sim_reasons
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
         scored.append((total_score, r, poster, explanation))
@@ -414,6 +472,8 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
             parts.append(f"similar to: {intent.similar_to}")
         if intent.emphasize_high_fit:
             parts.append("emphasizing your taste fit")
+        if intent.mood_keywords:
+            parts.append(f"mood: {', '.join(intent.mood_keywords[:3])}")
     summary = "; ".join(parts) if parts else "Watchlist items matching your query"
 
     result = {
@@ -431,6 +491,8 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
                     "matched_decade": exp.get("matched_decade"),
                     "matched_people": exp.get("matched_people", []),
                     "matched_strong_directors": exp.get("matched_strong_directors", []),
+                    "plot_matched": exp.get("plot_matched", []),
+                    "similar_to_matched": exp.get("similar_to_matched", []),
                     "top_reasons": exp.get("top_reasons", [])[:5],
                 },
             }
@@ -457,15 +519,11 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
     if prefix_type is not None:
         intent.title_type = prefix_type
 
+    similar_to_signals: dict | None = None
     if intent.similar_to:
-        similar = _lookup_similar_title(db, intent.similar_to)
-        if similar:
-            intent.genres = list(set(intent.genres) | set(similar.get("genres", [])))
-            intent.countries = list(set(intent.countries) | set(similar.get("countries", [])))
-            if not intent.decade and similar.get("decade"):
-                intent.decade = similar["decade"]
+        similar_to_signals = _lookup_similar_title(db, intent.similar_to)
 
-    # Base: rated titles with metadata
+    # Base: rated titles with metadata (including plot for soft mood matching)
     q = (
         db.query(
             IMDbRating,
@@ -475,6 +533,7 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
             TitleMetadata.writer,
             TitleMetadata.country,
             TitleMetadata.genres,
+            TitleMetadata.plot,
             TitleMetadata.imdb_rating,
             TitleMetadata.metascore,
         )
@@ -561,13 +620,22 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
     rows = q.limit(fetch_limit).all()
 
     scored = []
-    for r, poster, actors, directors, writer, country, meta_genres, imdb_rating, metascore in rows:
+    for r, poster, actors, directors, writer, country, meta_genres, plot, imdb_rating, metascore in rows:
         boost, matches = compute_favorite_boost(actors, directors, writer, favorites_by_role)
         genres_str = meta_genres or r.genres
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
         total_score = fit_score + boost * 2
+        plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
+        total_score += plot_boost
+        if plot_matched:
+            explanation["plot_matched"] = plot_matched
+        if similar_to_signals:
+            sim_boost, sim_reasons = _similar_to_boost(genres_str, country, r.year, similar_to_signals)
+            total_score += sim_boost
+            if sim_reasons:
+                explanation["similar_to_matched"] = sim_reasons
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
         scored.append((total_score, r, poster, explanation))
@@ -595,6 +663,8 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
             parts.append("disagreed with critics")
         if intent.emphasize_high_fit:
             parts.append("emphasizing your taste fit")
+        if intent.mood_keywords:
+            parts.append(f"mood: {', '.join(intent.mood_keywords[:3])}")
     summary = "; ".join(parts) if parts else "Watched titles matching your query"
 
     result = {
@@ -614,6 +684,8 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
                     "matched_decade": exp.get("matched_decade"),
                     "matched_people": exp.get("matched_people", []),
                     "matched_strong_directors": exp.get("matched_strong_directors", []),
+                    "plot_matched": exp.get("plot_matched", []),
+                    "similar_to_matched": exp.get("similar_to_matched", []),
                     "top_reasons": exp.get("top_reasons", [])[:5],
                 },
             }
