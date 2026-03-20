@@ -480,7 +480,7 @@ class WatchlistSearchRequest(BaseModel):
 @router.post("/watchlist-search")
 def recommendations_watchlist_search(
     body: WatchlistSearchRequest,
-    limit: int = Query(default=15, ge=1, le=50),
+    limit: int = Query(default=8, ge=1, le=50),
 ):
     """Grounded natural-language search. scope=watchlist (default) or watched. LLM interprets query; retrieval uses only real data."""
     db = SessionLocal()

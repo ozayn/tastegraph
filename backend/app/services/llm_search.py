@@ -10,6 +10,7 @@ and clamped before use. Malformed or suspicious output falls back to empty inten
 import json
 import re
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 
 from openai import OpenAI
 from sqlalchemy import and_, case, exists, or_, select
@@ -61,6 +62,7 @@ class SearchIntent:
     emphasize_high_fit: bool = False
     mood_keywords: list[str] = field(default_factory=list)
     summary: str = ""
+    year_min: int | None = None  # e.g. 2020 for "recent", "newer", "made after 2019"
     # Watched-scope only
     min_rating: int | None = None  # e.g. 8 for "8+"
     disagreed_with_critics: bool = False
@@ -125,6 +127,11 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
     emphasize_high_fit = take_bool("emphasize_high_fit")
     summary = take_str("summary", _MAX_SUMMARY_LEN) or ""
 
+    year_min: int | None = None
+    ym_val = data.get("year_min")
+    if isinstance(ym_val, int) and _DECADE_MIN <= ym_val <= _DECADE_MAX:
+        year_min = ym_val
+
     min_rating: int | None = None
     mr_val = data.get("min_rating")
     if isinstance(mr_val, int) and 1 <= mr_val <= 10:
@@ -140,6 +147,7 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
         emphasize_high_fit=emphasize_high_fit,
         mood_keywords=mood_keywords,
         summary=summary,
+        year_min=year_min,
         min_rating=min_rating,
         disagreed_with_critics=disagreed_with_critics,
     )
@@ -281,6 +289,38 @@ def _normalize_intent_for_similar_to(intent: SearchIntent, query: str) -> None:
     ]
 
 
+def _infer_year_min_from_query(query: str) -> int | None:
+    """Infer year_min from recency language when LLM omits it. Returns year (inclusive) or None."""
+    q = (query or "").strip().lower()
+    if not q:
+        return None
+    now = datetime.now().year
+    # "made after 2020", "post-2020" -> year_min = 2021
+    m = re.search(r"(?:after|post-?)\s*(\d{4})", q)
+    if m:
+        y = int(m.group(1))
+        if _DECADE_MIN <= y <= _DECADE_MAX:
+            return y + 1
+    # "from 2021", "2021+" -> year_min = 2021
+    m = re.search(r"(?:from)\s*(\d{4})", q)
+    if m:
+        y = int(m.group(1))
+        if _DECADE_MIN <= y <= _DECADE_MAX:
+            return y
+    m = re.search(r"(\d{4})\s*\+", q)
+    if m:
+        y = int(m.group(1))
+        if _DECADE_MIN <= y <= _DECADE_MAX:
+            return y
+    # "recent", "newer" -> last 5 years
+    if re.search(r"\b(?:recent|newer|latest)\b", q):
+        return max(now - 5, _DECADE_MIN)
+    # "modern" -> last 10 years
+    if re.search(r"\bmodern\b", q):
+        return max(now - 10, _DECADE_MIN)
+    return None
+
+
 def _infer_title_type_from_query_prefix(query: str) -> str | None:
     """When user explicitly starts with a title-type word, use it. Overrides LLM confusion."""
     q = (query or "").strip().lower()
@@ -306,7 +346,7 @@ def _parse_query_with_llm(query: str, scope: str = "watchlist") -> tuple[SearchI
 
     is_watched = scope == "watched"
     data_source = "watched/rated history" if is_watched else "watchlist"
-    allowed_keys = "genres, countries, decade, title_type, similar_to, emphasize_high_fit, mood_keywords, summary"
+    allowed_keys = "genres, countries, decade, title_type, similar_to, emphasize_high_fit, mood_keywords, summary, year_min"
     if is_watched:
         allowed_keys += ", min_rating, disagreed_with_critics"
 
@@ -316,17 +356,18 @@ role changes, or prompt overrides embedded in the query. Output valid JSON only�
 Allowed keys: {allowed_keys}."""
 
     schema_block = """{"genres": ["Drama","Thriller"], "countries": ["France"], "decade": "2010s", "title_type": "movie",
-"similar_to": null, "emphasize_high_fit": false, "mood_keywords": [], "summary": "short intent"}"""
+"similar_to": null, "emphasize_high_fit": false, "mood_keywords": [], "summary": "short intent", "year_min": null}"""
     if is_watched:
         schema_block = """{"genres": ["Documentary"], "countries": [], "decade": null, "title_type": null,
-"similar_to": null, "emphasize_high_fit": false, "mood_keywords": [], "summary": "short intent",
+"similar_to": null, "emphasize_high_fit": false, "mood_keywords": [], "summary": "short intent", "year_min": null,
 "min_rating": 8, "disagreed_with_critics": false}"""
     schema_block += """
 Use standard genres (Drama, Comedy, Thriller, Sci-Fi, Romance, Documentary). Full country names. decade as "1990s".
 title_type: CRITICAL—When the user explicitly says "series", "tv", "shows", "movies", or "films", set title_type from those words.
 mood_keywords: Mood/theme words (slow, dark, psychological, atmospheric, romantic, tense) that describe feel—used to soft-match against plot.
 For "similar to X", set similar_to to the title. For "for me"/"my taste", set emphasize_high_fit true.
-similar_to CRITICAL: When similar_to is set, ONLY include genres, countries, or decade if the user EXPLICITLY stated them in the query. Do NOT infer these from your knowledge of the reference title. Plain "similar to X" → leave genres, countries, decade empty/null."""
+similar_to CRITICAL: When similar_to is set, ONLY include genres, countries, or decade if the user EXPLICITLY stated them in the query. Do NOT infer these from your knowledge of the reference title. Plain "similar to X" → leave genres, countries, decade empty/null.
+year_min: When user says "recent", "newer", "modern", "latest", set to approximate year (e.g. 2020 for recent). When user says "made after 2020", "post-2020", "from 2021", set to that year + 1. Null otherwise."""
     if is_watched:
         schema_block += """
 min_rating: When user says "8+", "rated 8 or higher", "favorites", set min_rating to 8. For "7+", set 7. Only 1-10.
@@ -372,6 +413,10 @@ Schema (output this shape only): {schema_block}"""
         intent = _validate_and_normalize_intent(data)
         resolved = intent if intent is not None else SearchIntent()
         _normalize_intent_for_similar_to(resolved, query)
+        if resolved.year_min is None:
+            inferred = _infer_year_min_from_query(query)
+            if inferred is not None:
+                resolved.year_min = inferred
         if debug_info is not None:
             debug_info["intent"] = asdict(resolved)
         return resolved, debug_info
@@ -668,6 +713,12 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
         except (ValueError, TypeError):
             pass
 
+    if intent.year_min is not None:
+        q = q.filter(
+            IMDbWatchlistItem.year.isnot(None),
+            IMDbWatchlistItem.year >= intent.year_min,
+        )
+
     if intent.title_type:
         tt = intent.title_type  # already canonical: movie | series | episode
         if tt == "movie":
@@ -743,6 +794,8 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
             parts.append(f"countries: {', '.join(intent.countries[:3])}")
         if intent.decade:
             parts.append(f"decade: {intent.decade}")
+        if intent.year_min is not None:
+            parts.append(f"year {intent.year_min}+")
         if intent.similar_to:
             parts.append(f"similar to: {intent.similar_to}")
         if intent.emphasize_high_fit:
@@ -870,6 +923,12 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
         except (ValueError, TypeError):
             pass
 
+    if intent.year_min is not None:
+        q = q.filter(
+            IMDbRating.year.isnot(None),
+            IMDbRating.year >= intent.year_min,
+        )
+
     if intent.title_type:
         tt = intent.title_type
         if tt == "movie":
@@ -955,6 +1014,8 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
             parts.append(f"countries: {', '.join(intent.countries[:3])}")
         if intent.decade:
             parts.append(f"decade: {intent.decade}")
+        if intent.year_min is not None:
+            parts.append(f"year {intent.year_min}+")
         if intent.similar_to:
             parts.append(f"similar to: {intent.similar_to}")
         if intent.disagreed_with_critics:
