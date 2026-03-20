@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { SectionHelp } from "../components/SectionHelp";
 import { ViewModeToggle, SlideOrScrollContainer, type ViewMode } from "../components/SlideOrScrollView";
