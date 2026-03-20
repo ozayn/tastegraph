@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { API_URL } from "../lib/api";
 import { SectionHelp } from "../components/SectionHelp";
+import { ViewModeToggle, SlideOrScrollContainer, type ViewMode } from "../components/SlideOrScrollView";
 
 type GenreShift = {
   genre: string;
@@ -518,6 +519,13 @@ function BarChart({
 export default function StudiesPage() {
   const [data, setData] = useState<StudiesData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<ViewMode>("scroll");
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const handleModeChange = useCallback((m: ViewMode) => {
+    setMode(m);
+    if (m === "slide") setSlideIndex(0);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/studies`)
@@ -576,15 +584,25 @@ export default function StudiesPage() {
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
         <header className="mb-14 sm:mb-16 md:mb-20">
-          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
-            Studies
-          </h1>
-          <p className="mt-3 max-w-lg text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
-            Analytical deep-dives into your viewing patterns.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
+                Studies
+              </h1>
+              <p className="mt-3 max-w-lg text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
+                Analytical deep-dives into your viewing patterns.
+              </p>
+            </div>
+            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="shrink-0" />
+          </div>
         </header>
 
-        <div className="space-y-16 sm:space-y-20 md:space-y-24">
+        <SlideOrScrollContainer
+          mode={mode}
+          slideIndex={slideIndex}
+          onSlideChange={setSlideIndex}
+          ariaLabel="Studies slides"
+        >
           {/* 1. How has my taste changed over time? */}
           <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-4">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
@@ -1201,7 +1219,7 @@ export default function StudiesPage() {
               </div>
             </section>
           )}
-        </div>
+        </SlideOrScrollContainer>
       </main>
     </div>
   );

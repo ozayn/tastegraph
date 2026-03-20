@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { SectionHelp } from "../components/SectionHelp";
 import { CountriesMap } from "../components/CountriesMap";
+import { ViewModeToggle, SlideOrScrollContainer, type ViewMode } from "../components/SlideOrScrollView";
 
 type Overview = {
   total_rated: number;
@@ -330,6 +331,13 @@ function BarList<T extends { [key: string]: unknown }>({
 export default function InsightsPage() {
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<ViewMode>("scroll");
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const handleModeChange = useCallback((m: ViewMode) => {
+    setMode(m);
+    if (m === "slide") setSlideIndex(0);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/insights`)
@@ -384,15 +392,26 @@ export default function InsightsPage() {
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
         <header className="mb-10 sm:mb-12">
-          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
-            Insights
-          </h1>
-          <p className="mt-2 max-w-lg text-[15px] leading-[1.55] text-[var(--muted-soft)] sm:text-[16px]">
-            Aggregated viewing history and taste profile from your ratings.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
+                Insights
+              </h1>
+              <p className="mt-2 max-w-lg text-[15px] leading-[1.55] text-[var(--muted-soft)] sm:text-[16px]">
+                Aggregated viewing history and taste profile from your ratings.
+              </p>
+            </div>
+            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="shrink-0" />
+          </div>
         </header>
 
-        <div className="space-y-14 sm:space-y-16 md:space-y-20">
+        <SlideOrScrollContainer
+          mode={mode}
+          slideIndex={slideIndex}
+          onSlideChange={setSlideIndex}
+          ariaLabel="Insights slides"
+          scrollClassName="space-y-14 sm:space-y-16 md:space-y-20"
+        >
           {/* Overview */}
           <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-6">
             <h2 className="mb-1 text-[18px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[19px]">
@@ -662,7 +681,7 @@ export default function InsightsPage() {
               </StatCard>
             </div>
           </section>
-        </div>
+        </SlideOrScrollContainer>
       </main>
     </div>
   );
