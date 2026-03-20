@@ -27,6 +27,7 @@ function normalizeExplanation(exp: Record<string, unknown>): {
   matched_people: { name: string; role: string }[];
   matched_strong_directors?: string[];
   plot_matched?: string[];
+  similar_to_matched?: string[];
   top_reasons: string[];
 } {
   const arr = (x: unknown): string[] =>
@@ -46,6 +47,7 @@ function normalizeExplanation(exp: Record<string, unknown>): {
     matched_people: people(exp.matched_people),
     matched_strong_directors: arr(exp.matched_strong_directors),
     plot_matched: arr(exp.plot_matched),
+    similar_to_matched: arr(exp.similar_to_matched),
     top_reasons: arr(exp.top_reasons),
   };
 }
@@ -61,6 +63,15 @@ type SearchResult = {
     intent?: Record<string, unknown> | null;
     fallback?: boolean;
     parse_error?: boolean;
+    similar_to_resolved?: string | null;
+    similar_to_signals_used?: {
+      genres: string[];
+      countries: string[];
+      has_directors: boolean;
+      has_writers: boolean;
+      has_actors: boolean;
+      plot_words_count: number;
+    };
   };
 };
 
@@ -81,7 +92,7 @@ export function LLMWatchlistSearch() {
     setLoading(true);
     setError(null);
     setResult(null);
-    fetch(`${API_URL}/recommendations/watchlist-search?limit=15`, {
+    fetch(`${API_URL}/recommendations/watchlist-search?limit=8`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ q: query.trim(), scope }),
@@ -225,6 +236,21 @@ function PromptInspector({ debug }: { debug: NonNullable<SearchResult["debug"]> 
             <p className="text-[var(--muted-soft)]">
               Fallback: {String(debug.fallback)} (heuristic search when LLM unavailable or empty intent)
             </p>
+          )}
+          {debug.similar_to_resolved !== undefined && (
+            <div>
+              <p className="font-medium text-[var(--foreground)] mb-1">similar_to resolution</p>
+              <p className="text-[var(--muted-soft)]">
+                {debug.similar_to_resolved
+                  ? `Resolved to: ${debug.similar_to_resolved}`
+                  : "Not found in ratings/watchlist — similarity ranking unavailable"}
+              </p>
+              {debug.similar_to_signals_used && (
+                <pre className="mt-1 whitespace-pre-wrap break-words overflow-x-auto rounded bg-[var(--card-bg)] border border-[var(--section-border)] p-2 font-mono text-[11px]">
+                  {JSON.stringify(debug.similar_to_signals_used, null, 2)}
+                </pre>
+              )}
+            </div>
           )}
           {debug.intent != null && (
             <div>

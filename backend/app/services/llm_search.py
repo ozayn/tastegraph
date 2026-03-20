@@ -146,6 +146,20 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
 
 
 _PLOT_MATCH_BOOST = 0.5  # per mood_keyword found in plot; soft signal
+_PLOT_STOPWORDS = frozenset(
+    "the and for with have has had was were been being be is are was were "
+    "that this these those from into through during before after about "
+    "when where why how all each every both few more most other some "
+    "their her his its our your my".split()
+)
+
+
+def _extract_plot_words(plot: str | None, min_len: int = 4) -> set[str]:
+    """Extract meaningful words from plot for similarity matching."""
+    if not plot or not plot.strip():
+        return set()
+    words = re.findall(r"[a-z]+", plot.lower())
+    return {w for w in words if len(w) >= min_len and w not in _PLOT_STOPWORDS}
 
 
 def _plot_match_score(plot: str | None, mood_keywords: list[str]) -> tuple[float, list[str]]:
@@ -158,6 +172,88 @@ def _plot_match_score(plot: str | None, mood_keywords: list[str]) -> tuple[float
         return 0.0, []
     boost = min(len(matched) * _PLOT_MATCH_BOOST, 2.0)  # cap at 2
     return boost, matched
+
+
+# Genre/country/decade terms to detect explicit user mention (for similar_to cleanup)
+_GENRE_QUERY_TERMS: dict[str, list[str]] = {
+    "Drama": ["drama", "dramas"],
+    "Comedy": ["comedy", "comedies", "comedic"],
+    "Thriller": ["thriller", "thrillers"],
+    "Sci-Fi": ["sci-fi", "scifi", "science fiction"],
+    "Romance": ["romance", "romantic"],
+    "Documentary": ["documentary", "documentaries"],
+    "Horror": ["horror"],
+    "Action": ["action"],
+    "Animation": ["animation", "animated"],
+}
+_COUNTRY_QUERY_TERMS: dict[str, list[str]] = {
+    "Germany": ["germany", "german"],
+    "France": ["france", "french"],
+    "Iran": ["iran", "iranian"],
+    "United Kingdom": ["uk", "british", "britain", "english"],
+    "United States": ["usa", "us", "american"],
+    "Japan": ["japan", "japanese"],
+    "South Korea": ["korea", "korean"],
+    "Italy": ["italy", "italian"],
+    "Spain": ["spain", "spanish"],
+    "India": ["india", "indian"],
+    "Mexico": ["mexico", "mexican"],
+    "Brazil": ["brazil", "brazilian"],
+    "Russia": ["russia", "russian"],
+    "Sweden": ["sweden", "swedish"],
+    "Denmark": ["denmark", "danish"],
+    "Norway": ["norway", "norwegian"],
+}
+
+
+def _query_explicitly_mentions_genre(query_lower: str, genre: str) -> bool:
+    """True if query contains a term indicating the user explicitly stated this genre."""
+    terms = _GENRE_QUERY_TERMS.get(genre, [genre.lower()])
+    return any(t in query_lower for t in terms)
+
+
+def _query_explicitly_mentions_country(query_lower: str, country: str) -> bool:
+    """True if query contains a term indicating the user explicitly stated this country."""
+    terms = _COUNTRY_QUERY_TERMS.get(country, [country.lower()])
+    return any(t in query_lower for t in terms)
+
+
+def _query_explicitly_mentions_decade(query_lower: str, decade: str) -> bool:
+    """True if query contains a term indicating the user explicitly stated this decade."""
+    if not decade:
+        return False
+    m = re.match(r"(\d{3,4})s?$", decade)
+    if not m:
+        return False
+    base = m.group(1)
+    # e.g. "2010s" -> "2010", "2010s"; "1990s" -> "1990", "90s"
+    year = int(base)
+    terms = [base, f"{base}s", f"{base}'s"]
+    if year >= 1900 and year < 2000:
+        short = str(year - 1900)  # 1990 -> "90"
+        terms.extend([f"{short}s", f"{short}'s"])
+    return any(t in query_lower for t in terms)
+
+
+def _normalize_intent_for_similar_to(intent: SearchIntent, query: str) -> None:
+    """Post-parse cleanup for similar_to queries: clear inferred metadata, prevent title/mood collision.
+    Mutates intent in place. Keeps explicit user constraints (genre/country/decade only if in query)."""
+    if not intent.similar_to:
+        return
+    q = (query or "").strip().lower()
+    similar_lower = (intent.similar_to or "").lower()
+
+    # Clear genres/countries/decade unless explicitly stated in query
+    intent.genres = [g for g in intent.genres if _query_explicitly_mentions_genre(q, g)]
+    intent.countries = [c for c in intent.countries if _query_explicitly_mentions_country(q, c)]
+    if intent.decade and not _query_explicitly_mentions_decade(q, intent.decade):
+        intent.decade = None
+
+    # Prevent title/mood collision: remove mood keywords that appear in similar_to
+    intent.mood_keywords = [
+        kw for kw in intent.mood_keywords
+        if kw and kw.strip() and kw.strip().lower() not in similar_lower
+    ]
 
 
 def _infer_title_type_from_query_prefix(query: str) -> str | None:
@@ -204,7 +300,8 @@ Allowed keys: {allowed_keys}."""
 Use standard genres (Drama, Comedy, Thriller, Sci-Fi, Romance, Documentary). Full country names. decade as "1990s".
 title_type: CRITICAL—When the user explicitly says "series", "tv", "shows", "movies", or "films", set title_type from those words.
 mood_keywords: Mood/theme words (slow, dark, psychological, atmospheric, romantic, tense) that describe feel—used to soft-match against plot.
-For "similar to X", set similar_to to the title. For "for me"/"my taste", set emphasize_high_fit true."""
+For "similar to X", set similar_to to the title. For "for me"/"my taste", set emphasize_high_fit true.
+similar_to CRITICAL: When similar_to is set, ONLY include genres, countries, or decade if the user EXPLICITLY stated them in the query. Do NOT infer these from your knowledge of the reference title. Plain "similar to X" → leave genres, countries, decade empty/null."""
     if is_watched:
         schema_block += """
 min_rating: When user says "8+", "rated 8 or higher", "favorites", set min_rating to 8. For "7+", set 7. Only 1-10.
@@ -249,6 +346,7 @@ Schema (output this shape only): {schema_block}"""
 
         intent = _validate_and_normalize_intent(data)
         resolved = intent if intent is not None else SearchIntent()
+        _normalize_intent_for_similar_to(resolved, query)
         if debug_info is not None:
             debug_info["intent"] = asdict(resolved)
         return resolved, debug_info
@@ -259,72 +357,142 @@ Schema (output this shape only): {schema_block}"""
         return SearchIntent(), debug_info
 
 
+def _parse_names(s: str | None) -> set[str]:
+    if not s or not s.strip():
+        return set()
+    return {n.strip().lower() for n in s.split(",") if n.strip()}
+
+
+def _plot_overlap_boost(plot: str | None, ref_plot_words: set[str]) -> tuple[float, str | None]:
+    """Boost for plot word overlap with reference. Returns (boost, reason or None). Cap 1.25.
+    Stronger for theme-heavy titles like Black Mirror where plot words matter more than broad genres."""
+    if not ref_plot_words or not plot:
+        return 0.0, None
+    item_words = _extract_plot_words(plot)
+    overlap = item_words & ref_plot_words
+    if len(overlap) < 2:
+        return 0.0, None
+    boost = min(1.25, 0.25 * len(overlap))  # 2 words=0.5, 5+=1.25
+    return boost, f"plot overlap: {', '.join(sorted(overlap)[:4])}"
+
+
 def _similar_to_boost(
     genres_str: str | None,
     country: str | None,
-    year: int | None,
+    item_directors: str | None,
+    item_writer: str | None,
+    item_actors: str | None,
+    item_plot: str | None,
     similar: dict,
 ) -> tuple[float, list[str]]:
-    """Soft ranking boost for overlap with reference title. Returns (boost, matched_reasons)."""
+    """Soft ranking boost for overlap with reference title. Returns (boost, matched_reasons).
+    Stronger weights for similar_to: genres, country, people. Cap 5.0."""
     if not similar:
         return 0.0, []
     reasons: list[str] = []
     boost = 0.0
+
     item_genres = {g.strip() for g in (genres_str or "").split(",") if g.strip()}
     ref_genres = set(similar.get("genres", []))
     overlap = item_genres & ref_genres
     if overlap:
-        boost += 0.5 * len(overlap)
+        boost += 1.0 * len(overlap)
         reasons.append(f"genres like ref: {', '.join(sorted(overlap)[:3])}")
 
     item_countries = parse_and_normalize_countries(country)
     ref_countries = set(similar.get("countries", []))
     if item_countries & ref_countries:
-        boost += 0.5
+        boost += 1.0
         reasons.append("country like ref")
 
-    ref_decade = similar.get("decade")
-    if ref_decade and year:
-        try:
-            decade_num = int(ref_decade.replace("s", ""))
-            if decade_num <= year <= decade_num + 9:
-                boost += 0.5
-                reasons.append("decade like ref")
-        except (ValueError, TypeError):
-            pass
+    ref_directors = similar.get("directors", set())
+    ref_writers = similar.get("writers", set())
+    ref_actors = similar.get("actors", set())
+    item_dir = _parse_names(item_directors)
+    item_wr = _parse_names(item_writer)
+    item_act = _parse_names(item_actors)
+    people_reasons: list[str] = []
+    if item_dir & ref_directors:
+        boost += 1.0
+        people_reasons.append("director")
+    if item_wr & ref_writers:
+        boost += 0.8
+        people_reasons.append("writer")
+    if item_act & ref_actors:
+        boost += 0.5
+        people_reasons.append("actor")
+    if people_reasons:
+        reasons.append(f"same creators: {', '.join(people_reasons)}")
 
-    return min(boost, 2.0), reasons  # cap
+    ref_plot_words = similar.get("plot_words", set())
+    plot_boost, plot_reason = _plot_overlap_boost(item_plot, ref_plot_words)
+    if plot_boost and plot_reason:
+        boost += plot_boost
+        reasons.append(plot_reason)
+
+    return min(boost, 5.0), reasons
+
+
+def _recency_boost(year: int | None) -> float:
+    """Subtle boost for newer titles when scores are close. Returns 0–0.15."""
+    if not year or year < 1980:
+        return 0.0
+    return min(0.15, (year - 1980) * 0.0035)
+
+
+def _similar_to_hint_variants(hint: str) -> list[str]:
+    """Produce search variants for similar_to lookup. Strips leading articles so 'The Black Mirror' matches 'Black Mirror'."""
+    s = hint.strip()
+    if len(s) < 2:
+        return []
+    out = [s.lower()]
+    lower = s.lower()
+    for article in ("the ", "a ", "an "):
+        if lower.startswith(article):
+            stripped = lower[len(article) :].strip()
+            if len(stripped) >= 2 and stripped not in out:
+                out.append(stripped)
+            break
+    return out
 
 
 def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
-    """Find a title in ratings or watchlist matching hint. Return genres, country, decade to use as signals."""
+    """Find a title in ratings or watchlist matching hint. Return genres, country, people for similarity signals.
+    Tries hint variants (with leading articles stripped) for better matching."""
     if not title_hint or len(title_hint.strip()) < 2:
         return None
-    hint = title_hint.strip().lower()
-    hint_part = f"%{hint}%"
+    variants = _similar_to_hint_variants(title_hint)
+    if not variants:
+        return None
 
     # Prefer IMDbRating (user has seen it), then WatchlistItem
     for model, title_col in [(IMDbRating, IMDbRating.title), (IMDbWatchlistItem, IMDbWatchlistItem.title)]:
-        q = db.query(model).filter(title_col.ilike(hint_part))
-        if model == IMDbRating:
-            q = q.filter(IMDbRating.user_rating.isnot(None))
-        row = q.limit(1).first()
-        if row:
-            imdb_id = row.imdb_title_id
-            meta = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == imdb_id).first()
-            genres = (meta.genres if meta else getattr(row, "genres", None)) or ""
-            country = meta.country if meta else None
-            year = getattr(row, "year", None) or (meta.year if meta else None)
-            decade = f"{year // 10 * 10}s" if year else None
-            return {
-                "genres": [g.strip() for g in genres.split(",") if g.strip()],
-                "countries": list(parse_and_normalize_countries(country)) if country else [],
-                "decade": decade,
-            }
+        for v in variants:
+            hint_part = f"%{v}%"
+            q = db.query(model).filter(title_col.ilike(hint_part))
+            if model == IMDbRating:
+                q = q.filter(IMDbRating.user_rating.isnot(None))
+            row = q.limit(1).first()
+            if row:
+                imdb_id = row.imdb_title_id
+                meta = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == imdb_id).first()
+                genres = (meta.genres if meta else getattr(row, "genres", None)) or ""
+                country = meta.country if meta else None
+                plot = meta.plot if meta else None
+                resolved_title = row.title or ""
+                return {
+                    "genres": [g.strip() for g in genres.split(",") if g.strip()],
+                    "countries": list(parse_and_normalize_countries(country)) if country else [],
+                    "directors": _parse_names(meta.directors if meta else None),
+                    "writers": _parse_names(meta.writer if meta else None),
+                    "actors": _parse_names(meta.actors if meta else None),
+                    "plot_words": _extract_plot_words(plot),
+                    "resolved_title": resolved_title,
+                }
     return None
 
 
-def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
+def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
     """Grounded search: parse query, retrieve from watchlist only, rank, explain.
 
     Returns { items, intent_summary, fallback }.
@@ -438,16 +606,20 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        total_score = fit_score + boost * 2
+        taste_weight = 0.4 if similar_to_signals else 1.0
+        total_score = fit_score * taste_weight + boost * 2
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
         if similar_to_signals:
-            sim_boost, sim_reasons = _similar_to_boost(genres_str, country, r.year, similar_to_signals)
+            sim_boost, sim_reasons = _similar_to_boost(
+                genres_str, country, directors, writer, actors, plot, similar_to_signals
+            )
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
+        total_score += _recency_boost(r.year)
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
         scored.append((total_score, r, poster, explanation))
@@ -502,11 +674,26 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
         "fallback": fallback,
     }
     if settings.DEBUG and parse_debug is not None:
-        result["debug"] = {**parse_debug, "fallback": fallback}
+        debug = {**parse_debug, "fallback": fallback}
+        if intent.similar_to:
+            debug["similar_to_resolved"] = (
+                similar_to_signals.get("resolved_title") if similar_to_signals else None
+            )
+            if similar_to_signals:
+                sig = similar_to_signals
+                debug["similar_to_signals_used"] = {
+                    "genres": sig.get("genres", []),
+                    "countries": sig.get("countries", []),
+                    "has_directors": bool(sig.get("directors")),
+                    "has_writers": bool(sig.get("writers")),
+                    "has_actors": bool(sig.get("actors")),
+                    "plot_words_count": len(sig.get("plot_words", set())),
+                }
+        result["debug"] = debug
     return result
 
 
-def search_rated(db: Session, query: str, limit: int = 15) -> dict:
+def search_rated(db: Session, query: str, limit: int = 8) -> dict:
     """Grounded search over rated/watched titles. Same retrieval-first design as watchlist search.
 
     Returns { items, intent_summary, fallback }.
@@ -626,16 +813,20 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        total_score = fit_score + boost * 2
+        taste_weight = 0.4 if similar_to_signals else 1.0
+        total_score = fit_score * taste_weight + boost * 2
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
         if similar_to_signals:
-            sim_boost, sim_reasons = _similar_to_boost(genres_str, country, r.year, similar_to_signals)
+            sim_boost, sim_reasons = _similar_to_boost(
+                genres_str, country, directors, writer, actors, plot, similar_to_signals
+            )
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
+        total_score += _recency_boost(r.year)
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
         scored.append((total_score, r, poster, explanation))
@@ -695,5 +886,20 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
         "fallback": fallback,
     }
     if settings.DEBUG and parse_debug is not None:
-        result["debug"] = {**parse_debug, "fallback": fallback}
+        debug = {**parse_debug, "fallback": fallback}
+        if intent.similar_to:
+            debug["similar_to_resolved"] = (
+                similar_to_signals.get("resolved_title") if similar_to_signals else None
+            )
+            if similar_to_signals:
+                sig = similar_to_signals
+                debug["similar_to_signals_used"] = {
+                    "genres": sig.get("genres", []),
+                    "countries": sig.get("countries", []),
+                    "has_directors": bool(sig.get("directors")),
+                    "has_writers": bool(sig.get("writers")),
+                    "has_actors": bool(sig.get("actors")),
+                    "plot_words_count": len(sig.get("plot_words", set())),
+                }
+        result["debug"] = debug
     return result
