@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { SectionHelp } from "../components/SectionHelp";
+import { CountriesMap } from "../components/CountriesMap";
 
 type Overview = {
   total_rated: number;
@@ -463,17 +464,20 @@ export default function InsightsPage() {
                   renderSub={(x) => `${x.count} titles`}
                 />
               </StatCard>
+            </div>
+            <div className="mt-5">
               <StatCard
-                variant="list"
-                title="Favorite decades"
-                subtitle="release decades by count"
+                variant="chart"
+                title="Watched by country"
+                subtitle="Geographic spread of your rated titles, regardless of rating."
               >
-                <BarList
-                  items={overview.top_decades}
-                  getValue={(x) => x.count}
-                  renderLabel={(x) => x.decade}
-                  renderSub={(x) => `${x.count} titles`}
-                />
+                {overview.top_countries.length > 0 ? (
+                  <CountriesMap items={overview.top_countries} />
+                ) : (
+                  <p className="text-[14px] text-[var(--muted-soft)]">
+                    No country data in your rated titles yet.
+                  </p>
+                )}
               </StatCard>
             </div>
           </section>
