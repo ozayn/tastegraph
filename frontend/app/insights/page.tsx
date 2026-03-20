@@ -89,13 +89,15 @@ function BarListRow({
   label,
   sub,
   barPct,
+  compact,
 }: {
   label: string;
   sub?: React.ReactNode;
   barPct: number;
+  compact?: boolean;
 }) {
   return (
-    <li className="group relative flex items-center justify-between gap-4 py-2.5 px-1">
+    <li className={`group relative flex items-center justify-between gap-4 px-1 ${compact ? "py-1.5" : "py-2.5"}`}>
       <div
         className="absolute inset-y-0 left-0 rounded-md bg-[var(--mondrian-yellow)]/25 transition-opacity group-hover:opacity-100"
         style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
@@ -300,22 +302,25 @@ function BarList<T extends { [key: string]: unknown }>({
   getValue,
   renderLabel,
   renderSub,
+  compact,
 }: {
   items: T[];
   getValue: (item: T) => number;
   renderLabel: (item: T) => string;
   renderSub?: (item: T) => React.ReactNode;
+  compact?: boolean;
 }) {
   if (!items.length) return null;
   const maxVal = Math.max(...items.map(getValue), 1);
   return (
-    <ul className="space-y-1">
+    <ul className={compact ? "space-y-0.5" : "space-y-1"}>
       {items.map((item, i) => (
         <BarListRow
           key={i}
           label={renderLabel(item)}
           sub={renderSub?.(item)}
           barPct={(getValue(item) / maxVal) * 100}
+          compact={compact}
         />
       ))}
     </ul>
@@ -426,7 +431,7 @@ export default function InsightsPage() {
                 </p>
               </StatCard>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               <StatCard
                 variant="list"
                 title="Top genres by count"
@@ -437,6 +442,7 @@ export default function InsightsPage() {
                   getValue={(x) => x.count}
                   renderLabel={(x) => x.genre}
                   renderSub={(x) => `${x.count} titles`}
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -451,6 +457,7 @@ export default function InsightsPage() {
                   renderSub={(x) =>
                     `${x.avg_rating.toFixed(1)} · ${x.count} titles`
                   }
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -463,17 +470,18 @@ export default function InsightsPage() {
                   getValue={(x) => x.count}
                   renderLabel={(x) => x.country}
                   renderSub={(x) => `${x.count} titles`}
+                  compact
                 />
               </StatCard>
-            </div>
-            <div className="mt-5">
               <StatCard
                 variant="chart"
                 title="Watched by country"
                 subtitle="Geographic spread of your rated titles, regardless of rating."
               >
                 {(overview.all_countries ?? overview.top_countries).length > 0 ? (
-                  <CountriesMap items={overview.all_countries ?? overview.top_countries} />
+                  <div className="flex min-h-[200px] justify-center items-center p-4">
+                    <CountriesMap items={overview.all_countries ?? overview.top_countries} />
+                  </div>
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
                     No country data in your rated titles yet.
@@ -510,6 +518,7 @@ export default function InsightsPage() {
                       ? `${x.count} · ${x.avg_rating.toFixed(1)}`
                       : `${x.count} titles`
                   }
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -526,6 +535,7 @@ export default function InsightsPage() {
                       ? `${x.count} · ${x.avg_rating.toFixed(1)}`
                       : `${x.count} titles`
                   }
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -542,6 +552,7 @@ export default function InsightsPage() {
                       ? `${x.count} · ${x.avg_rating.toFixed(1)}`
                       : `${x.count} titles`
                   }
+                  compact
                 />
               </StatCard>
             </div>
@@ -620,6 +631,7 @@ export default function InsightsPage() {
                   getValue={(x) => x.count}
                   renderLabel={(x) => x.genre}
                   renderSub={(x) => `${x.count} titles`}
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -632,6 +644,7 @@ export default function InsightsPage() {
                   getValue={(x) => x.count}
                   renderLabel={(x) => x.country}
                   renderSub={(x) => `${x.count} titles`}
+                  compact
                 />
               </StatCard>
               <StatCard
@@ -644,6 +657,7 @@ export default function InsightsPage() {
                   getValue={(x) => x.count}
                   renderLabel={(x) => x.name}
                   renderSub={(x) => `${x.count} titles`}
+                  compact
                 />
               </StatCard>
             </div>

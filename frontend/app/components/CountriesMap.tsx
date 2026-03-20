@@ -187,10 +187,10 @@ export function CountriesMap({ items }: CountriesMapProps) {
   if (!hasMappable) return null;
 
   return (
-    <div className="relative space-y-2">
+    <div className="relative space-y-1.5">
       <div
         ref={containerRef}
-        className="h-[120px] w-full overflow-hidden rounded-md border border-[var(--section-border)] [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
+        className="aspect-[784/459] w-full overflow-hidden rounded-md border border-[var(--section-border)] [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
         aria-hidden
       />
       <div className="flex items-center gap-2 text-[10px] text-[var(--muted-soft)]">
