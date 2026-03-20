@@ -159,6 +159,7 @@ _PLOT_GENERIC_WORDS = frozenset(
     "begin end become try bring look leave meet start live".split()
 )
 # Distinctive genres (sci-fi, speculative) matter more for concept-heavy refs like Black Mirror
+# Broad genres (Drama, Crime, Mystery) often misrepresent concept-driven titles
 _REF_GENRE_WEIGHT: dict[str, float] = {
     "Sci-Fi": 1.6,
     "Science Fiction": 1.6,
@@ -166,13 +167,16 @@ _REF_GENRE_WEIGHT: dict[str, float] = {
     "Animation": 1.3,
     "Documentary": 1.3,
     "Thriller": 1.0,
-    "Mystery": 1.1,
     "Fantasy": 1.2,
+    "Mystery": 0.6,
+    "Crime": 0.6,
     "Drama": 0.6,
     "Comedy": 0.6,
     "Romance": 0.6,
     "Action": 0.7,
 }
+# Countries too common to strongly signal similarity (UK/US produce most content)
+_REF_COUNTRY_LOW_WEIGHT = frozenset({"United Kingdom", "United States"})
 
 
 def _extract_plot_words(plot: str | None, min_len: int = 4) -> set[str]:
@@ -384,9 +388,11 @@ def _parse_names(s: str | None) -> set[str]:
     return {n.strip().lower() for n in s.split(",") if n.strip()}
 
 
-def _plot_overlap_boost(plot: str | None, ref_plot_words: set[str]) -> tuple[float, str | None]:
-    """Boost for plot word overlap with reference. Returns (boost, reason or None). Cap 1.5.
-    Filters out generic words (life, find, etc.) so distinctive concept overlap (tech, dystopia) matters more."""
+def _plot_overlap_boost(
+    plot: str | None, ref_plot_words: set[str], plot_heavy: bool = False
+) -> tuple[float, str | None]:
+    """Boost for plot word overlap with reference. Returns (boost, reason or None).
+    plot_heavy: when ref metadata is generic, rely more on plot (e.g. Black Mirror)."""
     if not ref_plot_words or not plot:
         return 0.0, None
     item_words = _extract_plot_words(plot)
@@ -394,8 +400,10 @@ def _plot_overlap_boost(plot: str | None, ref_plot_words: set[str]) -> tuple[flo
     overlap = raw_overlap - _PLOT_GENERIC_WORDS
     if len(overlap) < 2:
         return 0.0, None
-    # Distinctive words matter more; require 2+ non-generic for boost
-    boost = min(1.5, 0.3 * len(overlap))
+    if plot_heavy:
+        boost = min(2.0, 0.4 * len(overlap))
+    else:
+        boost = min(1.5, 0.3 * len(overlap))
     return boost, f"plot overlap: {', '.join(sorted(overlap)[:4])}"
 
 
@@ -426,7 +434,10 @@ def _similar_to_boost(
     item_countries = parse_and_normalize_countries(country)
     ref_countries = set(similar.get("countries", []))
     if item_countries & ref_countries:
-        boost += 1.0
+        # UK/US are very common; reduce weight so they don't flood results
+        ref_c = next(iter(ref_countries), "")
+        country_weight = 0.5 if ref_c in _REF_COUNTRY_LOW_WEIGHT else 1.0
+        boost += country_weight
         reasons.append("country like ref")
 
     ref_directors = similar.get("directors", set())
@@ -449,7 +460,12 @@ def _similar_to_boost(
         reasons.append(f"same creators: {', '.join(people_reasons)}")
 
     ref_plot_words = similar.get("plot_words", set())
-    plot_boost, plot_reason = _plot_overlap_boost(item_plot, ref_plot_words)
+    # When ref has only broad genres (Crime/Drama/Mystery), metadata may misrepresent concept;
+    # rely more on plot overlap (e.g. Black Mirror stored as Crime,Drama,Mystery but plot has tech,dystopia)
+    ref_genres = similar.get("genres", [])
+    broad_only = all(_REF_GENRE_WEIGHT.get(g, 1.0) <= 0.7 for g in ref_genres)
+    plot_heavy = broad_only and len(ref_plot_words) >= 12
+    plot_boost, plot_reason = _plot_overlap_boost(item_plot, ref_plot_words, plot_heavy=plot_heavy)
     if plot_boost and plot_reason:
         boost += plot_boost
         reasons.append(plot_reason)
@@ -563,8 +579,9 @@ def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
     plot = meta.plot if meta else None
     resolved_title = row.title or ""
     resolved_type = getattr(row, "title_type", None) or ""
+    genre_list = [g.strip() for g in genres.split(",") if g.strip()]
     return {
-        "genres": [g.strip() for g in genres.split(",") if g.strip()],
+        "genres": genre_list,
         "countries": list(parse_and_normalize_countries(country)) if country else [],
         "directors": _parse_names(meta.directors if meta else None),
         "writers": _parse_names(meta.writer if meta else None),
@@ -572,6 +589,7 @@ def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
         "plot_words": _extract_plot_words(plot),
         "resolved_title": resolved_title,
         "resolved_title_type": resolved_type,
+        "resolved_plot_snippet": (plot or "")[:400].strip() if plot else None,
     }
 
 
@@ -774,6 +792,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
                     "has_actors": bool(sig.get("actors")),
                     "plot_words_count": len(sig.get("plot_words", set())),
                     "resolved_title_type": sig.get("resolved_title_type"),
+                    "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
         result["debug"] = debug
     return result
@@ -989,6 +1008,7 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
                     "has_actors": bool(sig.get("actors")),
                     "plot_words_count": len(sig.get("plot_words", set())),
                     "resolved_title_type": sig.get("resolved_title_type"),
+                    "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
         result["debug"] = debug
     return result

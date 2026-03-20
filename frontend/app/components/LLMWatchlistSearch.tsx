@@ -72,6 +72,7 @@ type SearchResult = {
       has_actors: boolean;
       plot_words_count: number;
       resolved_title_type?: string;
+      resolved_plot_snippet?: string;
     };
   };
 };
