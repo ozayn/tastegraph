@@ -135,8 +135,13 @@ export function CountriesMap({ items }: CountriesMapProps) {
 
     const styleCountry = (node: Element) => {
       const id = node.getAttribute("id");
-      if (!id || id.startsWith("_")) return;
+      if (!id) return;
       const iso = id.toLowerCase();
+      if (id.startsWith("_")) {
+        node.setAttribute("fill", "var(--section-border)");
+        node.setAttribute("fill-opacity", "0.2");
+        return;
+      }
       const data = byIso.get(iso);
       if (!data) {
         node.setAttribute("fill", "var(--section-border)");
