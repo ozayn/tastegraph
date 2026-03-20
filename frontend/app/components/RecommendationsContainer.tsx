@@ -7,6 +7,7 @@ import {
 } from "./RecommendationModeSwitcher";
 import { SectionHelp } from "./SectionHelp";
 import { HighFitWatchlist } from "./HighFitWatchlist";
+import { LLMWatchlistSearch } from "./LLMWatchlistSearch";
 import { MLRecommendations } from "./MLRecommendations";
 import { RecommendationComparison } from "./RecommendationComparison";
 import { SimpleRecommendations } from "./SimpleRecommendations";
@@ -21,9 +22,9 @@ export function RecommendationsContainer() {
         <div>
           <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
             Recommendations
-            <SectionHelp title="How this works">
-              <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood.</p>
-            </SectionHelp>
+              <SectionHelp title="How this works">
+                <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood. <strong>Search</strong> uses natural language over your watchlist—grounded, no invented titles.</p>
+              </SectionHelp>
           </h2>
           <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
             Explore different ways to find what to watch
@@ -42,6 +43,9 @@ export function RecommendationsContainer() {
             <MLModeContent />
           )}
           {mode === "ml" && <RecommendationComparison />}
+          {mode === "search" && (
+            <LLMWatchlistSearch />
+          )}
         </div>
       </div>
     </section>

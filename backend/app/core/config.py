@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     PORT: int = 8000
     # Admin import: token required in X-Admin-Import-Token header for CSV upload endpoints
     ADMIN_IMPORT_TOKEN: str = ""
+    # LLM search: Groq API key for grounded watchlist search (OpenAI-compatible)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
 
     class Config:
         env_file = _ENV_FILE

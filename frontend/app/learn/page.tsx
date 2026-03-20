@@ -43,7 +43,7 @@ export default function LearnPage() {
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items.
+                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search</strong> uses natural-language queries over your watchlist—LLM interprets the query into filters; retrieval is grounded in your real data only.
               </p>
               <p>
                 <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
@@ -70,8 +70,8 @@ export default function LearnPage() {
                 <p className="mt-1">ML mode shows predicted P(rate 8+ | title) for watchlist items—i.e. likelihood of a strong favorite. 8+ means highly likely favorite; 7 is still a good rating, not a negative. Logistic-regression baseline on genres, countries, decade, title type, and taste-derived features. Interpret as likelihood, not certainty. Requires trained model (run <code>python -m app.ml.train_8plus_baseline</code>).</p>
               </div>
               <div>
-                <p className="font-medium text-[var(--foreground)]">Future LLM search</p>
-                <p className="mt-1">Natural-language queries and explanations planned. Will supplement, not replace, heuristic and ML signals.</p>
+                <p className="font-medium text-[var(--foreground)]">LLM search (Search mode)</p>
+                <p className="mt-1">Natural-language queries over your watchlist. The LLM interprets your query into genres, countries, decades, and &quot;similar to&quot; signals. Retrieval is always from your actual watchlist—no invented titles. Requires <code>GROQ_API_KEY</code> in backend .env.</p>
               </div>
             </div>
           </section>
@@ -82,6 +82,7 @@ export default function LearnPage() {
               3. Recent additions
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
+              <li>LLM search: grounded natural-language search over your watchlist</li>
               <li>ML recommendation mode: watchlist ranked by predicted 8+ probability</li>
               <li>Learning layer: &quot;How to read this&quot; help on key sections (Insights, Studies, recommendations)</li>
               <li>High-fit watchlist with explainable reasons per item</li>
@@ -95,7 +96,7 @@ export default function LearnPage() {
               4. What&apos;s next
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>LLM search: natural-language queries over your library and watchlist</li>
+              <li>LLM search: richer interpretations, conversational memory</li>
               <li>LLM-generated &quot;why this fits&quot; explanations</li>
               <li>Richer ML model (e.g. XGBoost, more features) and model comparison</li>
               <li>Alternative targets: 7+ model for &quot;likely to like&quot;; multi-tier / ordinal rating model</li>

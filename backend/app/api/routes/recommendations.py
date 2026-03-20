@@ -1,6 +1,7 @@
 """Simple recommendation endpoints."""
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 from sqlalchemy import case, desc, exists, or_, select
 from sqlalchemy.sql.expression import nulls_last
 
@@ -10,6 +11,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
+from app.services.llm_search import search_watchlist
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import load_taste_signals, build_reasons, score_watchlist_item
 
@@ -468,3 +470,21 @@ def recommendations_simple_explanation(
     """Plain-text explanation of the current simple recommendation filters."""
     explanation = _build_simple_explanation(genres, countries, title_type, year_from, year_to)
     return {"explanation": explanation}
+
+
+class WatchlistSearchRequest(BaseModel):
+    q: str = ""
+
+
+@router.post("/watchlist-search")
+def recommendations_watchlist_search(
+    body: WatchlistSearchRequest,
+    limit: int = Query(default=15, ge=1, le=50),
+):
+    """Grounded natural-language search over your watchlist. LLM interprets query into filters; retrieval uses only real watchlist data."""
+    db = SessionLocal()
+    try:
+        result = search_watchlist(db, body.q or "", limit=limit)
+        return result
+    finally:
+        db.close()
