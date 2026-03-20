@@ -13,6 +13,7 @@ type Overview = {
   top_genres: { genre: string; count: number }[];
   top_genres_by_avg: { genre: string; avg_rating: number; count: number }[];
   top_countries: { country: string; count: number }[];
+  all_countries?: { country: string; count: number }[];
   top_decades: { decade: string; count: number }[];
 };
 
@@ -471,8 +472,8 @@ export default function InsightsPage() {
                 title="Watched by country"
                 subtitle="Geographic spread of your rated titles, regardless of rating."
               >
-                {overview.top_countries.length > 0 ? (
-                  <CountriesMap items={overview.top_countries} />
+                {(overview.all_countries ?? overview.top_countries).length > 0 ? (
+                  <CountriesMap items={overview.all_countries ?? overview.top_countries} />
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
                     No country data in your rated titles yet.

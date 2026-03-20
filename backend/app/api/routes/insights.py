@@ -121,6 +121,12 @@ def _build_overview(db: Session) -> dict:
         for c, n in country_counts.most_common(15)
         if not _is_low_quality(c)
     ][:10]
+    # Full country list for map (top 50); list UI keeps top 10
+    all_countries = [
+        {"country": c, "count": n}
+        for c, n in country_counts.most_common(50)
+        if not _is_low_quality(c)
+    ]
 
     year_rows = (
         db.query(IMDbRating.year)
@@ -146,6 +152,7 @@ def _build_overview(db: Session) -> dict:
         "top_genres": top_genres,
         "top_genres_by_avg": top_genres_by_avg,
         "top_countries": top_countries,
+        "all_countries": all_countries,
         "top_decades": top_decades,
     }
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+const WORLD_MAP_URL = "/world-map.svg";
+
 /** Country name (API) -> ISO 2-letter code for map paths. Covers common film-production countries. */
 const COUNTRY_TO_ISO: Record<string, string> = {
   "United States": "us",
@@ -86,55 +88,89 @@ type CountriesMapProps = {
 
 /** Map of countries with rated titles. Shading and tooltip show country + count. */
 export function CountriesMap({ items }: CountriesMapProps) {
-  const objectRef = useRef<HTMLObjectElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<{ country: string; count: number } | null>(null);
+  const [svgLoaded, setSvgLoaded] = useState(false);
 
   useEffect(() => {
-    const el = objectRef.current;
-    if (!el || !items.length) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const onLoad = () => {
-      const doc = el.contentDocument;
-      if (!doc) return;
+    let cancelled = false;
+    fetch(WORLD_MAP_URL)
+      .then((r) => r.text())
+      .then((svgText) => {
+        if (cancelled) return;
+        container.innerHTML = svgText;
+        setSvgLoaded(true);
+      })
+      .catch(() => {});
 
-      const byIso = new Map<string, { country: string; count: number }>();
-      for (const item of items) {
-        const iso = COUNTRY_TO_ISO[item.country];
-        if (iso) byIso.set(iso.toLowerCase(), item);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !svgLoaded || !items.length) return;
+
+    const svg = container.querySelector("svg");
+    if (!svg) return;
+
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+
+    const byIso = new Map<string, { country: string; count: number }>();
+    for (const item of items) {
+      const iso = COUNTRY_TO_ISO[item.country];
+      if (iso) byIso.set(iso.toLowerCase(), item);
+    }
+
+    const maxCount = Math.max(...items.map((x) => x.count), 1);
+    const OPACITY_MIN = 0.24;
+    const OPACITY_MAX = 0.52;
+    const OPACITY_HOVER_BOOST = 0.18;
+
+    const styleCountry = (node: Element) => {
+      const id = node.getAttribute("id");
+      if (!id || id.startsWith("_")) return;
+      const iso = id.toLowerCase();
+      const data = byIso.get(iso);
+      if (!data) {
+        node.setAttribute("fill", "var(--section-border)");
+        node.setAttribute("fill-opacity", "0.2");
+        return;
       }
 
-      const paths = doc.querySelectorAll("path[id], g[id]");
-      paths.forEach((node) => {
-        const id = node.getAttribute("id");
-        if (!id || id.startsWith("_")) return;
-        const iso = id.toLowerCase();
-        const data = byIso.get(iso);
-        if (!data) {
-          node.setAttribute("fill", "var(--section-border)");
-          node.setAttribute("fill-opacity", "0.2");
-          return;
-        }
+      const baseOpacity =
+        OPACITY_MIN + (OPACITY_MAX - OPACITY_MIN) * (data.count / maxCount);
+      node.setAttribute("fill", "var(--mondrian-yellow)");
+      node.setAttribute("fill-opacity", String(baseOpacity.toFixed(2)));
+      (node as HTMLElement).style.cursor = "pointer";
+      (node as HTMLElement).style.transition = "fill-opacity 0.15s";
 
-        node.setAttribute("fill", "var(--mondrian-yellow)");
-        node.setAttribute("fill-opacity", "0.35");
-        node.style.cursor = "pointer";
-        node.style.transition = "fill-opacity 0.15s";
-
-        node.addEventListener("mouseenter", () => {
-          node.setAttribute("fill-opacity", "0.6");
-          setHovered(data);
-        });
-        node.addEventListener("mouseleave", () => {
-          node.setAttribute("fill-opacity", "0.35");
-          setHovered(null);
-        });
+      node.addEventListener("mouseenter", () => {
+        const hoverOpacity = Math.min(baseOpacity + OPACITY_HOVER_BOOST, 0.65);
+        node.setAttribute("fill-opacity", String(hoverOpacity.toFixed(2)));
+        setHovered(data);
+      });
+      node.addEventListener("mouseleave", () => {
+        node.setAttribute("fill-opacity", String(baseOpacity.toFixed(2)));
+        setHovered(null);
       });
     };
 
-    if (el.contentDocument?.body) onLoad();
-    else el.addEventListener("load", onLoad);
-    return () => el.removeEventListener("load", onLoad);
-  }, [items]);
+    const paths = svg.querySelectorAll("path[id], g[id]");
+    paths.forEach(styleCountry);
+
+    return () => {
+      Array.from(paths).forEach((node) => {
+        node.replaceWith(node.cloneNode(true));
+      });
+    };
+  }, [items, svgLoaded]);
 
   const byIso = new Map<string, { country: string; count: number }>();
   for (const item of items) {
@@ -146,14 +182,23 @@ export function CountriesMap({ items }: CountriesMapProps) {
   if (!hasMappable) return null;
 
   return (
-    <div className="relative">
-      <object
-        ref={objectRef}
-        data="/world-map.svg"
-        type="image/svg+xml"
-        className="h-[120px] w-full rounded-md border border-[var(--section-border)]"
+    <div className="relative space-y-2">
+      <div
+        ref={containerRef}
+        className="h-[120px] w-full overflow-hidden rounded-md border border-[var(--section-border)] [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
         aria-hidden
       />
+      <div className="flex items-center gap-2 text-[10px] text-[var(--muted-soft)]">
+        <span>Few</span>
+        <div
+          className="h-1.5 flex-1 max-w-[80px] rounded-sm border border-[var(--section-border)]"
+          style={{
+            background: `linear-gradient(to right, color-mix(in srgb, var(--mondrian-yellow) 24%, transparent), color-mix(in srgb, var(--mondrian-yellow) 52%, transparent))`,
+          }}
+          aria-hidden
+        />
+        <span>Many</span>
+      </div>
       {hovered && (
         <div
           className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1.5 text-[11px] shadow-sm"
