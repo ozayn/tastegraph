@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://localhost:5432/tastegraph"
     OMDB_API_KEY: str = ""
     OMDB_API_KEY_FALLBACK: str = ""
-    # CORS: comma-separated origins, e.g. "http://localhost:3000,https://myapp.railway.app"
-    CORS_ORIGINS: str = "http://localhost:3000"
+    # CORS: comma-separated origins, e.g. "http://localhost:3000,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     PORT: int = 8000
     # Admin import: token required in X-Admin-Import-Token header for CSV upload endpoints
     ADMIN_IMPORT_TOKEN: str = ""

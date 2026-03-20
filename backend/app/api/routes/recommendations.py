@@ -1,7 +1,7 @@
 """Simple recommendation endpoints."""
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import case, desc, exists, or_, select
 from sqlalchemy.sql.expression import nulls_last
 
@@ -473,7 +473,7 @@ def recommendations_simple_explanation(
 
 
 class WatchlistSearchRequest(BaseModel):
-    q: str = ""
+    q: str = Field(default="", max_length=500)
 
 
 @router.post("/watchlist-search")
