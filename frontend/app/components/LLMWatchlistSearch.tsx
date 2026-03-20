@@ -11,8 +11,40 @@ type SearchItem = {
   title_type: string | null;
   year: number | null;
   poster: string | null;
-  explanation: { top_reasons?: string[] };
+  explanation: Record<string, unknown>;
+  user_rating?: number | null;
+  date_rated?: string | null;
 };
+
+/** Normalize API explanation to HighFitExplanation shape with safe defaults. */
+function normalizeExplanation(exp: Record<string, unknown>): {
+  in_favorite_list?: boolean;
+  matched_genres: string[];
+  matched_countries: string[];
+  matched_decade: string | null;
+  matched_people: { name: string; role: string }[];
+  matched_strong_directors?: string[];
+  top_reasons: string[];
+} {
+  const arr = (x: unknown): string[] =>
+    Array.isArray(x) ? x.filter((v): v is string => typeof v === "string") : [];
+  const people = (x: unknown): { name: string; role: string }[] =>
+    Array.isArray(x)
+      ? x.filter(
+          (v): v is { name: string; role: string } =>
+            typeof v === "object" && v !== null && "name" in v && "role" in v
+        )
+      : [];
+  return {
+    in_favorite_list: Boolean(exp.in_favorite_list),
+    matched_genres: arr(exp.matched_genres),
+    matched_countries: arr(exp.matched_countries),
+    matched_decade: typeof exp.matched_decade === "string" ? exp.matched_decade : null,
+    matched_people: people(exp.matched_people),
+    matched_strong_directors: arr(exp.matched_strong_directors),
+    top_reasons: arr(exp.top_reasons),
+  };
+}
 
 type SearchResult = {
   items: SearchItem[];
@@ -23,8 +55,11 @@ type SearchResult = {
 const inputClass =
   "w-full rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
 
+type SearchScope = "watchlist" | "watched";
+
 export function LLMWatchlistSearch() {
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<SearchScope>("watchlist");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +72,13 @@ export function LLMWatchlistSearch() {
     fetch(`${API_URL}/recommendations/watchlist-search?limit=15`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q: query.trim() }),
+      body: JSON.stringify({ q: query.trim(), scope }),
     })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Search failed"))))
       .then((data: SearchResult) => setResult(data))
       .catch(() => setError("Search failed. Check that GROQ_API_KEY is set and the backend is running."))
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query, scope]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") doSearch();
@@ -51,23 +86,57 @@ export function LLMWatchlistSearch() {
 
   return (
     <div className="space-y-4">
-      <p className="text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        Natural-language search over your watchlist. The LLM interprets your query into filters; results are always from your real watchlist.
-        <SectionHelp title="How this works">
-          <p><strong>Grounded search</strong>: Results come only from your watchlist. The LLM helps interpret your query into genres, countries, decades, and &quot;similar to&quot; signals.</p>
-          <p>Examples: &quot;slow psychological thrillers from Europe&quot;, &quot;movies similar to The Lobster&quot;, &quot;high-fit political dramas&quot;.</p>
-          <p>Requires <code>GROQ_API_KEY</code> in backend .env.</p>
-        </SectionHelp>
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+          Natural-language search. The LLM interprets your query into filters; results are always from your real data.
+          <SectionHelp title="How this works">
+            <p><strong>Grounded search</strong>: Results come only from your actual data—watchlist or watched history. The LLM interprets into genres, countries, decades, ratings, and more.</p>
+            <p>Watchlist: &quot;slow thrillers from Europe&quot;, &quot;series similar to X&quot;. Watched: &quot;documentaries I rated 8+&quot;, &quot;movies from Japan in the 2000s&quot;.</p>
+            <p>Requires <code>GROQ_API_KEY</code> in backend .env.</p>
+          </SectionHelp>
+        </p>
+        <div
+          className="flex rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] p-0.5"
+          role="group"
+          aria-label="Search scope"
+        >
+          <button
+            type="button"
+            onClick={() => setScope("watchlist")}
+            className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+              scope === "watchlist"
+                ? "bg-[var(--accent)] text-white"
+                : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            Watchlist
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope("watched")}
+            className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+              scope === "watched"
+                ? "bg-[var(--accent)] text-white"
+                : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            Watched
+          </button>
+        </div>
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="e.g. slow psychological thrillers from Europe"
+          placeholder={
+            scope === "watched"
+              ? "e.g. documentaries I rated 8+"
+              : "e.g. slow psychological thrillers from Europe"
+          }
           className={inputClass}
-          aria-label="Search your watchlist"
+          aria-label={scope === "watched" ? "Search your watched history" : "Search your watchlist"}
           disabled={loading}
         />
         <button
@@ -87,7 +156,8 @@ export function LLMWatchlistSearch() {
           {result.intent_summary && (
             <p className="text-[13px] text-[var(--muted-soft)]">
               Interpreted as: {result.intent_summary}
-              {result.fallback && " (LLM unavailable; showing watchlist by taste fit)"}
+              {result.fallback &&
+            ` (LLM unavailable; showing ${scope === "watched" ? "watched" : "watchlist"} by taste fit)`}
             </p>
           )}
           {result.items.length > 0 ? (
@@ -100,14 +170,16 @@ export function LLMWatchlistSearch() {
                     title_type={item.title_type}
                     year={item.year}
                     poster={item.poster}
-                    explanation={item.explanation}
+                    explanation={normalizeExplanation(item.explanation ?? {})}
+                    user_rating={item.user_rating}
+                    date_rated={item.date_rated}
                   />
                 </li>
               ))}
             </ul>
           ) : (
             <p className="rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]">
-              No watchlist items match. Try a broader query or different filters.
+              No {scope === "watched" ? "watched" : "watchlist"} items match. Try a broader query or different filters.
             </p>
           )}
         </div>

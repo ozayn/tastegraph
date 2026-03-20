@@ -71,7 +71,7 @@ export default function LearnPage() {
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Search mode</p>
-                <p className="mt-1">You type a natural-language request (e.g. &quot;slow psychological thrillers from Europe&quot;). Groq parses it into structured intent—genres, countries, decades, &quot;similar to&quot; hints. The backend retrieves only from your actual watchlist, using metadata and taste signals for filtering and ranking. Results are grounded in real data; nothing is invented. Requires <code>GROQ_API_KEY</code> in backend .env.</p>
+                <p className="mt-1">Natural-language search over your <strong>watchlist</strong> or <strong>watched</strong> history. Groq parses your query into structured intent—genres, countries, decades, &quot;similar to&quot;, min rating (e.g. 8+). Retrieval is always from real data only. Watchlist: unrated items to discover. Watched: titles you&apos;ve rated (e.g. &quot;documentaries I rated 8+&quot;, &quot;movies from Japan in the 2000s&quot;). Requires <code>GROQ_API_KEY</code> in backend .env.</p>
               </div>
             </div>
           </section>
@@ -82,15 +82,15 @@ export default function LearnPage() {
               How Search works
             </h2>
             <ol className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)] list-decimal pl-5">
-              <li><strong className="text-[var(--foreground)]">Query</strong> — You enter a natural-language request in Search mode.</li>
-              <li><strong className="text-[var(--foreground)]">Interpretation</strong> — Groq turns it into structured filters: genres, countries, decade, title type, similar-to title, high-fit emphasis.</li>
-              <li><strong className="text-[var(--foreground)]">Retrieval</strong> — The backend queries IMDbWatchlistItem and TitleMetadata. Only unrated watchlist items are eligible.</li>
-              <li><strong className="text-[var(--foreground)]">Similar-to resolution</strong> — For &quot;similar to X&quot;, we look up X in your ratings or watchlist and reuse its genres, country, decade as signals. If not found, we keep the raw hint.</li>
-              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items are scored using real metadata and your taste signals (genre overlap, favorite directors, etc.).</li>
-              <li><strong className="text-[var(--foreground)]">Explanations</strong> — Each result explains why it fits: matched genres, countries, decade, people—all from actual metadata, not LLM-generated text.</li>
+              <li><strong className="text-[var(--foreground)]">Scope</strong> — Watchlist (unrated items) or Watched (your rated history).</li>
+              <li><strong className="text-[var(--foreground)]">Interpretation</strong> — Groq turns the query into structured filters: genres, countries, decade, title type, similar-to, min rating (watched), disagreed-with-critics (watched).</li>
+              <li><strong className="text-[var(--foreground)]">Retrieval</strong> — Backend queries IMDbWatchlistItem (watchlist) or IMDbRating (watched) with TitleMetadata. Only real rows; no invented titles.</li>
+              <li><strong className="text-[var(--foreground)]">Similar-to</strong> — For &quot;similar to X&quot;, we look up X in ratings or watchlist and reuse its genres, country, decade as signals.</li>
+              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items scored by metadata and taste signals (genre overlap, favorite directors, user rating).</li>
+              <li><strong className="text-[var(--foreground)]">Explanations</strong> — Matched genres, countries, people—all from actual metadata.</li>
             </ol>
             <p className="mt-4 text-[13px] text-[var(--muted-subtle)]">
-              <strong className="text-[var(--foreground)]">Reliability:</strong> The LLM does not invent titles. Results come only from your real watchlist. If <code>GROQ_API_KEY</code> is missing, the system falls back to heuristic search (watchlist ranked by taste fit). This is retrieval-first design—not a freeform chatbot.
+              <strong className="text-[var(--foreground)]">Reliability:</strong> The LLM does not invent titles. Results come only from your real data. If <code>GROQ_API_KEY</code> is missing, the system falls back to heuristic search. Retrieval-first design—not a freeform chatbot.
             </p>
           </section>
 
@@ -100,7 +100,7 @@ export default function LearnPage() {
               3. Recent additions
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>LLM search: grounded natural-language search over your watchlist</li>
+              <li>LLM search: grounded natural-language search over watchlist and watched history</li>
               <li>ML recommendation mode: watchlist ranked by predicted 8+ probability</li>
               <li>Learning layer: &quot;How to read this&quot; help on key sections (Insights, Studies, recommendations)</li>
               <li>High-fit watchlist with explainable reasons per item</li>

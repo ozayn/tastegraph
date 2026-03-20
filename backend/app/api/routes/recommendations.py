@@ -11,7 +11,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
-from app.services.llm_search import search_watchlist
+from app.services.llm_search import search_rated, search_watchlist
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import load_taste_signals, build_reasons, score_watchlist_item
 
@@ -474,6 +474,7 @@ def recommendations_simple_explanation(
 
 class WatchlistSearchRequest(BaseModel):
     q: str = Field(default="", max_length=500)
+    scope: str = Field(default="watchlist", description="watchlist | watched")
 
 
 @router.post("/watchlist-search")
@@ -481,10 +482,14 @@ def recommendations_watchlist_search(
     body: WatchlistSearchRequest,
     limit: int = Query(default=15, ge=1, le=50),
 ):
-    """Grounded natural-language search over your watchlist. LLM interprets query into filters; retrieval uses only real watchlist data."""
+    """Grounded natural-language search. scope=watchlist (default) or watched. LLM interprets query; retrieval uses only real data."""
     db = SessionLocal()
     try:
-        result = search_watchlist(db, body.q or "", limit=limit)
+        scope = (body.scope or "watchlist").strip().lower()
+        if scope == "watched":
+            result = search_rated(db, body.q or "", limit=limit)
+        else:
+            result = search_watchlist(db, body.q or "", limit=limit)
         return result
     finally:
         db.close()

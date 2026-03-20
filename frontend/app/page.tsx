@@ -1,4 +1,3 @@
-import { BackendHealth } from "./components/BackendHealth";
 import { EnrichedSample } from "./components/EnrichedSample";
 import { ImportStatus } from "./components/ImportStatus";
 import { MetadataCoverage } from "./components/MetadataCoverage";
@@ -69,26 +68,6 @@ export default function Home() {
           <RecommendationsContainer />
         </div>
 
-        <section className="mt-16 sm:mt-20 md:mt-24">
-          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
-            Example queries
-          </p>
-          <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
-            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
-              &ldquo;What should I watch on BritBox?&rdquo;
-            </li>
-            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
-              &ldquo;What fits my mood from my watchlist?&rdquo;
-            </li>
-            <li className="text-[14px] leading-[1.65] text-[var(--muted-soft)] sm:text-[15px]">
-              &ldquo;Recommend a Persian romance movie from my watchlist.&rdquo;
-            </li>
-          </ul>
-        </section>
-
-        <div className="mt-16 pt-2 sm:mt-20 md:mt-24">
-          <BackendHealth />
-        </div>
       </main>
     </div>
   );
