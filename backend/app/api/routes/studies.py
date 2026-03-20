@@ -19,6 +19,9 @@ STRONG_THRESHOLD = 8
 SUPPORT_FLOOR = 30  # full lift weight above this count
 CREATOR_MIN_SUPPORT = 5  # min rated titles for favorite creators
 GENRE_PAIR_MIN_SUPPORT = 5  # min titles for genre combination analysis
+OUTGROW_GROW_MIN_SUPPORT = 6  # min combined count for outgrew/grew-into
+OUTGROW_GROW_MIN_SHARE_CHANGE = 1.0  # min share change (pct points) to count as significant
+OUTGROW_GROW_MAX_ITEMS = 5  # max items per side
 
 
 def _is_low_quality(s: str) -> bool:
@@ -76,6 +79,10 @@ def studies_summary():
             taste_evolution_deep = _build_taste_evolution_deep(db)
         except Exception:
             taste_evolution_deep = {"note": "Insufficient data"}
+        try:
+            outgrew_grew_into = _build_outgrew_grew_into(db)
+        except Exception:
+            outgrew_grew_into = {"note": "Insufficient data"}
         return {
             "taste_evolution": taste_evolution,
             "predictors_8plus": predictors_8plus,
@@ -88,6 +95,7 @@ def studies_summary():
             "score_disagreement": score_disagreement,
             "director_discovery": director_discovery,
             "taste_evolution_deep": taste_evolution_deep,
+            "outgrew_grew_into": outgrew_grew_into,
         }
     finally:
         db.close()
@@ -515,6 +523,136 @@ def _compute_language_shifts(
             })
     shifts.sort(key=lambda x: -x["delta"])
     return shifts[:10]
+
+
+def _build_outgrew_grew_into(db: Session) -> dict:
+    """What did I outgrow vs grow into? Early vs recent: viewing share change only.
+
+    Early = first half of years; recent = second half.
+    Outgrew = watched less. Grew into = watched more. Focus on significant shifts.
+    """
+    rows_genre = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            IMDbRating.genres,
+        )
+        .filter(IMDbRating.date_rated.isnot(None), IMDbRating.genres.isnot(None))
+        .all()
+    )
+    rows_country = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            TitleMetadata.country,
+        )
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.date_rated.isnot(None), TitleMetadata.country.isnot(None))
+        .all()
+    )
+    rows_lang = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            TitleMetadata.languages,
+        )
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.date_rated.isnot(None), TitleMetadata.languages.isnot(None))
+        .all()
+    )
+    rows_tt = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            IMDbRating.title_type,
+        )
+        .filter(IMDbRating.date_rated.isnot(None), IMDbRating.title_type.isnot(None))
+        .all()
+    )
+
+    all_years = set()
+    for r in rows_genre:
+        all_years.add(int(r[0]))
+    for r in rows_country:
+        all_years.add(int(r[0]))
+    for r in rows_lang:
+        all_years.add(int(r[0]))
+    for r in rows_tt:
+        all_years.add(int(r[0]))
+
+    years_sorted = sorted(all_years)
+    if len(years_sorted) < 4:
+        return {"note": "Need 4+ years of date-rated data"}
+
+    mid = len(years_sorted) // 2
+    early_years = set(years_sorted[:mid])
+    recent_years = set(years_sorted[mid:])
+
+    def _agg_by_period(rows, get_features):
+        early_count: Counter = Counter()
+        recent_count: Counter = Counter()
+        for row in rows:
+            year, feats_val = int(row[0]), row[1]
+            if year not in early_years and year not in recent_years:
+                continue
+            for f in get_features(feats_val):
+                if _is_low_quality(f):
+                    continue
+                if year in early_years:
+                    early_count[f] += 1
+                else:
+                    recent_count[f] += 1
+        return early_count, recent_count
+
+    def _compute_shift_items(early_count, recent_count, feature_type: str):
+        early_total = sum(early_count.values())
+        recent_total = sum(recent_count.values())
+        if early_total == 0 or recent_total == 0:
+            return []
+        items = []
+        all_feats = set(early_count.keys()) | set(recent_count.keys())
+        for f in all_feats:
+            ec = early_count.get(f, 0)
+            rc = recent_count.get(f, 0)
+            if ec + rc < OUTGROW_GROW_MIN_SUPPORT:
+                continue
+            early_share_pct = 100 * ec / early_total if early_total > 0 else 0
+            recent_share_pct = 100 * rc / recent_total if recent_total > 0 else 0
+            share_delta = recent_share_pct - early_share_pct
+            if abs(share_delta) < OUTGROW_GROW_MIN_SHARE_CHANGE:
+                continue
+            items.append({
+                "feature_type": feature_type,
+                "feature": f,
+                "early_share_pct": round(early_share_pct, 1),
+                "recent_share_pct": round(recent_share_pct, 1),
+            })
+        return items
+
+    def _parse_title_type(tt):
+        if not tt or _is_low_quality(str(tt).strip()):
+            return []
+        return [str(tt).strip()]
+
+    ec_g, rc_g = _agg_by_period(rows_genre, _parse_genres)
+    ec_c, rc_c = _agg_by_period(rows_country, parse_and_normalize_countries)
+    ec_l, rc_l = _agg_by_period(rows_lang, _parse_languages)
+    ec_t, rc_t = _agg_by_period(rows_tt, _parse_title_type)
+
+    all_items = []
+    all_items.extend(_compute_shift_items(ec_g, rc_g, "genre"))
+    all_items.extend(_compute_shift_items(ec_c, rc_c, "country"))
+    all_items.extend(_compute_shift_items(ec_l, rc_l, "language"))
+    all_items.extend(_compute_shift_items(ec_t, rc_t, "title_type"))
+
+    outgrew = [x for x in all_items if x["recent_share_pct"] < x["early_share_pct"]]
+    outgrew.sort(key=lambda x: x["early_share_pct"] - x["recent_share_pct"])
+    grew_into = [x for x in all_items if x["recent_share_pct"] > x["early_share_pct"]]
+    grew_into.sort(key=lambda x: x["recent_share_pct"] - x["early_share_pct"])
+
+    return {
+        "early_years_label": f"{years_sorted[0]}–{years_sorted[mid - 1]}",
+        "recent_years_label": f"{years_sorted[mid]}–{years_sorted[-1]}",
+        "min_support": OUTGROW_GROW_MIN_SUPPORT,
+        "outgrew": outgrew[:OUTGROW_GROW_MAX_ITEMS],
+        "grew_into": grew_into[:OUTGROW_GROW_MAX_ITEMS],
+    }
 
 
 def _build_predictors_8plus(db: Session) -> dict:

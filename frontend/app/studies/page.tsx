@@ -158,6 +158,22 @@ type TasteEvolutionDeep = {
   };
 };
 
+type OutgrewGrewIntoRow = {
+  feature_type: string;
+  feature: string;
+  early_share_pct: number;
+  recent_share_pct: number;
+};
+
+type OutgrewGrewInto = {
+  note?: string;
+  early_years_label?: string;
+  recent_years_label?: string;
+  min_support?: number;
+  outgrew?: OutgrewGrewIntoRow[];
+  grew_into?: OutgrewGrewIntoRow[];
+};
+
 type StudiesData = {
   taste_evolution: TasteEvolution & {
     country_shifts?: { country: string; early_count: number; recent_count: number; delta: number }[];
@@ -174,6 +190,7 @@ type StudiesData = {
   score_disagreement?: ScoreDisagreement;
   director_discovery?: DirectorDiscovery;
   taste_evolution_deep?: TasteEvolutionDeep;
+  outgrew_grew_into?: OutgrewGrewInto;
 };
 
 function StatCard({
@@ -560,7 +577,7 @@ export default function StudiesPage() {
     );
   }
 
-  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, eights_vs_sevens, volume_vs_reward, favorite_list_summary, score_disagreement, director_discovery, taste_evolution_deep } = data;
+  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, eights_vs_sevens, volume_vs_reward, favorite_list_summary, score_disagreement, director_discovery, taste_evolution_deep, outgrew_grew_into } = data;
 
   const yearsWithData = Object.keys(taste_evolution.avg_rating_by_year)
     .map(Number)
@@ -742,6 +759,63 @@ export default function StudiesPage() {
               </div>
             )}
           </section>
+
+          {/* What did I outgrow? / What did I grow into? */}
+          {outgrew_grew_into && !outgrew_grew_into.note && (outgrew_grew_into.outgrew?.length ?? 0) + (outgrew_grew_into.grew_into?.length ?? 0) > 0 && (
+            <section className="border-t border-[var(--section-border)] pt-8">
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                What did I outgrow? What did I grow into?
+                <SectionHelp title="How to read this">
+                  <p><strong>Outgrew</strong> = what you watched less of in the recent period.</p>
+                  <p><strong>Grew into</strong> = what you watched more of over time.</p>
+                  <p>Share = % of your viewing. Compares first vs second half of your rating history. Only shows shifts of 1+ percentage point.</p>
+                </SectionHelp>
+              </h2>
+              <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                What you started watching more or less of over time.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <StatCard
+                  title="What I outgrew"
+                  subtitle={`${outgrew_grew_into.early_years_label} → ${outgrew_grew_into.recent_years_label}`}
+                >
+                  {outgrew_grew_into.outgrew && outgrew_grew_into.outgrew.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {outgrew_grew_into.outgrew.map((r, i) => (
+                        <li key={i} className="flex items-baseline justify-between gap-2 text-[13px]">
+                          <span className="min-w-0 truncate font-medium text-[var(--foreground)]">{r.feature}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            {r.early_share_pct}% → {r.recent_share_pct}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No notable declines.</p>
+                  )}
+                </StatCard>
+                <StatCard
+                  title="What I grew into"
+                  subtitle={`${outgrew_grew_into.early_years_label} → ${outgrew_grew_into.recent_years_label}`}
+                >
+                  {outgrew_grew_into.grew_into && outgrew_grew_into.grew_into.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {outgrew_grew_into.grew_into.map((r, i) => (
+                        <li key={i} className="flex items-baseline justify-between gap-2 text-[13px]">
+                          <span className="min-w-0 truncate font-medium text-[var(--foreground)]">{r.feature}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            {r.early_share_pct}% → {r.recent_share_pct}%
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No notable gains.</p>
+                  )}
+                </StatCard>
+              </div>
+            </section>
+          )}
 
           {/* 2. What distinguishes my 8s from my 7s? */}
           {eights_vs_sevens && !("note" in eights_vs_sevens) && (eights_vs_sevens.genre_signals?.length || eights_vs_sevens.country_signals?.length || eights_vs_sevens.decade_signals?.length) ? (
