@@ -118,6 +118,9 @@ export function CountriesMap({ items }: CountriesMapProps) {
     const svg = container.querySelector("svg");
     if (!svg) return;
 
+    const title = svg.querySelector("title");
+    if (title) title.remove();
+
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.style.width = "100%";
     svg.style.height = "100%";
@@ -128,10 +131,13 @@ export function CountriesMap({ items }: CountriesMapProps) {
       if (iso) byIso.set(iso.toLowerCase(), item);
     }
 
-    const maxCount = Math.max(...items.map((x) => x.count), 1);
-    const OPACITY_MIN = 0.24;
-    const OPACITY_MAX = 0.52;
-    const OPACITY_HOVER_BOOST = 0.18;
+    const sortedCounts = [...new Set([...byIso.values()].map((d) => d.count))].sort((a, b) => a - b);
+    const countToRank = new Map<number, number>();
+    sortedCounts.forEach((c, i) => {
+      countToRank.set(c, sortedCounts.length > 1 ? i / (sortedCounts.length - 1) : 1);
+    });
+
+    const OPACITY_HOVER_BOOST = 0.08;
 
     const styleCountry = (node: Element) => {
       const id = node.getAttribute("id");
@@ -149,20 +155,22 @@ export function CountriesMap({ items }: CountriesMapProps) {
         return;
       }
 
-      const baseOpacity =
-        OPACITY_MIN + (OPACITY_MAX - OPACITY_MIN) * (data.count / maxCount);
-      node.setAttribute("fill", "var(--mondrian-yellow)");
-      node.setAttribute("fill-opacity", String(baseOpacity.toFixed(2)));
+      const rank = countToRank.get(data.count) ?? 0;
+      const hue = 50 - rank * 25;
+      const sat = 85;
+      const light = 75 - rank * 35;
+      const fillColor = `hsl(${hue}, ${sat}%, ${light}%)`;
+      node.setAttribute("fill", fillColor);
+      node.setAttribute("fill-opacity", "1");
       (node as HTMLElement).style.cursor = "pointer";
-      (node as HTMLElement).style.transition = "fill-opacity 0.15s";
+      (node as HTMLElement).style.transition = "fill 0.15s";
 
       node.addEventListener("mouseenter", () => {
-        const hoverOpacity = Math.min(baseOpacity + OPACITY_HOVER_BOOST, 0.65);
-        node.setAttribute("fill-opacity", String(hoverOpacity.toFixed(2)));
+        node.setAttribute("fill", `hsl(${Math.max(hue - 5, 20)}, ${sat}%, ${Math.max(light - 10, 35)}%)`);
         setHovered(data);
       });
       node.addEventListener("mouseleave", () => {
-        node.setAttribute("fill-opacity", String(baseOpacity.toFixed(2)));
+        node.setAttribute("fill", fillColor);
         setHovered(null);
       });
     };
@@ -198,7 +206,7 @@ export function CountriesMap({ items }: CountriesMapProps) {
         <div
           className="h-1.5 flex-1 max-w-[80px] rounded-sm border border-[var(--section-border)]"
           style={{
-            background: `linear-gradient(to right, color-mix(in srgb, var(--mondrian-yellow) 24%, transparent), color-mix(in srgb, var(--mondrian-yellow) 52%, transparent))`,
+            background: `linear-gradient(to right, hsl(50, 85%, 75%), hsl(25, 85%, 40%))`,
           }}
           aria-hidden
         />
