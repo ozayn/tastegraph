@@ -154,7 +154,7 @@ function BarListRow({
     default: "bg-[var(--mondrian-yellow)]/25",
   };
   return (
-    <li className="group relative flex items-center justify-between gap-4 py-2.5 px-1">
+    <li className="group relative flex items-center justify-between gap-4 py-1.5 px-1">
       <div
         className={`absolute inset-y-0 left-0 rounded-md ${barColors[variant]} transition-opacity group-hover:opacity-100`}
         style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
@@ -185,7 +185,7 @@ function DivergingBarList<T extends { delta: number }>({
   if (!items.length) return null;
   const maxAbs = Math.max(...items.map((s) => Math.abs(s.delta)), 1);
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-1">
       {items.map((item, i) => {
         const { delta } = item;
         const pctOfHalf = (Math.abs(delta) / maxAbs) * 100;
@@ -194,7 +194,7 @@ function DivergingBarList<T extends { delta: number }>({
             <span className="w-20 shrink-0 truncate text-[14px] text-[var(--foreground)] sm:w-24">
               {renderLabel(item)}
             </span>
-            <div className="flex min-h-[22px] flex-1 items-stretch">
+            <div className="flex min-h-[18px] flex-1 items-stretch">
               <div className="flex flex-1 justify-end">
                 {delta < 0 && (
                   <div
@@ -243,7 +243,7 @@ function BarList<T>({
   if (!items.length) return null;
   const maxVal = Math.max(...items.map(getValue), 1);
   return (
-    <ul className="space-y-1">
+    <ul className="space-y-0.5">
       {items.map((item, i) => (
         <BarListRow
           key={i}
