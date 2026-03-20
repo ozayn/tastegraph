@@ -32,7 +32,7 @@ export default function LearnPage() {
               The same data feeds both heuristic and ML paths, which surface across Home, Insights, Studies, and Model Lab. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings.
             </p>
             <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
-              Future: similarity model, blended heuristic + ML, grounded LLM watchlist search.
+              Future: similarity model, blended heuristic + ML, grounded conversational assistant.
             </p>
           </section>
 
@@ -43,7 +43,7 @@ export default function LearnPage() {
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search</strong> uses natural-language queries over your watchlist—LLM interprets the query into filters; retrieval is grounded in your real data only.
+                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search mode</strong> is grounded natural-language search over your real watchlist—Groq interprets your query into structured intent; the backend retrieves and ranks only from your actual data.
               </p>
               <p>
                 <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
@@ -70,10 +70,28 @@ export default function LearnPage() {
                 <p className="mt-1">ML mode shows predicted P(rate 8+ | title) for watchlist items—i.e. likelihood of a strong favorite. 8+ means highly likely favorite; 7 is still a good rating, not a negative. Logistic-regression baseline on genres, countries, decade, title type, and taste-derived features. Interpret as likelihood, not certainty. Requires trained model (run <code>python -m app.ml.train_8plus_baseline</code>).</p>
               </div>
               <div>
-                <p className="font-medium text-[var(--foreground)]">LLM search (Search mode)</p>
-                <p className="mt-1">Natural-language queries over your watchlist. The LLM interprets your query into genres, countries, decades, and &quot;similar to&quot; signals. Retrieval is always from your actual watchlist—no invented titles. Requires <code>GROQ_API_KEY</code> in backend .env.</p>
+                <p className="font-medium text-[var(--foreground)]">Search mode</p>
+                <p className="mt-1">You type a natural-language request (e.g. &quot;slow psychological thrillers from Europe&quot;). Groq parses it into structured intent—genres, countries, decades, &quot;similar to&quot; hints. The backend retrieves only from your actual watchlist, using metadata and taste signals for filtering and ranking. Results are grounded in real data; nothing is invented. Requires <code>GROQ_API_KEY</code> in backend .env.</p>
               </div>
             </div>
+          </section>
+
+          {/* 2b. How Search works */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-8">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              How Search works
+            </h2>
+            <ol className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)] list-decimal pl-5">
+              <li><strong className="text-[var(--foreground)]">Query</strong> — You enter a natural-language request in Search mode.</li>
+              <li><strong className="text-[var(--foreground)]">Interpretation</strong> — Groq turns it into structured filters: genres, countries, decade, title type, similar-to title, high-fit emphasis.</li>
+              <li><strong className="text-[var(--foreground)]">Retrieval</strong> — The backend queries IMDbWatchlistItem and TitleMetadata. Only unrated watchlist items are eligible.</li>
+              <li><strong className="text-[var(--foreground)]">Similar-to resolution</strong> — For &quot;similar to X&quot;, we look up X in your ratings or watchlist and reuse its genres, country, decade as signals. If not found, we keep the raw hint.</li>
+              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items are scored using real metadata and your taste signals (genre overlap, favorite directors, etc.).</li>
+              <li><strong className="text-[var(--foreground)]">Explanations</strong> — Each result explains why it fits: matched genres, countries, decade, people—all from actual metadata, not LLM-generated text.</li>
+            </ol>
+            <p className="mt-4 text-[13px] text-[var(--muted-subtle)]">
+              <strong className="text-[var(--foreground)]">Reliability:</strong> The LLM does not invent titles. Results come only from your real watchlist. If <code>GROQ_API_KEY</code> is missing, the system falls back to heuristic search (watchlist ranked by taste fit). This is retrieval-first design—not a freeform chatbot.
+            </p>
           </section>
 
           {/* 3. Recent additions */}
@@ -96,8 +114,7 @@ export default function LearnPage() {
               4. What&apos;s next
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>LLM search: richer interpretations, conversational memory</li>
-              <li>LLM-generated &quot;why this fits&quot; explanations</li>
+              <li>Search: semantic similarity, blended ML + search ranking, grounded conversational assistant</li>
               <li>Richer ML model (e.g. XGBoost, more features) and model comparison</li>
               <li>Alternative targets: 7+ model for &quot;likely to like&quot;; multi-tier / ordinal rating model</li>
             </ul>
