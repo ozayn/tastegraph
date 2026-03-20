@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 import { API_URL } from "../lib/api";
 import { HighFitCard } from "./HighFitCard";
 import { SectionHelp } from "./SectionHelp";
@@ -50,6 +52,14 @@ type SearchResult = {
   items: SearchItem[];
   intent_summary: string;
   fallback?: boolean;
+  debug?: {
+    system_prompt?: string;
+    user_content?: string;
+    schema_block?: string;
+    intent?: Record<string, unknown> | null;
+    fallback?: boolean;
+    parse_error?: boolean;
+  };
 };
 
 const inputClass =
@@ -181,6 +191,70 @@ export function LLMWatchlistSearch() {
             <p className="rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]">
               No {scope === "watched" ? "watched" : "watchlist"} items match. Try a broader query or different filters.
             </p>
+          )}
+          {IS_DEV && result.debug && (
+            <PromptInspector debug={result.debug} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PromptInspector({ debug }: { debug: NonNullable<SearchResult["debug"]> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full px-4 py-3 text-left text-[13px] font-medium text-[var(--muted-soft)] hover:text-[var(--foreground)] flex items-center justify-between"
+        aria-expanded={open}
+      >
+        <span>Prompt inspector (dev only)</span>
+        <span className="text-[10px] uppercase tracking-wide">{open ? "▼" : "▶"}</span>
+      </button>
+      {open && (
+        <div className="border-t border-[var(--section-border)] p-4 space-y-4 text-[12px]">
+          {debug.parse_error && (
+            <p className="text-[var(--mondrian-red)] font-medium">Parse error (LLM output invalid)</p>
+          )}
+          {debug.fallback !== undefined && (
+            <p className="text-[var(--muted-soft)]">
+              Fallback: {String(debug.fallback)} (heuristic search when LLM unavailable or empty intent)
+            </p>
+          )}
+          {debug.intent != null && (
+            <div>
+              <p className="font-medium text-[var(--foreground)] mb-1">Interpreted intent</p>
+              <pre className="whitespace-pre-wrap break-words overflow-x-auto max-h-32 overflow-y-auto rounded bg-[var(--card-bg)] border border-[var(--section-border)] p-3 font-mono text-[11px]">
+                {JSON.stringify(debug.intent, null, 2)}
+              </pre>
+            </div>
+          )}
+          {debug.system_prompt && (
+            <div>
+              <p className="font-medium text-[var(--foreground)] mb-1">System prompt</p>
+              <pre className="whitespace-pre-wrap break-words overflow-x-auto max-h-40 overflow-y-auto rounded bg-[var(--card-bg)] border border-[var(--section-border)] p-3 font-mono text-[11px]">
+                {debug.system_prompt}
+              </pre>
+            </div>
+          )}
+          {debug.user_content && (
+            <div>
+              <p className="font-medium text-[var(--foreground)] mb-1">User message (query + schema)</p>
+              <pre className="whitespace-pre-wrap break-words overflow-x-auto max-h-48 overflow-y-auto rounded bg-[var(--card-bg)] border border-[var(--section-border)] p-3 font-mono text-[11px]">
+                {debug.user_content}
+              </pre>
+            </div>
+          )}
+          {debug.schema_block && (
+            <div>
+              <p className="font-medium text-[var(--foreground)] mb-1">Schema block (embedded in user message)</p>
+              <pre className="whitespace-pre-wrap break-words overflow-x-auto max-h-32 overflow-y-auto rounded bg-[var(--card-bg)] border border-[var(--section-border)] p-3 font-mono text-[11px]">
+                {debug.schema_block}
+              </pre>
+            </div>
           )}
         </div>
       )}

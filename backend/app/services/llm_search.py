@@ -9,7 +9,7 @@ and clamped before use. Malformed or suspicious output falls back to empty inten
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from openai import OpenAI
 from sqlalchemy import and_, case, exists, or_, select
@@ -157,11 +157,11 @@ def _infer_title_type_from_query_prefix(query: str) -> str | None:
     return None
 
 
-def _parse_query_with_llm(query: str, scope: str = "watchlist") -> SearchIntent:
-    """Use LLM to extract structured search intent. Returns empty intent if API unavailable or output invalid.
-    scope: 'watchlist' | 'watched'. Watched adds min_rating and disagreed_with_critics."""
+def _parse_query_with_llm(query: str, scope: str = "watchlist") -> tuple[SearchIntent, dict | None]:
+    """Use LLM to extract structured search intent. Returns (intent, debug_info).
+    debug_info is non-None only when settings.DEBUG (dev/local)."""
     if not settings.GROQ_API_KEY or not query or not query.strip():
-        return SearchIntent()
+        return SearchIntent(), None
 
     client = OpenAI(
         api_key=settings.GROQ_API_KEY,
@@ -202,6 +202,14 @@ disagreed_with_critics: When user asks for titles where they disagreed with crit
 
 Schema (output this shape only): {schema_block}"""
 
+    debug_info: dict | None = None
+    if settings.DEBUG:
+        debug_info = {
+            "system_prompt": system_prompt,
+            "user_content": user_content,
+            "schema_block": schema_block,
+        }
+
     try:
         response = client.chat.completions.create(
             model=settings.GROQ_MODEL,
@@ -214,7 +222,9 @@ Schema (output this shape only): {schema_block}"""
         )
         text = (response.choices[0].message.content or "").strip()
         if not text:
-            return SearchIntent()
+            if debug_info is not None:
+                debug_info["intent"] = asdict(SearchIntent())
+            return SearchIntent(), debug_info
 
         if text.startswith("```"):
             lines = text.split("\n")
@@ -222,9 +232,15 @@ Schema (output this shape only): {schema_block}"""
         data = json.loads(text)
 
         intent = _validate_and_normalize_intent(data)
-        return intent if intent is not None else SearchIntent()
+        resolved = intent if intent is not None else SearchIntent()
+        if debug_info is not None:
+            debug_info["intent"] = asdict(resolved)
+        return resolved, debug_info
     except Exception:
-        return SearchIntent()  # fail closed: API error, parse error, or invalid output
+        if debug_info is not None:
+            debug_info["intent"] = None
+            debug_info["parse_error"] = True
+        return SearchIntent(), debug_info
 
 
 def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
@@ -261,7 +277,7 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
     Returns { items, intent_summary, fallback }.
     fallback=True means LLM was unavailable or failed; we returned heuristic results.
     """
-    intent = _parse_query_with_llm(query)
+    intent, parse_debug = _parse_query_with_llm(query)
     fallback = not intent.summary and not intent.genres and not intent.countries
 
     # Override title_type when user explicitly starts with it (e.g. "series similar to X")
@@ -400,7 +416,7 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
             parts.append("emphasizing your taste fit")
     summary = "; ".join(parts) if parts else "Watchlist items matching your query"
 
-    return {
+    result = {
         "items": [
             {
                 "imdb_title_id": r.imdb_title_id,
@@ -423,6 +439,9 @@ def search_watchlist(db: Session, query: str, limit: int = 15) -> dict:
         "intent_summary": summary,
         "fallback": fallback,
     }
+    if settings.DEBUG and parse_debug is not None:
+        result["debug"] = {**parse_debug, "fallback": fallback}
+    return result
 
 
 def search_rated(db: Session, query: str, limit: int = 15) -> dict:
@@ -431,7 +450,7 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
     Returns { items, intent_summary, fallback }.
     items include user_rating and date_rated.
     """
-    intent = _parse_query_with_llm(query, scope="watched")
+    intent, parse_debug = _parse_query_with_llm(query, scope="watched")
     fallback = not intent.summary and not intent.genres and not intent.countries and intent.min_rating is None
 
     prefix_type = _infer_title_type_from_query_prefix(query)
@@ -578,7 +597,7 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
             parts.append("emphasizing your taste fit")
     summary = "; ".join(parts) if parts else "Watched titles matching your query"
 
-    return {
+    result = {
         "items": [
             {
                 "imdb_title_id": r.imdb_title_id,
@@ -603,3 +622,6 @@ def search_rated(db: Session, query: str, limit: int = 15) -> dict:
         "intent_summary": summary,
         "fallback": fallback,
     }
+    if settings.DEBUG and parse_debug is not None:
+        result["debug"] = {**parse_debug, "fallback": fallback}
+    return result
