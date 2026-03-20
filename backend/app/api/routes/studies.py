@@ -64,6 +64,18 @@ def studies_summary():
             favorite_list_summary = _build_favorite_list_summary(db)
         except Exception:
             favorite_list_summary = {"count": 0, "top_genres": [], "top_countries": [], "overlap_with_rated": 0}
+        try:
+            score_disagreement = _build_score_disagreement(db)
+        except Exception:
+            score_disagreement = {"n_titles": 0, "note": "Insufficient data"}
+        try:
+            director_discovery = _build_director_discovery(db)
+        except Exception:
+            director_discovery = {"note": "Insufficient data"}
+        try:
+            taste_evolution_deep = _build_taste_evolution_deep(db)
+        except Exception:
+            taste_evolution_deep = {"note": "Insufficient data"}
         return {
             "taste_evolution": taste_evolution,
             "predictors_8plus": predictors_8plus,
@@ -73,6 +85,9 @@ def studies_summary():
             "eights_vs_sevens": eights_vs_sevens,
             "volume_vs_reward": volume_vs_reward,
             "favorite_list_summary": favorite_list_summary,
+            "score_disagreement": score_disagreement,
+            "director_discovery": director_discovery,
+            "taste_evolution_deep": taste_evolution_deep,
         }
     finally:
         db.close()
@@ -233,6 +248,273 @@ def _compute_country_shifts(country_by_year: dict[int, Counter]) -> list[dict]:
             })
     shifts.sort(key=lambda x: -x["delta"])
     return shifts[:8]
+
+
+def _parse_directors(directors: str | None) -> list[str]:
+    """Parse comma-separated director names, filter junk."""
+    if not directors or not directors.strip():
+        return []
+    return [d.strip() for d in directors.split(",") if d.strip() and not _is_low_quality(d.strip())]
+
+
+def _build_director_discovery(db: Session) -> dict:
+    """Director discovery and follow-through: when first rated, how often returned, recurring favorites.
+
+    Requires date_rated. Uses IMDbRating.directors or TitleMetadata.directors (coalesce).
+    """
+    rows = (
+        db.query(
+            IMDbRating.date_rated,
+            IMDbRating.user_rating,
+            IMDbRating.directors,
+            TitleMetadata.directors.label("meta_directors"),
+        )
+        .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.date_rated.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    # director -> list of (year, rating)
+    by_director: dict[str, list[tuple[int, float]]] = defaultdict(list)
+    for r in rows:
+        directors_str = r.directors if r.directors else r.meta_directors
+        for d in _parse_directors(directors_str):
+            year = r.date_rated.year
+            rating = float(r.user_rating)
+            by_director[d].append((year, rating))
+
+    # Require at least 2 directors with 2+ titles for meaningful output
+    candidates = {d: vals for d, vals in by_director.items() if len(vals) >= 1}
+    if len(candidates) < 5:
+        return {"note": "Need date-rated data and directors for at least 5 titles"}
+
+    result = []
+    for director, vals in candidates.items():
+        vals_sorted = sorted(vals, key=lambda x: x[0])
+        first_year = vals_sorted[0][0]
+        titles_after = sum(1 for y, _ in vals_sorted if y > first_year)
+        total = len(vals)
+        ratings = [v for _, v in vals_sorted]
+        avg = sum(ratings) / len(ratings)
+        result.append({
+            "director": director,
+            "first_rated_year": first_year,
+            "titles_after_discovery": titles_after,
+            "total_titles": total,
+            "avg_rating": round(avg, 2),
+            "is_recurring_favorite": titles_after >= 2 and avg >= STRONG_THRESHOLD,
+        })
+
+    # Strongest follow-through: most titles after discovery, then avg rating
+    follow_through = [r for r in result if r["titles_after_discovery"] >= 1]
+    follow_through.sort(key=lambda x: (-x["titles_after_discovery"], -x["avg_rating"]))
+    top_follow_through = follow_through[:15]
+
+    recurring = [r for r in result if r["is_recurring_favorite"]]
+    recurring.sort(key=lambda x: (-x["titles_after_discovery"], -x["avg_rating"]))
+
+    return {
+        "top_follow_through": top_follow_through,
+        "recurring_favorites": recurring[:12],
+        "total_directors_discovered": len(candidates),
+    }
+
+
+def _build_taste_evolution_deep(db: Session) -> dict:
+    """Deeper taste evolution: language shifts, broadening/narrowing, rating trend.
+
+    Early vs recent period (first vs second half of years). Interpretive narrative.
+    """
+    rows_year_genre = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            IMDbRating.genres,
+        )
+        .filter(IMDbRating.date_rated.isnot(None), IMDbRating.genres.isnot(None))
+        .all()
+    )
+    rows_year_country = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            TitleMetadata.country,
+        )
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.date_rated.isnot(None), TitleMetadata.country.isnot(None))
+        .all()
+    )
+    rows_year_lang = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            TitleMetadata.languages,
+        )
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.date_rated.isnot(None), TitleMetadata.languages.isnot(None))
+        .all()
+    )
+    rows_year_rating = (
+        db.query(
+            extract("year", IMDbRating.date_rated).label("year"),
+            IMDbRating.user_rating,
+        )
+        .filter(IMDbRating.date_rated.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+
+    genre_by_year: dict[int, Counter] = defaultdict(Counter)
+    for year, genres in rows_year_genre:
+        y = int(year)
+        for g in _parse_genres(genres):
+            genre_by_year[y][g] += 1
+
+    country_by_year: dict[int, Counter] = defaultdict(Counter)
+    for year, country in rows_year_country:
+        y = int(year)
+        for c in parse_and_normalize_countries(country):
+            country_by_year[y][c] += 1
+
+    lang_by_year: dict[int, Counter] = defaultdict(Counter)
+    for year, lang in rows_year_lang:
+        y = int(year)
+        for l in _parse_languages(lang):
+            lang_by_year[y][l] += 1
+
+    years_sorted = sorted(
+        set(genre_by_year.keys()) | set(country_by_year.keys()) | set(lang_by_year.keys())
+    )
+    if len(years_sorted) < 4:
+        return {"note": "Need 4+ years of date-rated data"}
+
+    mid = len(years_sorted) // 2
+    early_years = set(years_sorted[:mid])
+    recent_years = set(years_sorted[mid:])
+
+    # Language shifts (same pattern as genre/country)
+    language_shifts = _compute_language_shifts(lang_by_year, early_years, recent_years)
+
+    # Broadening: unique genres/countries/languages early vs recent
+    early_genres = set()
+    recent_genres = set()
+    for y, counter in genre_by_year.items():
+        for g, c in counter.items():
+            if _is_low_quality(g):
+                continue
+            if y in early_years:
+                early_genres.add(g)
+            else:
+                recent_genres.add(g)
+
+    early_countries = set()
+    recent_countries = set()
+    for y, counter in country_by_year.items():
+        for c, n in counter.items():
+            if _is_low_quality(c):
+                continue
+            if y in early_years:
+                early_countries.add(c)
+            else:
+                recent_countries.add(c)
+
+    early_langs = set()
+    recent_langs = set()
+    for y, counter in lang_by_year.items():
+        for l, n in counter.items():
+            if _is_low_quality(l):
+                continue
+            if y in early_years:
+                early_langs.add(l)
+            else:
+                recent_langs.add(l)
+
+    broadening = {
+        "genres": {
+            "early_unique": len(early_genres),
+            "recent_unique": len(recent_genres),
+            "broadening": len(recent_genres) > len(early_genres),
+            "delta": len(recent_genres) - len(early_genres),
+        },
+        "countries": {
+            "early_unique": len(early_countries),
+            "recent_unique": len(recent_countries),
+            "broadening": len(recent_countries) > len(early_countries),
+            "delta": len(recent_countries) - len(early_countries),
+        },
+        "languages": {
+            "early_unique": len(early_langs),
+            "recent_unique": len(recent_langs),
+            "broadening": len(recent_langs) > len(early_langs),
+            "delta": len(recent_langs) - len(early_langs),
+        },
+    }
+
+    # Rating trend: early vs recent average
+    early_ratings = []
+    recent_ratings = []
+    for year, rating in rows_year_rating:
+        y = int(year)
+        if rating is None:
+            continue
+        r = float(rating)
+        if y in early_years:
+            early_ratings.append(r)
+        else:
+            recent_ratings.append(r)
+
+    early_avg = sum(early_ratings) / len(early_ratings) if early_ratings else None
+    recent_avg = sum(recent_ratings) / len(recent_ratings) if recent_ratings else None
+    rating_delta = None
+    rating_trend = "stable"
+    if early_avg is not None and recent_avg is not None:
+        rating_delta = round(recent_avg - early_avg, 2)
+        if rating_delta > 0.2:
+            rating_trend = "more_generous"
+        elif rating_delta < -0.2:
+            rating_trend = "more_selective"
+
+    return {
+        "early_years_label": f"{years_sorted[0]}–{years_sorted[mid - 1]}",
+        "recent_years_label": f"{years_sorted[mid]}–{years_sorted[-1]}",
+        "language_shifts": language_shifts,
+        "broadening": broadening,
+        "rating_trend": {
+            "early_avg": round(early_avg, 2) if early_avg is not None else None,
+            "recent_avg": round(recent_avg, 2) if recent_avg is not None else None,
+            "delta": rating_delta,
+            "interpretation": rating_trend,
+        },
+    }
+
+
+def _compute_language_shifts(
+    lang_by_year: dict[int, Counter],
+    early_years: set[int],
+    recent_years: set[int],
+) -> list[dict]:
+    """Early vs recent: biggest language gains and declines."""
+    early_total: Counter = Counter()
+    recent_total: Counter = Counter()
+    for y, counter in lang_by_year.items():
+        for l, n in counter.items():
+            if _is_low_quality(l):
+                continue
+            if y in early_years:
+                early_total[l] += n
+            else:
+                recent_total[l] += n
+
+    shifts = []
+    all_langs = set(early_total.keys()) | set(recent_total.keys())
+    for l in all_langs:
+        early = early_total.get(l, 0)
+        recent = recent_total.get(l, 0)
+        delta = recent - early
+        if early + recent >= 6:
+            shifts.append({
+                "language": l,
+                "early_count": early,
+                "recent_count": recent,
+                "delta": delta,
+            })
+    shifts.sort(key=lambda x: -x["delta"])
+    return shifts[:10]
 
 
 def _build_predictors_8plus(db: Session) -> dict:
@@ -759,6 +1041,101 @@ def _build_volume_vs_reward(db: Session) -> dict:
         "watch_less_love_more_genres": watch_less_love_more,
         "watch_lot_love_less_countries": country_watch_lot,
         "watch_less_love_more_countries": country_watch_less,
+    }
+
+
+def _build_score_disagreement(db: Session) -> dict:
+    """Compare my rating vs IMDb rating vs Metascore (critics). Metascore normalized to 0–10.
+
+    Requires titles with user_rating, imdb_rating, and metascore. Graceful when Metascore missing.
+    """
+    rows = (
+        db.query(
+            IMDbRating.imdb_title_id,
+            IMDbRating.title,
+            IMDbRating.year,
+            IMDbRating.user_rating,
+            IMDbRating.imdb_rating,
+            TitleMetadata.metascore,
+        )
+        .join(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(
+            IMDbRating.user_rating.isnot(None),
+            TitleMetadata.metascore.isnot(None),
+        )
+        .all()
+    )
+    # Prefer IMDb rating from CSV; fallback to TitleMetadata if needed (same join)
+    # IMDbRating has imdb_rating from export; TitleMetadata has it from OMDb. Use IMDbRating.
+    valid = []
+    for r in rows:
+        imdb = r.imdb_rating if r.imdb_rating is not None else None
+        if imdb is None:
+            continue
+        meta = r.metascore
+        if meta is None or meta < 0 or meta > 100:
+            continue
+        meta_10 = meta / 10.0
+        me = float(r.user_rating)
+        valid.append({
+            "imdb_title_id": r.imdb_title_id,
+            "title": r.title or "",
+            "year": r.year,
+            "me": me,
+            "imdb": float(imdb),
+            "metascore_10": round(meta_10, 1),
+            "gap_me_imdb": round(me - float(imdb), 1),
+            "gap_me_metascore": round(me - meta_10, 1),
+            "gap_critic_audience": round(meta_10 - float(imdb), 1),
+        })
+
+    if len(valid) < 5:
+        return {"n_titles": len(valid), "note": "Need at least 5 titles with Metascore for this study"}
+
+    n = len(valid)
+    avg_gap_me_imdb = sum(x["gap_me_imdb"] for x in valid) / n
+    avg_gap_me_metascore = sum(x["gap_me_metascore"] for x in valid) / n
+    abs_me_imdb = sum(abs(x["gap_me_imdb"]) for x in valid) / n
+    abs_me_metascore = sum(abs(x["gap_me_metascore"]) for x in valid) / n
+
+    alignment = "critics" if abs_me_metascore < abs_me_imdb else "audiences"
+    if abs(abs_me_metascore - abs_me_imdb) < 0.1:
+        alignment = "neutral"
+
+    higher_than_imdb = sorted([x for x in valid if x["gap_me_imdb"] > 0], key=lambda x: -x["gap_me_imdb"])[:5]
+    lower_than_imdb = sorted([x for x in valid if x["gap_me_imdb"] < 0], key=lambda x: x["gap_me_imdb"])[:5]
+    higher_than_metascore = sorted([x for x in valid if x["gap_me_metascore"] > 0], key=lambda x: -x["gap_me_metascore"])[:5]
+    lower_than_metascore = sorted([x for x in valid if x["gap_me_metascore"] < 0], key=lambda x: x["gap_me_metascore"])[:5]
+
+    critic_audience_divergence = [
+        x for x in valid if abs(x["gap_critic_audience"]) >= 1.5
+    ]
+    critic_audience_divergence.sort(key=lambda x: -abs(x["gap_critic_audience"]))
+    critic_audience_divergence = critic_audience_divergence[:15]
+
+    def _row(r):
+        return {
+            "imdb_title_id": r["imdb_title_id"],
+            "title": r["title"],
+            "year": r["year"],
+            "me": r["me"],
+            "imdb": r["imdb"],
+            "metascore_10": r["metascore_10"],
+            "gap_me_imdb": r["gap_me_imdb"],
+            "gap_me_metascore": r["gap_me_metascore"],
+            "gap_critic_audience": r["gap_critic_audience"],
+        }
+
+    return {
+        "n_titles": n,
+        "avg_gap_me_imdb": round(avg_gap_me_imdb, 2),
+        "avg_gap_me_metascore": round(avg_gap_me_metascore, 2),
+        "alignment": alignment,
+        "higher_than_imdb": [_row(x) for x in higher_than_imdb],
+        "lower_than_imdb": [_row(x) for x in lower_than_imdb],
+        "higher_than_metascore": [_row(x) for x in higher_than_metascore],
+        "lower_than_metascore": [_row(x) for x in lower_than_metascore],
+        "critic_audience_divergence": [_row(x) for x in critic_audience_divergence],
     }
 
 

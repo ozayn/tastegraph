@@ -54,9 +54,9 @@ export function RecommendationCard({
             />
           </div>
         )}
-        <div className="min-w-0 flex-1 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
+        <div className="min-w-0 flex-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h3 className="break-words text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
               {displayTitle}
             </h3>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -90,7 +90,7 @@ export function RecommendationCard({
             )}
           </div>
           {rating != null && (
-            <span className="shrink-0 rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">
+            <span className="w-fit shrink-0 self-start rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">
               {rating}
             </span>
           )}

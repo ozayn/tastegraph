@@ -97,7 +97,7 @@ function BarListRow({
   compact?: boolean;
 }) {
   return (
-    <li className={`group relative flex items-center justify-between gap-4 px-1 ${compact ? "py-1.5" : "py-2.5"}`}>
+    <li className={`group relative flex items-center justify-between gap-2 px-1 sm:gap-4 ${compact ? "py-1.5" : "py-2.5"}`}>
       <div
         className="absolute inset-y-0 left-0 rounded-md bg-[var(--mondrian-yellow)]/25 transition-opacity group-hover:opacity-100"
         style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
@@ -278,8 +278,8 @@ function BarChart({
   return (
     <div className="space-y-3">
       {items.map((d, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <span className="w-10 shrink-0 text-[13px] font-medium tabular-nums text-[var(--foreground)]">
+        <div key={i} className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <span className="min-w-0 shrink-0 truncate text-[13px] font-medium tabular-nums text-[var(--foreground)] sm:w-16">
             {getLabel(d)}
           </span>
           <div className="min-w-0 flex-1">
@@ -288,7 +288,7 @@ function BarChart({
               style={{ width: `${Math.max((getValue(d) / maxVal) * 100, 2)}%` }}
             />
           </div>
-          <span className="w-10 shrink-0 text-right text-[13px] tabular-nums text-[var(--muted-soft)]">
+          <span className="w-8 shrink-0 text-right text-[12px] tabular-nums text-[var(--muted-soft)] sm:w-10 sm:text-[13px]">
             {getValue(d)}
           </span>
         </div>

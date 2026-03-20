@@ -125,7 +125,7 @@ export function HighFitCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
+          <h3 className="break-words text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
             {displayTitle}
           </h3>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">

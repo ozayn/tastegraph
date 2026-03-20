@@ -115,7 +115,7 @@ export default function ModelLabPage() {
     <div className="model-lab min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
         <header className="mb-10 sm:mb-12">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
                 Model Lab
@@ -377,8 +377,8 @@ export default function ModelLabPage() {
                   <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top positive (predict 8+)</p>
                   <ul className="space-y-1">
                     {(diag.top_positive ?? []).map(({ name, coef }, i) => (
-                      <li key={i} className="flex justify-between gap-2 text-[13px]">
-                        <span className="truncate text-[var(--foreground)]">{formatFeat(name)}</span>
+                      <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
+                        <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
                         <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef > 0 ? "+" : ""}{coef}</span>
                       </li>
                     ))}
@@ -388,8 +388,8 @@ export default function ModelLabPage() {
                   <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top negative (predict &lt;8+; 7 is still good)</p>
                   <ul className="space-y-1">
                     {(diag.top_negative ?? []).map(({ name, coef }, i) => (
-                      <li key={i} className="flex justify-between gap-2 text-[13px]">
-                        <span className="truncate text-[var(--foreground)]">{formatFeat(name)}</span>
+                      <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
+                        <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
                         <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef}</span>
                       </li>
                     ))}
@@ -401,7 +401,7 @@ export default function ModelLabPage() {
                   <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">By feature type (positive)</p>
                   <div className="flex flex-wrap gap-4">
                     {Object.entries(diag.grouped_positive).map(([type, items]) => (
-                      <div key={type} className="min-w-0">
+                      <div key={type} className="min-w-0 basis-32 sm:basis-40">
                         <p className="text-[11px] font-medium text-[var(--muted-soft)]">{type}</p>
                         <ul className="mt-1 space-y-0.5">
                           {items.slice(0, 4).map(({ name, coef }, i) => (
@@ -429,7 +429,7 @@ export default function ModelLabPage() {
             <p className="mb-4 text-[12px] text-[var(--overview-muted)]">
               Overlap: {overlap} · ML-only: {mlOnly} · High-Fit-only: {hfOnly}
             </p>
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div>
                 <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">Overlap</p>
                 <ul className="space-y-3 text-[13px]">
@@ -442,11 +442,11 @@ export default function ModelLabPage() {
                       const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
                       const reason = comparison?.highfit?.find((h) => h.imdb_title_id === id)?.explanation?.top_reasons?.[0];
                       return (
-                        <li key={id} className="block">
-                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                        <li key={id} className="block min-w-0">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
                             {ml?.title ?? id}
                           </a>
-                          <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                          <p className="mt-0.5 break-words text-[12px] text-[var(--muted-soft)]">
                             {ml && formatProb(ml.prob_8plus)}
                             {reason && ` · ${shortenReason(reason)}`}
                           </p>
@@ -466,11 +466,11 @@ export default function ModelLabPage() {
                       const ml = comparison?.ml?.find((m) => m.imdb_title_id === id);
                       const feats = (ml?.top_features ?? []).slice(0, 2).map(formatFeat);
                       return (
-                        <li key={id} className="block">
-                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                        <li key={id} className="block min-w-0">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
                             {ml?.title ?? id}
                           </a>
-                          <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                          <p className="mt-0.5 break-words text-[12px] text-[var(--muted-soft)]">
                             {ml && formatProb(ml.prob_8plus)}
                             {feats.length > 0 && ` · ${feats.join(", ")}`}
                           </p>
@@ -490,12 +490,12 @@ export default function ModelLabPage() {
                       const hf = comparison?.highfit?.find((m) => m.imdb_title_id === id);
                       const reason = hf?.explanation?.top_reasons?.[0];
                       return (
-                        <li key={id} className="block">
-                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
+                        <li key={id} className="block min-w-0">
+                          <a href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noopener noreferrer" className="block break-words font-medium text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--accent)]">
                             {hf?.title ?? id}
                           </a>
                           {reason && (
-                            <p className="mt-0.5 text-[12px] text-[var(--muted-soft)]">
+                            <p className="mt-0.5 break-words text-[12px] text-[var(--muted-soft)]">
                               {shortenReason(reason)}
                             </p>
                           )}

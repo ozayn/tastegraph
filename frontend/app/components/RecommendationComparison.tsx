@@ -53,12 +53,12 @@ function Row({
         href={`https://www.imdb.com/title/${id}/`}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium text-[var(--foreground)] underline decoration-[var(--muted-subtle)] underline-offset-2 hover:text-[var(--accent)]"
+        className="block break-words font-medium text-[var(--foreground)] underline decoration-[var(--muted-subtle)] underline-offset-2 hover:text-[var(--accent)]"
       >
         {display}
       </a>
       {hint && (
-        <p className="mt-0.5 text-[12px] leading-snug text-[var(--muted-soft)]">
+        <p className="mt-0.5 break-words text-[12px] leading-snug text-[var(--muted-soft)]">
           {hint}
         </p>
       )}
@@ -114,7 +114,7 @@ export function RecommendationComparison() {
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
     >
       <summary className="cursor-pointer list-none px-4 py-3 text-[13px] font-medium text-[var(--muted-soft)] hover:text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
-        <span className="inline-flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           Compare ML vs High-Fit (top 15 from each)
           {data && (
             <span className="text-[12px] font-normal">
@@ -129,7 +129,7 @@ export function RecommendationComparison() {
         ) : !data ? (
           <p className="text-[13px] text-[var(--muted-soft)]">Open to load comparison.</p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-3 text-[12px]">
+          <div className="grid grid-cols-1 gap-4 text-[12px] sm:grid-cols-3">
             <div>
               <p className="mb-1.5 font-medium text-[var(--overview-muted)]">Overlap ({overlapIds.length})</p>
               <ul className="space-y-0">

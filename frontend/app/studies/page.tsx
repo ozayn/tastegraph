@@ -98,6 +98,65 @@ type VolumeVsReward = {
   watch_less_love_more_countries: { feature: string; count: number; avg_rating: number }[];
 };
 
+type ScoreDisagreementRow = {
+  imdb_title_id: string;
+  title: string;
+  year: number | null;
+  me: number;
+  imdb: number;
+  metascore_10: number;
+  gap_me_imdb: number;
+  gap_me_metascore: number;
+  gap_critic_audience: number;
+};
+
+type ScoreDisagreement = {
+  n_titles: number;
+  note?: string;
+  avg_gap_me_imdb?: number;
+  avg_gap_me_metascore?: number;
+  alignment?: "critics" | "audiences" | "neutral";
+  higher_than_imdb?: ScoreDisagreementRow[];
+  lower_than_imdb?: ScoreDisagreementRow[];
+  higher_than_metascore?: ScoreDisagreementRow[];
+  lower_than_metascore?: ScoreDisagreementRow[];
+  critic_audience_divergence?: ScoreDisagreementRow[];
+};
+
+type DirectorDiscoveryRow = {
+  director: string;
+  first_rated_year: number;
+  titles_after_discovery: number;
+  total_titles: number;
+  avg_rating: number;
+  is_recurring_favorite: boolean;
+};
+
+type DirectorDiscovery = {
+  note?: string;
+  top_follow_through?: DirectorDiscoveryRow[];
+  recurring_favorites?: DirectorDiscoveryRow[];
+  total_directors_discovered?: number;
+};
+
+type TasteEvolutionDeep = {
+  note?: string;
+  early_years_label?: string;
+  recent_years_label?: string;
+  language_shifts?: { language: string; early_count: number; recent_count: number; delta: number }[];
+  broadening?: {
+    genres: { early_unique: number; recent_unique: number; broadening: boolean; delta: number };
+    countries: { early_unique: number; recent_unique: number; broadening: boolean; delta: number };
+    languages: { early_unique: number; recent_unique: number; broadening: boolean; delta: number };
+  };
+  rating_trend?: {
+    early_avg: number | null;
+    recent_avg: number | null;
+    delta: number | null;
+    interpretation: "stable" | "more_selective" | "more_generous";
+  };
+};
+
 type StudiesData = {
   taste_evolution: TasteEvolution & {
     country_shifts?: { country: string; early_count: number; recent_count: number; delta: number }[];
@@ -111,6 +170,9 @@ type StudiesData = {
   eights_vs_sevens?: EightsVsSevens;
   volume_vs_reward?: VolumeVsReward;
   favorite_list_summary?: FavoriteListSummary;
+  score_disagreement?: ScoreDisagreement;
+  director_discovery?: DirectorDiscovery;
+  taste_evolution_deep?: TasteEvolutionDeep;
 };
 
 function StatCard({
@@ -154,7 +216,7 @@ function BarListRow({
     default: "bg-[var(--mondrian-yellow)]/25",
   };
   return (
-    <li className="group relative flex items-center justify-between gap-4 py-1.5 px-1">
+    <li className="group relative flex items-center justify-between gap-2 py-1.5 px-1 sm:gap-4">
       <div
         className={`absolute inset-y-0 left-0 rounded-md ${barColors[variant]} transition-opacity group-hover:opacity-100`}
         style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
@@ -190,8 +252,8 @@ function DivergingBarList<T extends { delta: number }>({
         const { delta } = item;
         const pctOfHalf = (Math.abs(delta) / maxAbs) * 100;
         return (
-          <li key={i} className="flex items-center gap-3">
-            <span className="w-20 shrink-0 truncate text-[14px] text-[var(--foreground)] sm:w-24">
+          <li key={i} className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="w-16 min-w-0 shrink-0 truncate text-[14px] text-[var(--foreground)] sm:w-24">
               {renderLabel(item)}
             </span>
             <div className="flex min-h-[18px] flex-1 items-stretch">
@@ -216,7 +278,7 @@ function DivergingBarList<T extends { delta: number }>({
               </div>
             </div>
             {renderSub && (
-              <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-[var(--muted-soft)]">
+              <span className="w-12 shrink-0 text-right text-[12px] tabular-nums text-[var(--muted-soft)] sm:w-16 sm:text-[13px]">
                 {renderSub(item)}
               </span>
             )}
@@ -490,7 +552,7 @@ export default function StudiesPage() {
     );
   }
 
-  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, eights_vs_sevens, volume_vs_reward, favorite_list_summary } = data;
+  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, eights_vs_sevens, volume_vs_reward, favorite_list_summary, score_disagreement, director_discovery, taste_evolution_deep } = data;
 
   const yearsWithData = Object.keys(taste_evolution.avg_rating_by_year)
     .map(Number)
@@ -529,7 +591,8 @@ export default function StudiesPage() {
               How has my taste changed over time?
               <SectionHelp title="How to read this">
                 <p>Tracks how your ratings and genre/country mix change by <strong>year watched</strong> (when you rated, not release year).</p>
-                <p>Genre shifts compare first vs second half of your history—what changed most since you started rating. Needs 4+ years of data.</p>
+                <p>Genre shifts compare first vs second half of your history—what changed most since you started rating.</p>
+                <p>Rating trend and broadening compare early vs recent period. Broader = more unique genres/countries/languages; narrower = fewer. Needs 4+ years of data.</p>
               </SectionHelp>
             </h2>
             <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
@@ -578,6 +641,88 @@ export default function StudiesPage() {
                 )}
               </StatCard>
             </div>
+
+            {/* Taste evolution deep: broadening, languages, rating trend */}
+            {taste_evolution_deep && !taste_evolution_deep.note && (
+              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {taste_evolution_deep.rating_trend && (
+                  <StatCard
+                    title="Rating trend"
+                    subtitle={`${taste_evolution_deep.early_years_label} vs ${taste_evolution_deep.recent_years_label}`}
+                  >
+                    <div className="space-y-2">
+                      <p className="text-[14px] text-[var(--foreground)]">
+                        Early: <span className="font-medium tabular-nums">{taste_evolution_deep.rating_trend.early_avg?.toFixed(1) ?? "—"}</span>
+                        {" · "}
+                        Recent: <span className="font-medium tabular-nums">{taste_evolution_deep.rating_trend.recent_avg?.toFixed(1) ?? "—"}</span>
+                        {taste_evolution_deep.rating_trend.delta != null && (
+                          <span className="ml-1 text-[12px] text-[var(--muted-soft)]">
+                            ({taste_evolution_deep.rating_trend.delta >= 0 ? "+" : ""}{taste_evolution_deep.rating_trend.delta.toFixed(2)})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[13px] text-[var(--muted-soft)]">
+                        {taste_evolution_deep.rating_trend.interpretation === "more_selective" && "You rate more strictly in recent years."}
+                        {taste_evolution_deep.rating_trend.interpretation === "more_generous" && "You rate more generously in recent years."}
+                        {taste_evolution_deep.rating_trend.interpretation === "stable" && "Your rating stringency has stayed similar."}
+                      </p>
+                    </div>
+                  </StatCard>
+                )}
+                {taste_evolution_deep.broadening && (
+                  <StatCard
+                    title="Broadening or narrowing?"
+                    subtitle="Unique genres, countries, languages in early vs recent period"
+                  >
+                    <div className="space-y-2 text-[13px]">
+                      <p className="text-[var(--foreground)]">
+                        Genres: {taste_evolution_deep.broadening.genres.early_unique} → {taste_evolution_deep.broadening.genres.recent_unique}
+                        {taste_evolution_deep.broadening.genres.broadening ? (
+                          <span className="ml-1 text-[var(--shift-increase)]">↑ broader</span>
+                        ) : taste_evolution_deep.broadening.genres.delta < 0 ? (
+                          <span className="ml-1 text-[var(--shift-decline)]">↓ narrower</span>
+                        ) : (
+                          <span className="ml-1 text-[var(--muted-soft)]">stable</span>
+                        )}
+                      </p>
+                      <p className="text-[var(--foreground)]">
+                        Countries: {taste_evolution_deep.broadening.countries.early_unique} → {taste_evolution_deep.broadening.countries.recent_unique}
+                        {taste_evolution_deep.broadening.countries.broadening ? (
+                          <span className="ml-1 text-[var(--shift-increase)]">↑ broader</span>
+                        ) : taste_evolution_deep.broadening.countries.delta < 0 ? (
+                          <span className="ml-1 text-[var(--shift-decline)]">↓ narrower</span>
+                        ) : (
+                          <span className="ml-1 text-[var(--muted-soft)]">stable</span>
+                        )}
+                      </p>
+                      <p className="text-[var(--foreground)]">
+                        Languages: {taste_evolution_deep.broadening.languages.early_unique} → {taste_evolution_deep.broadening.languages.recent_unique}
+                        {taste_evolution_deep.broadening.languages.broadening ? (
+                          <span className="ml-1 text-[var(--shift-increase)]">↑ broader</span>
+                        ) : taste_evolution_deep.broadening.languages.delta < 0 ? (
+                          <span className="ml-1 text-[var(--shift-decline)]">↓ narrower</span>
+                        ) : (
+                          <span className="ml-1 text-[var(--muted-soft)]">stable</span>
+                        )}
+                      </p>
+                    </div>
+                  </StatCard>
+                )}
+                {taste_evolution_deep.language_shifts && taste_evolution_deep.language_shifts.length > 0 && (
+                  <StatCard
+                    title="Language shifts"
+                    subtitle={`${taste_evolution_deep.early_years_label} → ${taste_evolution_deep.recent_years_label}`}
+                    className="lg:col-span-2"
+                  >
+                    <DivergingBarList
+                      items={taste_evolution_deep.language_shifts}
+                      renderLabel={(s) => s.language}
+                      renderSub={(s) => (s.delta > 0 ? `+${s.delta}` : `${s.delta}`)}
+                    />
+                  </StatCard>
+                )}
+              </div>
+            )}
           </section>
 
           {/* 2. What distinguishes my 8s from my 7s? */}
@@ -669,6 +814,192 @@ export default function StudiesPage() {
               </div>
             </section>
           ) : null}
+
+          {/* Director discovery and follow-through */}
+          {director_discovery && !director_discovery.note && (director_discovery.top_follow_through?.length ?? 0) > 0 && (
+            <section className="border-t border-[var(--section-border)] pt-8">
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                Which directors did I discover and return to?
+                <SectionHelp title="How to read this">
+                  <p><strong>First rated year</strong> = when you first rated a title by this director.</p>
+                  <p><strong>Titles after discovery</strong> = titles you rated in years <em>after</em> that first year—how often you came back.</p>
+                  <p><strong>Recurring favorites</strong> = directors with 2+ titles after discovery and avg rating ≥8.</p>
+                  <p>Requires date-rated data.</p>
+                </SectionHelp>
+              </h2>
+              <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                The story of director discovery: who hooked you, and who you kept coming back to.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <StatCard
+                  title="Strongest follow-through"
+                  subtitle="directors you returned to most after first discovery"
+                >
+                  <ul className="space-y-2">
+                    {director_discovery.top_follow_through?.map((r, i) => (
+                      <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-3 text-[13px]">
+                        <span className="min-w-0 truncate font-medium text-[var(--foreground)]">{r.director}</span>
+                        <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                          since {r.first_rated_year} · {r.titles_after_discovery} after · {r.total_titles} total · avg {r.avg_rating.toFixed(1)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </StatCard>
+                <StatCard
+                  title="Recurring favorites"
+                  subtitle="2+ titles after discovery, avg ≥8"
+                >
+                  {director_discovery.recurring_favorites && director_discovery.recurring_favorites.length > 0 ? (
+                    <ul className="space-y-2">
+                      {director_discovery.recurring_favorites.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-3 text-[13px]">
+                          <span className="min-w-0 truncate font-medium text-[var(--foreground)]">{r.director}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            {r.titles_after_discovery} after · avg {r.avg_rating.toFixed(1)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">
+                      No recurring favorites yet—directors with 2+ return watches and 8+ avg.
+                    </p>
+                  )}
+                </StatCard>
+              </div>
+              {director_discovery.total_directors_discovered != null && (
+                <p className="mt-4 text-[12px] text-[var(--muted-soft)]">
+                  {director_discovery.total_directors_discovered} directors discovered in total.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* Score disagreement: me vs IMDb vs Metascore */}
+          {score_disagreement && score_disagreement.n_titles >= 5 && !score_disagreement.note && (
+            <section className="border-t border-[var(--section-border)] pt-8">
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                Where do my ratings align or diverge from critics and audiences?
+                <SectionHelp title="How to read this">
+                  <p>Compares <strong>your rating</strong> to <strong>IMDb</strong> (audiences) and <strong>Metascore</strong> (critics, scaled 0–10).</p>
+                  <p><strong>Gap</strong> = your rating minus theirs. Positive = you rate higher; negative = you rate lower.</p>
+                  <p><strong>Alignment</strong> = whose scores you&apos;re closer to on average (smaller absolute gap).</p>
+                  <p>Includes only titles with Metascore; many titles lack it, so sample size may be smaller than your full library.</p>
+                </SectionHelp>
+              </h2>
+              <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                Understanding where your taste matches or differs from critics and general audiences.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <StatCard title="Summary" subtitle={`${score_disagreement.n_titles} titles with Metascore`}>
+                  <div className="space-y-3">
+                    <p className="text-[14px] text-[var(--foreground)]">
+                      Avg gap vs IMDb: <span className="font-medium tabular-nums">{score_disagreement.avg_gap_me_imdb != null ? (score_disagreement.avg_gap_me_imdb >= 0 ? "+" : "") + score_disagreement.avg_gap_me_imdb.toFixed(2) : "—"}</span>
+                      <span className="ml-1 text-[12px] text-[var(--muted-soft)]">(you − audience)</span>
+                    </p>
+                    <p className="text-[14px] text-[var(--foreground)]">
+                      Avg gap vs Metascore: <span className="font-medium tabular-nums">{score_disagreement.avg_gap_me_metascore != null ? (score_disagreement.avg_gap_me_metascore >= 0 ? "+" : "") + score_disagreement.avg_gap_me_metascore.toFixed(2) : "—"}</span>
+                      <span className="ml-1 text-[12px] text-[var(--muted-soft)]">(you − critics)</span>
+                    </p>
+                    <p className="text-[14px] text-[var(--foreground)]">
+                      You align more with <span className="font-medium">{score_disagreement.alignment ?? "—"}</span>
+                    </p>
+                  </div>
+                </StatCard>
+                <StatCard title="I rate higher than audiences" subtitle="biggest positive gap (me − IMDb)">
+                  {score_disagreement.higher_than_imdb && score_disagreement.higher_than_imdb.length > 0 ? (
+                    <ul className="space-y-2">
+                      {score_disagreement.higher_than_imdb.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">
+                            {r.title}{r.year ? ` (${r.year})` : ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            +{r.gap_me_imdb.toFixed(1)} (me {r.me} vs {r.imdb.toFixed(1)})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No titles where you rate notably higher than IMDb.</p>
+                  )}
+                </StatCard>
+                <StatCard title="I rate lower than audiences" subtitle="biggest negative gap (me − IMDb)">
+                  {score_disagreement.lower_than_imdb && score_disagreement.lower_than_imdb.length > 0 ? (
+                    <ul className="space-y-2">
+                      {score_disagreement.lower_than_imdb.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">
+                            {r.title}{r.year ? ` (${r.year})` : ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            {r.gap_me_imdb.toFixed(1)} (me {r.me} vs {r.imdb.toFixed(1)})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No titles where you rate notably lower than IMDb.</p>
+                  )}
+                </StatCard>
+                <StatCard title="I rate higher than critics" subtitle="biggest positive gap (me − Metascore/10)">
+                  {score_disagreement.higher_than_metascore && score_disagreement.higher_than_metascore.length > 0 ? (
+                    <ul className="space-y-2">
+                      {score_disagreement.higher_than_metascore.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">
+                            {r.title}{r.year ? ` (${r.year})` : ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            +{r.gap_me_metascore.toFixed(1)} (me {r.me} vs {r.metascore_10})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No titles where you rate notably higher than critics.</p>
+                  )}
+                </StatCard>
+                <StatCard title="I rate lower than critics" subtitle="biggest negative gap (me − Metascore/10)">
+                  {score_disagreement.lower_than_metascore && score_disagreement.lower_than_metascore.length > 0 ? (
+                    <ul className="space-y-2">
+                      {score_disagreement.lower_than_metascore.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">
+                            {r.title}{r.year ? ` (${r.year})` : ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            {r.gap_me_metascore.toFixed(1)} (me {r.me} vs {r.metascore_10})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No titles where you rate notably lower than critics.</p>
+                  )}
+                </StatCard>
+                <StatCard title="Critics vs audiences diverge" subtitle="where IMDb and Metascore differ by ≥1.5 · gap = critics − audience" className="lg:col-span-2">
+                  {score_disagreement.critic_audience_divergence && score_disagreement.critic_audience_divergence.length > 0 ? (
+                    <ul className="space-y-2">
+                      {score_disagreement.critic_audience_divergence.map((r, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 sm:flex-row sm:flex-nowrap sm:items-baseline sm:justify-between sm:gap-3 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">
+                            {r.title}{r.year ? ` (${r.year})` : ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">
+                            me {r.me} · IMDb {r.imdb.toFixed(1)} · Meta {r.metascore_10} · gap {r.gap_critic_audience >= 0 ? "+" : ""}{r.gap_critic_audience.toFixed(1)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[14px] text-[var(--muted-soft)]">No titles with large critic–audience gaps.</p>
+                  )}
+                </StatCard>
+              </div>
+            </section>
+          )}
 
           {/* 5. Features associated with 8+ */}
           <section>

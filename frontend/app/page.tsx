@@ -34,7 +34,7 @@ export default function Home() {
                 <p>More ratings and metadata improve recommendations. Studies and high-fit watchlist use these signals.</p>
               </SectionHelp>
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
               <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
                 <ImportStatus />
               </div>

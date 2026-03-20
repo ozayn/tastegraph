@@ -16,7 +16,7 @@ export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
 
   return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:px-8 sm:py-8">
       <div className="flex flex-col gap-6 sm:gap-7">
         <div>
           <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
