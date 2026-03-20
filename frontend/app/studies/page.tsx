@@ -83,12 +83,33 @@ type FavoriteListSummary = {
   overlap_with_rated: number;
 };
 
+type EightsVsSevens = {
+  min_support: number;
+  genre_signals: { feature: string; count_8plus: number; count_7: number; ratio_8_over_7: number }[];
+  country_signals: { feature: string; count_8plus: number; count_7: number; ratio_8_over_7: number }[];
+  decade_signals: { feature: string; count_8plus: number; count_7: number; ratio_8_over_7: number }[];
+};
+
+type VolumeVsReward = {
+  min_support: number;
+  watch_lot_love_less_genres: { feature: string; count: number; avg_rating: number }[];
+  watch_less_love_more_genres: { feature: string; count: number; avg_rating: number }[];
+  watch_lot_love_less_countries: { feature: string; count: number; avg_rating: number }[];
+  watch_less_love_more_countries: { feature: string; count: number; avg_rating: number }[];
+};
+
 type StudiesData = {
-  taste_evolution: TasteEvolution;
+  taste_evolution: TasteEvolution & {
+    country_shifts?: { country: string; early_count: number; recent_count: number; delta: number }[];
+    biggest_genre_increases?: GenreShift[];
+    biggest_genre_decreases?: GenreShift[];
+  };
   predictors_8plus: Predictors8Plus;
   watchlist_taste_alignment: WatchlistTasteAlignment;
   genre_combinations?: GenreCombinations;
   best_creators?: BestCreators;
+  eights_vs_sevens?: EightsVsSevens;
+  volume_vs_reward?: VolumeVsReward;
   favorite_list_summary?: FavoriteListSummary;
 };
 
@@ -118,15 +139,22 @@ function BarListRow({
   label,
   sub,
   barPct,
+  variant = "default",
 }: {
   label: string;
   sub?: React.ReactNode;
   barPct: number;
+  variant?: "positive" | "negative" | "default";
 }) {
+  const barColors = {
+    positive: "bg-[var(--shift-increase)]",
+    negative: "bg-[var(--shift-decline)]",
+    default: "bg-[var(--mondrian-yellow)]/25",
+  };
   return (
     <li className="group relative flex items-center justify-between gap-4 py-2.5 px-1">
       <div
-        className="absolute inset-y-0 left-0 rounded-md bg-[var(--mondrian-yellow)]/25 transition-opacity group-hover:opacity-100"
+        className={`absolute inset-y-0 left-0 rounded-md ${barColors[variant]} transition-opacity group-hover:opacity-100`}
         style={{ width: `${Math.max(barPct, 4)}%`, left: 0, right: "auto" }}
         aria-hidden
       />
@@ -142,16 +170,73 @@ function BarListRow({
   );
 }
 
+/** Diverging horizontal bar chart: gains right of center, declines left of center. */
+function DivergingBarList<T extends { delta: number }>({
+  items,
+  renderLabel,
+  renderSub,
+}: {
+  items: T[];
+  renderLabel: (item: T) => string;
+  renderSub?: (item: T) => React.ReactNode;
+}) {
+  if (!items.length) return null;
+  const maxAbs = Math.max(...items.map((s) => Math.abs(s.delta)), 1);
+  return (
+    <ul className="space-y-2">
+      {items.map((item, i) => {
+        const { delta } = item;
+        const pctOfHalf = (Math.abs(delta) / maxAbs) * 100;
+        return (
+          <li key={i} className="flex items-center gap-3">
+            <span className="w-20 shrink-0 truncate text-[14px] text-[var(--foreground)] sm:w-24">
+              {renderLabel(item)}
+            </span>
+            <div className="flex min-h-[22px] flex-1 items-stretch">
+              <div className="flex flex-1 justify-end">
+                {delta < 0 && (
+                  <div
+                    className="rounded-l bg-[var(--shift-decline)] transition-opacity hover:opacity-90"
+                    style={{ width: `${pctOfHalf}%`, minWidth: 4 }}
+                    aria-hidden
+                  />
+                )}
+              </div>
+              <div className="w-px shrink-0 bg-[var(--section-border)]" aria-hidden />
+              <div className="flex flex-1 justify-start">
+                {delta > 0 && (
+                  <div
+                    className="rounded-r bg-[var(--shift-increase)] transition-opacity hover:opacity-90"
+                    style={{ width: `${pctOfHalf}%`, minWidth: 4 }}
+                    aria-hidden
+                  />
+                )}
+              </div>
+            </div>
+            {renderSub && (
+              <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-[var(--muted-soft)]">
+                {renderSub(item)}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function BarList<T>({
   items,
   getValue,
   renderLabel,
   renderSub,
+  getBarVariant,
 }: {
   items: T[];
   getValue: (item: T) => number;
   renderLabel: (item: T) => string;
   renderSub?: (item: T) => React.ReactNode;
+  getBarVariant?: (item: T) => "positive" | "negative" | "default";
 }) {
   if (!items.length) return null;
   const maxVal = Math.max(...items.map(getValue), 1);
@@ -163,6 +248,7 @@ function BarList<T>({
           label={renderLabel(item)}
           sub={renderSub?.(item)}
           barPct={(getValue(item) / maxVal) * 100}
+          variant={getBarVariant?.(item)}
         />
       ))}
     </ul>
@@ -247,7 +333,7 @@ export default function StudiesPage() {
     );
   }
 
-  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, favorite_list_summary } = data;
+  const { taste_evolution, predictors_8plus, watchlist_taste_alignment, genre_combinations, best_creators, eights_vs_sevens, volume_vs_reward, favorite_list_summary } = data;
 
   const yearsWithData = Object.keys(taste_evolution.avg_rating_by_year)
     .map(Number)
@@ -279,17 +365,17 @@ export default function StudiesPage() {
         </header>
 
         <div className="space-y-16 sm:space-y-20 md:space-y-24">
-          {/* 1. Taste evolution */}
+          {/* 1. How has my taste changed over time? */}
           <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-4">
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Taste evolution over time
+              How has my taste changed over time?
               <SectionHelp title="How to read this">
                 <p>Tracks how your ratings and genre/country mix change by <strong>year watched</strong> (when you rated, not release year).</p>
-                <p>Genre shifts compare first vs second half of your history—useful for seeing if your taste has drifted. Needs 4+ years of data.</p>
+                <p>Genre shifts compare first vs second half of your history—what changed most since you started rating. Needs 4+ years of data.</p>
               </SectionHelp>
             </h2>
-            <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
-              How your ratings and preferences changed by year watched.
+            <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+              What changed most in your taste since you started rating.
             </p>
             <div className="grid gap-6 sm:grid-cols-2">
               <StatCard
@@ -313,20 +399,28 @@ export default function StudiesPage() {
               </StatCard>
               <StatCard
                 title="Genre shifts: early vs recent"
-                subtitle="biggest changes between first and second half of your rating history"
+                subtitle="biggest changes between first and second half. Right = more in recent, left = less."
               >
-                {taste_evolution.genre_shifts?.length > 0 ? (
-                  <BarList
-                    items={taste_evolution.genre_shifts}
-                    getValue={(s) => Math.abs(s.delta)}
-                    renderLabel={(s) => s.genre}
-                    renderSub={(s) =>
-                      s.delta >= 0
-                        ? `+${s.delta} (${s.early_count}→${s.recent_count})`
-                        : `${s.delta} (${s.early_count}→${s.recent_count})`
-                    }
-                  />
-                ) : (
+                {taste_evolution.genre_shifts?.length > 0 ? (() => {
+                    const nonzero = taste_evolution.genre_shifts
+                      .filter((s) => s.delta !== 0)
+                      .sort((a, b) => b.delta - a.delta);
+                    return nonzero.length > 0 ? (
+                      <DivergingBarList
+                        items={nonzero}
+                        renderLabel={(s) => s.genre}
+                        renderSub={(s) =>
+                          s.delta > 0
+                            ? `+${s.delta}`
+                            : `${s.delta}`
+                        }
+                      />
+                    ) : (
+                      <p className="text-[14px] text-[var(--muted-soft)]">
+                        No notable shifts.
+                      </p>
+                    );
+                  })() : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
                     Need 4+ years of data for early vs recent comparison.
                   </p>
@@ -335,7 +429,97 @@ export default function StudiesPage() {
             </div>
           </section>
 
-          {/* 2. Features associated with 8+ */}
+          {/* 2. What distinguishes my 8s from my 7s? */}
+          {eights_vs_sevens && !("note" in eights_vs_sevens) && (eights_vs_sevens.genre_signals?.length || eights_vs_sevens.country_signals?.length || eights_vs_sevens.decade_signals?.length) ? (
+            <section className="border-t border-[var(--section-border)] pt-8">
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                What distinguishes my 8s from my 7s?
+                <SectionHelp title="How to read this">
+                  <p>Features that appear <strong>more often</strong> in titles you rated 8+ than in titles you rated 7.</p>
+                  <p>7 = liked; 8+ = strong favorite. Ratio &gt; 1 means this feature is more associated with strong favorites than good-but-not-top-tier ratings.</p>
+                  <p>Requires min {eights_vs_sevens.min_support} titles in each group (8+ and 7) per feature.</p>
+                </SectionHelp>
+              </h2>
+              <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                What separates strong favorites from good-but-not-top-tier ratings.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {eights_vs_sevens.genre_signals?.length ? (
+                  <StatCard title="Genres" subtitle="ratio 8+ vs 7">
+                    <BarList
+                      items={eights_vs_sevens.genre_signals}
+                      getValue={(s) => s.ratio_8_over_7}
+                      renderLabel={(s) => s.feature}
+                      renderSub={(s) => `${s.ratio_8_over_7}× · n8=${s.count_8plus} n7=${s.count_7}`}
+                    />
+                  </StatCard>
+                ) : null}
+                {eights_vs_sevens.country_signals?.length ? (
+                  <StatCard title="Countries" subtitle="ratio 8+ vs 7">
+                    <BarList
+                      items={eights_vs_sevens.country_signals}
+                      getValue={(s) => s.ratio_8_over_7}
+                      renderLabel={(s) => s.feature}
+                      renderSub={(s) => `${s.ratio_8_over_7}×`}
+                    />
+                  </StatCard>
+                ) : null}
+                {eights_vs_sevens.decade_signals?.length ? (
+                  <StatCard title="Decades" subtitle="ratio 8+ vs 7">
+                    <BarList
+                      items={eights_vs_sevens.decade_signals}
+                      getValue={(s) => s.ratio_8_over_7}
+                      renderLabel={(s) => s.feature}
+                      renderSub={(s) => `${s.ratio_8_over_7}×`}
+                    />
+                  </StatCard>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {/* 4. What do I watch often but not love as much? */}
+          {volume_vs_reward && (volume_vs_reward.watch_lot_love_less_genres?.length || volume_vs_reward.watch_less_love_more_genres?.length) ? (
+            <section className="border-t border-[var(--section-border)] pt-8">
+              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+                What do I watch often but not love as much?
+                <SectionHelp title="How to read this">
+                  <p><strong>Watch a lot, love less</strong> = genres/countries you consume frequently but rate lower on average.</p>
+                  <p><strong>Watch less, love more</strong> = genres/countries you watch less often but rate higher when you do.</p>
+                  <p>Based on rank mismatch: high volume rank but low avg-rank (or vice versa). Min {volume_vs_reward.min_support} titles.</p>
+                </SectionHelp>
+              </h2>
+              <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                Volume vs reward: overconsumed vs high-reward patterns.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <StatCard title="Watch a lot, love less" subtitle="high volume, lower avg rating">
+                  <BarList
+                    items={[
+                      ...(volume_vs_reward.watch_lot_love_less_genres ?? []),
+                      ...(volume_vs_reward.watch_lot_love_less_countries ?? []),
+                    ]}
+                    getValue={(x) => x.count}
+                    renderLabel={(x) => x.feature}
+                    renderSub={(x) => `${x.count} titles · avg ${x.avg_rating}`}
+                  />
+                </StatCard>
+                <StatCard title="Watch less, love more" subtitle="lower volume, higher avg rating">
+                  <BarList
+                    items={[
+                      ...(volume_vs_reward.watch_less_love_more_genres ?? []),
+                      ...(volume_vs_reward.watch_less_love_more_countries ?? []),
+                    ]}
+                    getValue={(x) => x.avg_rating}
+                    renderLabel={(x) => x.feature}
+                    renderSub={(x) => `${x.count} titles · avg ${x.avg_rating}`}
+                  />
+                </StatCard>
+              </div>
+            </section>
+          ) : null}
+
+          {/* 5. Features associated with 8+ */}
           <section>
             <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               Features associated with 8+ ratings

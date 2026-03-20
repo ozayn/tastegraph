@@ -58,6 +58,8 @@ def studies_summary():
         watchlist_taste_alignment = _build_watchlist_taste_alignment(db)
         genre_combinations = _build_genre_combinations(db)
         best_creators = _build_best_creators(db)
+        eights_vs_sevens = _build_eights_vs_sevens(db)
+        volume_vs_reward = _build_volume_vs_reward(db)
         try:
             favorite_list_summary = _build_favorite_list_summary(db)
         except Exception:
@@ -68,6 +70,8 @@ def studies_summary():
             "watchlist_taste_alignment": watchlist_taste_alignment,
             "genre_combinations": genre_combinations,
             "best_creators": best_creators,
+            "eights_vs_sevens": eights_vs_sevens,
+            "volume_vs_reward": volume_vs_reward,
             "favorite_list_summary": favorite_list_summary,
         }
     finally:
@@ -140,6 +144,10 @@ def _build_taste_evolution(db: Session) -> dict:
             top_countries_by_year[y] = top
 
     genre_shifts = _compute_genre_shifts(genre_by_year)
+    country_shifts = _compute_country_shifts(country_by_year)
+    biggest_increases = [s for s in genre_shifts if s["delta"] > 0][:5]
+    biggest_decreases = [s for s in genre_shifts if s["delta"] < 0][-5:]
+    biggest_decreases.reverse()
 
     return {
         "avg_rating_by_year": avg_rating_by_year,
@@ -147,6 +155,9 @@ def _build_taste_evolution(db: Session) -> dict:
         "top_genres_by_year": top_genres_by_year,
         "top_countries_by_year": top_countries_by_year,
         "genre_shifts": genre_shifts,
+        "country_shifts": country_shifts,
+        "biggest_genre_increases": biggest_increases,
+        "biggest_genre_decreases": biggest_decreases,
     }
 
 
@@ -185,6 +196,43 @@ def _compute_genre_shifts(genre_by_year: dict[int, Counter]) -> list[dict]:
             })
     shifts.sort(key=lambda x: -x["delta"])
     return shifts[:10]
+
+
+def _compute_country_shifts(country_by_year: dict[int, Counter]) -> list[dict]:
+    """Early vs recent: biggest country gains and declines."""
+    years_sorted = sorted(country_by_year.keys())
+    if len(years_sorted) < 4:
+        return []
+    mid = len(years_sorted) // 2
+    early_years = set(years_sorted[:mid])
+    recent_years = set(years_sorted[mid:])
+
+    early_total: Counter = Counter()
+    recent_total: Counter = Counter()
+    for y, counter in country_by_year.items():
+        for c, n in counter.items():
+            if _is_low_quality(c):
+                continue
+            if y in early_years:
+                early_total[c] += n
+            else:
+                recent_total[c] += n
+
+    shifts = []
+    all_countries = set(early_total.keys()) | set(recent_total.keys())
+    for c in all_countries:
+        early = early_total.get(c, 0)
+        recent = recent_total.get(c, 0)
+        delta = recent - early
+        if early + recent >= 8:
+            shifts.append({
+                "country": c,
+                "early_count": early,
+                "recent_count": recent,
+                "delta": delta,
+            })
+    shifts.sort(key=lambda x: -x["delta"])
+    return shifts[:8]
 
 
 def _build_predictors_8plus(db: Session) -> dict:
@@ -481,6 +529,236 @@ def _build_best_creators(db: Session) -> dict:
         "directors": _top_creators(director_ratings, CREATOR_MIN_SUPPORT),
         "actors": _top_creators(actor_ratings, CREATOR_MIN_SUPPORT),
         "writers": _top_creators(writer_ratings, CREATOR_MIN_SUPPORT),
+    }
+
+
+EIGHTS_VS_SEVENS_MIN = 10  # min titles in each group (8+ and 7) for a feature
+
+
+def _build_eights_vs_sevens(db: Session) -> dict:
+    """What distinguishes 8+ from 7: features more associated with strong favorites than good-but-not-top ratings."""
+    rows = (
+        db.query(IMDbRating.genres, IMDbRating.user_rating)
+        .filter(IMDbRating.genres.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    genre_8: Counter = Counter()
+    genre_7: Counter = Counter()
+    for genres, r in rows:
+        for g in _parse_genres(genres):
+            if r >= STRONG_THRESHOLD:
+                genre_8[g] += 1
+            elif r == 7:
+                genre_7[g] += 1
+
+    total_8 = sum(genre_8.values())
+    total_7 = sum(genre_7.values())
+    if total_8 == 0 or total_7 == 0:
+        return {"genre_signals": [], "note": "Need both 8+ and 7 ratings."}
+
+    genre_signals = []
+    all_genres = set(genre_8.keys()) | set(genre_7.keys())
+    for g in all_genres:
+        if _is_low_quality(g):
+            continue
+        c8, c7 = genre_8.get(g, 0), genre_7.get(g, 0)
+        if c8 < EIGHTS_VS_SEVENS_MIN or c7 < EIGHTS_VS_SEVENS_MIN:
+            continue
+        share_8 = c8 / total_8
+        share_7 = c7 / total_7
+        ratio = share_8 / share_7 if share_7 > 0 else 0
+        if ratio > 1:
+            genre_signals.append({
+                "feature": g,
+                "count_8plus": c8,
+                "count_7": c7,
+                "ratio_8_over_7": round(ratio, 2),
+            })
+    genre_signals.sort(key=lambda x: -x["ratio_8_over_7"])
+    genre_signals = genre_signals[:8]
+
+    country_rows = (
+        db.query(TitleMetadata.country, IMDbRating.user_rating)
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(TitleMetadata.country.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    country_8: Counter = Counter()
+    country_7: Counter = Counter()
+    for c_str, r in country_rows:
+        for c in parse_and_normalize_countries(c_str):
+            if r >= STRONG_THRESHOLD:
+                country_8[c] += 1
+            elif r == 7:
+                country_7[c] += 1
+    total_8_c = sum(country_8.values())
+    total_7_c = sum(country_7.values())
+    country_signals = []
+    if total_8_c > 0 and total_7_c > 0:
+        all_countries = set(country_8.keys()) | set(country_7.keys())
+        for c in all_countries:
+            if _is_low_quality(c):
+                continue
+            c8, c7 = country_8.get(c, 0), country_7.get(c, 0)
+            if c8 < EIGHTS_VS_SEVENS_MIN or c7 < EIGHTS_VS_SEVENS_MIN:
+                continue
+            share_8 = c8 / total_8_c
+            share_7 = c7 / total_7_c
+            ratio = share_8 / share_7 if share_7 > 0 else 0
+            if ratio > 1:
+                country_signals.append({
+                    "feature": c,
+                    "count_8plus": c8,
+                    "count_7": c7,
+                    "ratio_8_over_7": round(ratio, 2),
+                })
+        country_signals.sort(key=lambda x: -x["ratio_8_over_7"])
+        country_signals = country_signals[:8]
+
+    decade_rows = (
+        db.query(IMDbRating.year, IMDbRating.user_rating)
+        .filter(IMDbRating.year.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    decade_8: Counter = Counter()
+    decade_7: Counter = Counter()
+    for y, r in decade_rows:
+        d = _decade(y)
+        if d:
+            if r >= STRONG_THRESHOLD:
+                decade_8[d] += 1
+            elif r == 7:
+                decade_7[d] += 1
+    total_8_d = sum(decade_8.values())
+    total_7_d = sum(decade_7.values())
+    decade_signals = []
+    if total_8_d > 0 and total_7_d > 0:
+        all_decades = set(decade_8.keys()) | set(decade_7.keys())
+        for d in all_decades:
+            c8, c7 = decade_8.get(d, 0), decade_7.get(d, 0)
+            if c8 < EIGHTS_VS_SEVENS_MIN or c7 < EIGHTS_VS_SEVENS_MIN:
+                continue
+            share_8 = c8 / total_8_d
+            share_7 = c7 / total_7_d
+            ratio = share_8 / share_7 if share_7 > 0 else 0
+            if ratio > 1:
+                decade_signals.append({
+                    "feature": d,
+                    "count_8plus": c8,
+                    "count_7": c7,
+                    "ratio_8_over_7": round(ratio, 2),
+                })
+        decade_signals.sort(key=lambda x: -x["ratio_8_over_7"])
+        decade_signals = decade_signals[:8]
+
+    return {
+        "min_support": EIGHTS_VS_SEVENS_MIN,
+        "genre_signals": genre_signals,
+        "country_signals": country_signals,
+        "decade_signals": decade_signals,
+    }
+
+
+VOLUME_REWARD_MIN = 10
+
+
+def _build_volume_vs_reward(db: Session) -> dict:
+    """Volume vs reward: watch a lot but love less vs watch less but love more."""
+    rows = (
+        db.query(IMDbRating.genres, IMDbRating.user_rating)
+        .filter(IMDbRating.genres.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    genre_count: Counter = Counter()
+    genre_sum: Counter = Counter()
+    for genres, r in rows:
+        for g in _parse_genres(genres):
+            genre_count[g] += 1
+            genre_sum[g] += r
+
+    watch_lot_love_less = []
+    watch_less_love_more = []
+    for g in genre_count:
+        if _is_low_quality(g) or genre_count[g] < VOLUME_REWARD_MIN:
+            continue
+        count = genre_count[g]
+        avg = genre_sum[g] / count
+        watch_lot_love_less.append({"feature": g, "count": count, "avg_rating": round(avg, 2)})
+        watch_less_love_more.append({"feature": g, "count": count, "avg_rating": round(avg, 2)})
+
+    count_sorted = sorted(watch_lot_love_less, key=lambda x: -x["count"])
+    avg_sorted = sorted(watch_less_love_more, key=lambda x: -x["avg_rating"])
+    count_rank = {x["feature"]: i for i, x in enumerate(count_sorted)}
+    avg_rank = {x["feature"]: i for i, x in enumerate(avg_sorted)}
+
+    watch_lot_love_less = []
+    for x in count_sorted[:20]:
+        rank_count = count_rank[x["feature"]]
+        rank_avg = avg_rank[x["feature"]]
+        if rank_avg > rank_count + 5:
+            watch_lot_love_less.append({**x, "rank_count": rank_count, "rank_avg": rank_avg})
+    watch_lot_love_less.sort(key=lambda x: x["rank_avg"] - x["rank_count"])
+    watch_lot_love_less = watch_lot_love_less[:6]
+
+    watch_less_love_more = []
+    for x in avg_sorted[:20]:
+        rank_count = count_rank[x["feature"]]
+        rank_avg = avg_rank[x["feature"]]
+        if rank_count > rank_avg + 5:
+            watch_less_love_more.append({**x, "rank_count": rank_count, "rank_avg": rank_avg})
+    watch_less_love_more.sort(key=lambda x: x["rank_count"] - x["rank_avg"])
+    watch_less_love_more = watch_less_love_more[:6]
+
+    country_rows = (
+        db.query(TitleMetadata.country, IMDbRating.user_rating)
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(TitleMetadata.country.isnot(None), IMDbRating.user_rating.isnot(None))
+        .all()
+    )
+    country_count: Counter = Counter()
+    country_sum: Counter = Counter()
+    for c_str, r in country_rows:
+        for c in parse_and_normalize_countries(c_str):
+            country_count[c] += 1
+            country_sum[c] += r
+
+    country_watch_lot = []
+    country_watch_less = []
+    for c in country_count:
+        if _is_low_quality(c) or country_count[c] < VOLUME_REWARD_MIN:
+            continue
+        count = country_count[c]
+        avg = country_sum[c] / count
+        country_watch_lot.append({"feature": c, "count": count, "avg_rating": round(avg, 2)})
+        country_watch_less.append({"feature": c, "count": count, "avg_rating": round(avg, 2)})
+
+    c_count_sorted = sorted(country_watch_lot, key=lambda x: -x["count"])
+    c_avg_sorted = sorted(country_watch_less, key=lambda x: -x["avg_rating"])
+    c_count_rank = {x["feature"]: i for i, x in enumerate(c_count_sorted)}
+    c_avg_rank = {x["feature"]: i for i, x in enumerate(c_avg_sorted)}
+
+    country_watch_lot = []
+    for x in c_count_sorted[:15]:
+        rc, ra = c_count_rank[x["feature"]], c_avg_rank[x["feature"]]
+        if ra > rc + 3:
+            country_watch_lot.append({**x, "rank_count": rc, "rank_avg": ra})
+    country_watch_lot.sort(key=lambda x: x["rank_avg"] - x["rank_count"])
+    country_watch_lot = country_watch_lot[:5]
+
+    country_watch_less = []
+    for x in c_avg_sorted[:15]:
+        rc, ra = c_count_rank[x["feature"]], c_avg_rank[x["feature"]]
+        if rc > ra + 3:
+            country_watch_less.append({**x, "rank_count": rc, "rank_avg": ra})
+    country_watch_less.sort(key=lambda x: x["rank_count"] - x["rank_avg"])
+    country_watch_less = country_watch_less[:5]
+
+    return {
+        "min_support": VOLUME_REWARD_MIN,
+        "watch_lot_love_less_genres": watch_lot_love_less,
+        "watch_less_love_more_genres": watch_less_love_more,
+        "watch_lot_love_less_countries": country_watch_lot,
+        "watch_less_love_more_countries": country_watch_less,
     }
 
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 const tabs = [
   { href: "/", label: "Home" },
@@ -20,6 +21,7 @@ export function NavBar() {
       aria-label="Main navigation"
     >
       <div className="mx-auto flex max-w-2xl items-center gap-1 px-4 py-3 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+        <div className="flex flex-1 items-center gap-1">
         <Link
           href="/"
           className="mr-4 shrink-0"
@@ -48,6 +50,10 @@ export function NavBar() {
               </Link>
             );
           })}
+        </div>
+        <div className="ml-auto">
+          <ThemeToggle />
+        </div>
         </div>
       </div>
     </nav>
