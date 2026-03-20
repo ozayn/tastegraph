@@ -111,6 +111,152 @@ function BarListRow({
   );
 }
 
+/** Column chart: x = label, y = value. Labels on horizontal axis, hover tooltip. */
+function CountByYearChart({
+  data,
+  valueLabel = "rated",
+  xLabel,
+  yLabel,
+}: {
+  data: { label: string; value: number }[];
+  valueLabel?: string;
+  xLabel?: string;
+  yLabel?: string;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  if (!data.length) return null;
+  const pad = { top: 18, right: 8, bottom: 32, left: 32 };
+  const w = 280;
+  const h = 160;
+  const chartW = w - pad.left - pad.right;
+  const chartH = h - pad.top - pad.bottom;
+
+  const maxVal = Math.max(...data.map((d) => d.value), 1);
+  const barW = Math.max(2, (chartW / data.length) * 0.7);
+  const gap = data.length > 1 ? (chartW - barW * data.length) / (data.length - 1) : 0;
+
+  const yScale = (v: number) => pad.top + chartH - (chartH * v) / maxVal;
+
+  return (
+    <div className="relative w-full">
+      <svg
+        viewBox={`0 -10 ${w} ${h + 10}`}
+        className="h-[160px] w-full max-w-[320px]"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* y-axis */}
+        <line
+          x1={pad.left}
+          y1={pad.top}
+          x2={pad.left}
+          y2={h - pad.bottom}
+          stroke="var(--muted-subtle)"
+          strokeWidth="1"
+        />
+        {/* x-axis */}
+        <line
+          x1={pad.left}
+          y1={h - pad.bottom}
+          x2={w - pad.right}
+          y2={h - pad.bottom}
+          stroke="var(--muted-subtle)"
+          strokeWidth="1"
+        />
+        {data.map((d, i) => (
+          <rect
+            key={i}
+            x={pad.left + i * (barW + gap)}
+            y={yScale(d.value)}
+            width={barW}
+            height={h - pad.bottom - yScale(d.value)}
+            rx={2}
+            fill="var(--mondrian-blue)"
+            fillOpacity={hovered === i ? 0.6 : 0.4}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ cursor: "pointer" }}
+          />
+        ))}
+      {/* y-axis label */}
+        {yLabel && (
+          <>
+            <text
+              x={pad.left - 6}
+              y={-2}
+              textAnchor="end"
+              style={{ fill: "var(--muted-subtle)", fontSize: 9 }}
+            >
+              {yLabel}
+            </text>
+          </>
+        )}
+        {/* y-axis tick labels */}
+        <text
+          x={pad.left - 6}
+          y={pad.top + 3}
+          textAnchor="end"
+          style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+        >
+          {maxVal}
+        </text>
+        <text
+          x={pad.left - 6}
+          y={h - pad.bottom + 4}
+          textAnchor="end"
+          style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+        >
+          0
+        </text>
+        {/* x-axis tick labels */}
+        {data.length > 0 && (
+          <>
+            <text
+              x={pad.left}
+              y={h - 10}
+              textAnchor="start"
+              style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+            >
+              {data[0].label}
+            </text>
+            <text
+              x={w - pad.right}
+              y={h - 10}
+              textAnchor="end"
+              style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+            >
+              {data[data.length - 1].label}
+            </text>
+          </>
+        )}
+        {/* x-axis label */}
+        {xLabel && (
+          <text
+            x={w / 2}
+            y={h - 4}
+            textAnchor="middle"
+            style={{ fill: "var(--muted-subtle)", fontSize: 9 }}
+          >
+            {xLabel}
+          </text>
+        )}
+      </svg>
+      {hovered != null && data[hovered] && (
+        <div
+          className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1.5 text-[11px] shadow-sm"
+        >
+          <div className="font-medium text-[var(--foreground)]">
+            {data[hovered].label}
+          </div>
+          <div className="mt-0.5 tabular-nums text-[var(--muted-soft)]">
+            {data[hovered].value} {valueLabel}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BarChart({
   data,
   getLabel,
@@ -411,14 +557,13 @@ export default function InsightsPage() {
                 subtitle="when you rated (date_rated)"
               >
                 {yearsWatched.length > 0 ? (
-                  <BarChart
+                  <CountByYearChart
                     data={yearsWatched.map((y) => ({
                       label: String(y),
                       value: trends.ratings_by_year_watched[y],
                     }))}
-                    getLabel={(d) => d.label}
-                    getValue={(d) => d.value}
-                    maxBars={150}
+                    xLabel="Year watched"
+                    yLabel="Count"
                   />
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
@@ -432,11 +577,11 @@ export default function InsightsPage() {
                 subtitle="titles by release decade (1910s, 1920s, …)"
               >
                 {releaseDecades.length > 0 ? (
-                  <BarChart
+                  <CountByYearChart
                     data={releaseDecades}
-                    getLabel={(d) => d.label}
-                    getValue={(d) => d.value}
-                    maxBars={20}
+                    valueLabel="titles"
+                    xLabel="Release decade"
+                    yLabel="Count"
                   />
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">

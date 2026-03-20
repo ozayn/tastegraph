@@ -117,13 +117,15 @@ function StatCard({
   title,
   subtitle,
   children,
+  className,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+    <div className={`rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6${className ? ` ${className}` : ""}`}>
       <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
         {title}
       </p>
@@ -255,6 +257,161 @@ function BarList<T>({
   );
 }
 
+/** Compact line chart: x = year, y = average rating. Visible axes, hover tooltip. */
+function RatingTrendChart({
+  data,
+}: {
+  data: { label: string; value: number; count?: number }[];
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  if (!data.length) return null;
+  const pad = { top: 18, right: 8, bottom: 28, left: 28 };
+  const w = 280;
+  const h = 180;
+  const chartW = w - pad.left - pad.right;
+  const chartH = h - pad.top - pad.bottom;
+
+  const minY = 0;
+  const maxY = 10;
+  const yTicks = [0, 7, 10];
+  const yScale = (v: number) => pad.top + chartH - (chartH * (v - minY)) / (maxY - minY);
+  const xScale = (i: number) => pad.left + (chartW * i) / Math.max(data.length - 1, 1);
+
+  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
+
+  return (
+    <div className="relative w-full">
+      <svg
+        viewBox={`0 -10 ${w} ${h + 10}`}
+        className="h-[180px] w-full max-w-[320px]"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* x-axis line */}
+        <line
+          x1={pad.left}
+          y1={h - pad.bottom}
+          x2={w - pad.right}
+          y2={h - pad.bottom}
+          stroke="var(--muted-subtle)"
+          strokeWidth="1"
+        />
+        {/* y-axis line */}
+        <line
+          x1={pad.left}
+          y1={pad.top}
+          x2={pad.left}
+          y2={h - pad.bottom}
+          stroke="var(--muted-subtle)"
+          strokeWidth="1"
+        />
+        {/* light horizontal grid at 7 */}
+        <line
+          x1={pad.left}
+          y1={yScale(7)}
+          x2={w - pad.right}
+          y2={yScale(7)}
+          stroke="var(--section-border)"
+          strokeWidth="0.5"
+          strokeDasharray="2 2"
+        />
+        <polyline
+          fill="none"
+          stroke="var(--mondrian-blue)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={points}
+        />
+        {data.map((d, i) => (
+          <circle
+            key={i}
+            cx={xScale(i)}
+            cy={yScale(d.value)}
+            r={hovered === i ? 4 : 2.5}
+            fill="var(--mondrian-blue)"
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ cursor: "pointer" }}
+          />
+        ))}
+        {/* y-axis label */}
+        <text
+          x={pad.left + 6}
+          y={-2}
+          textAnchor="end"
+          style={{ fill: "var(--muted-subtle)", fontSize: 9 }}
+        >
+          Average
+        </text>
+        <text
+          x={pad.left + 6}
+          y={7}
+          textAnchor="end"
+          style={{ fill: "var(--muted-subtle)", fontSize: 9 }}
+        >
+          rating
+        </text>
+        {/* y-axis tick labels: 0, 7, 10 */}
+        {yTicks.map((tick) => (
+          <text
+            key={tick}
+            x={pad.left - 6}
+            y={tick === maxY ? pad.top + 3 : tick === minY ? h - pad.bottom + 4 : yScale(tick) + 3}
+            textAnchor="end"
+            style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+          >
+            {tick}
+          </text>
+        ))}
+        {/* x-axis tick labels */}
+        {data.length > 0 && (
+          <>
+            <text
+              x={pad.left}
+              y={h - 10}
+              textAnchor="start"
+              style={{ fill: "var(--muted-soft)", fontSize: 10 }}
+            >
+              {data[0].label}
+            </text>
+            <text
+              x={w - pad.right}
+              y={h - 10}
+              textAnchor="end"
+              style={{ fill: "var(--muted-subtle)", fontSize: 10 }}
+            >
+              {data[data.length - 1].label}
+            </text>
+          </>
+        )}
+        {/* x-axis label */}
+        <text
+          x={w / 2}
+          y={h - 4}
+          textAnchor="middle"
+          style={{ fill: "var(--muted-subtle)", fontSize: 9 }}
+        >
+          Year watched
+        </text>
+      </svg>
+      {hovered != null && data[hovered] && (
+        <div
+          className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2.5 py-1.5 text-[11px] shadow-sm"
+        >
+          <div className="font-medium text-[var(--foreground)]">
+            {data[hovered].label}
+          </div>
+          <div className="mt-0.5 tabular-nums text-[var(--muted-soft)]">
+            {data[hovered].value.toFixed(1)} avg
+            {data[hovered].count != null && ` · ${data[hovered].count} rated`}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BarChart({
   data,
   getLabel,
@@ -341,6 +498,7 @@ export default function StudiesPage() {
   const avgByYearData = yearsWithData.map((y) => ({
     label: String(y),
     value: taste_evolution.avg_rating_by_year[y] ?? 0,
+    count: taste_evolution.count_by_year[y],
   }));
 
   const allSignals = [
@@ -383,14 +541,7 @@ export default function StudiesPage() {
                 subtitle="mean rating when you rated titles"
               >
                 {avgByYearData.length > 0 ? (
-                  <BarChart
-                    data={avgByYearData}
-                    getLabel={(d) => d.label}
-                    getValue={(d) => d.value}
-                    maxBars={20}
-                    maxValOverride={10}
-                    formatValue={(v) => v.toFixed(1)}
-                  />
+                  <RatingTrendChart data={avgByYearData} />
                 ) : (
                   <p className="text-[14px] text-[var(--muted-soft)]">
                     No date-rated data yet.
@@ -399,7 +550,7 @@ export default function StudiesPage() {
               </StatCard>
               <StatCard
                 title="Genre shifts: early vs recent"
-                subtitle="biggest changes between first and second half. Right = more in recent, left = less."
+                subtitle={<>biggest changes between first and second half.<br />Right = more in recent, left = less.</>}
               >
                 {taste_evolution.genre_shifts?.length > 0 ? (() => {
                     const nonzero = taste_evolution.genre_shifts
@@ -605,7 +756,7 @@ export default function StudiesPage() {
               <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
                 Curated favorites list
                 <SectionHelp title="How to read this">
-                  <p>Your hand-picked &quot;would recommend&quot; list. Overlap with rated = titles you&apos;ve both saved as favorites and rated.</p>
+                  <p>Your hand-picked &quot;would recommend&quot; list.</p>
                   <p>Used as a strong signal for high-fit watchlist: similar titles (by genre, country, creators) get boosted in recommendations.</p>
                 </SectionHelp>
               </h2>
@@ -622,16 +773,9 @@ export default function StudiesPage() {
                   </p>
                 </StatCard>
                 <StatCard
-                  title="Overlap with rated"
-                  subtitle="titles you&apos;ve also rated"
-                >
-                  <p className="text-[24px] font-semibold tabular-nums text-[var(--foreground)]">
-                    {favorite_list_summary.overlap_with_rated}
-                  </p>
-                </StatCard>
-                <StatCard
                   title="Top genres"
                   subtitle="in curated list"
+                  className="sm:col-span-2"
                 >
                   <BarList
                     items={favorite_list_summary.top_genres}
@@ -683,7 +827,7 @@ export default function StudiesPage() {
               <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 Directors, actors, and writers with the highest average rating among those you&apos;ve rated at least {best_creators.min_support} times.
               </p>
-              <div className="grid gap-6 sm:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2">
                 {best_creators.directors.length > 0 && (
                   <StatCard
                     title="Best directors"
