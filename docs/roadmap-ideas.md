@@ -4,7 +4,7 @@ Working ideas and next-steps list. Not polished marketing copy.
 
 ---
 
-## 1. Current State
+## 1. How TasteGraph Works Today
 
 ### Implemented
 - **Grounded Search mode** — retrieval-first, only from watchlist/rated data

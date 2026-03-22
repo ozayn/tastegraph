@@ -36,10 +36,10 @@ export default function LearnPage() {
             </p>
           </section>
 
-          {/* 1. Current system */}
+          {/* 1. How TasteGraph works today */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              1. Current system
+              1. How TasteGraph works today
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
