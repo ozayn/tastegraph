@@ -121,7 +121,7 @@ export default function ModelLabPage() {
                 Model Lab
               </h1>
               <p className="mt-2 text-[14px] text-[var(--muted-soft)]">
-                Internal page for understanding ML and recommender logic. Not part of normal user flow.
+                Internal page for understanding ML and recommender logic. Technical reference: docs/ml-current-snapshot.md.
               </p>
             </div>
             <Link
@@ -213,8 +213,26 @@ export default function ModelLabPage() {
           {/* 1. ML Model Summary */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              1. Current ML model summary
+              1. Current ML model snapshot
             </h2>
+            <div className="mb-5 space-y-3 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <p className="text-[13px] font-medium text-[var(--foreground)]">What it is</p>
+              <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
+                Logistic regression baseline. Predicts P(rate 8+ | title). Trained on your rated history. One row per rated title; target = 1 if rating ≥ 8 else 0.
+              </p>
+              <p className="text-[13px] font-medium text-[var(--foreground)]">Good for</p>
+              <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
+                Learned preference ranking. Interpretable coefficients. Contrast with heuristic High-Fit. Strong baseline for future blending.
+              </p>
+              <p className="text-[13px] font-medium text-[var(--foreground)]">Not for</p>
+              <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
+                Semantic similarity. &quot;Similar to X&quot; reasoning. Collaborative filtering. Full rating-scale nuance.
+              </p>
+              <p className="text-[13px] font-medium text-[var(--foreground)]">Next step</p>
+              <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
+                Current model answers &quot;what am I likely to rate 8+?&quot; Next model answers &quot;what is semantically similar to this?&quot; — a different question requiring embeddings.
+              </p>
+            </div>
             {!diag?.available ? (
               <p className="text-[14px] text-[var(--muted-soft)]">
                 {diag?.message ?? "No model diagnostics available. Run: python -m app.ml.train_8plus_baseline"}
@@ -508,18 +526,22 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 7. Model limitations */}
+          {/* 7. Model limitations — what it&apos;s not for */}
           <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              7. Model limitations
+              7. Limitations — what it&apos;s not for
             </h2>
             <ul className="space-y-2 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
-              <li><strong>Single-user model</strong> — Your data only. No collaborative filtering.</li>
-              <li><strong>Content-based only</strong> — Genres, countries, decade, title type, taste flags. No embeddings or semantic similarity yet.</li>
-              <li><strong>Dependent on metadata coverage</strong> — Missing country, genres, or cast weakens the score.</li>
-              <li><strong>Target = 8+ as strong-favorite proxy</strong> — The binary split is a design choice. 7 is still a good rating even though it&apos;s on the negative side of the current target.</li>
-              <li><strong>Association, not causation</strong> — Features correlate with 8+ but don&apos;t necessarily cause high ratings. Predictions are estimates, not guarantees.</li>
+              <li><strong>Not semantic similarity</strong> — Cannot reason about &quot;like The Lobster&quot; conceptually; metadata only.</li>
+              <li><strong>Not collaborative filtering</strong> — Single-user; your data only.</li>
+              <li><strong>Not a general-purpose recommender</strong> — Trained on one user; not applicable to all users.</li>
+              <li><strong>Not a full rating-scale model</strong> — Binary 8+ vs not; does not model 7 vs 8 vs 9+.</li>
+              <li><strong>Metadata-dependent</strong> — Missing country, genres, or cast weakens the score.</li>
+              <li><strong>Association, not causation</strong> — Features correlate with 8+; predictions are estimates, not guarantees.</li>
             </ul>
+            <p className="mt-4 text-[13px] text-[var(--muted-soft)]">
+              <strong className="text-[var(--foreground)]">Why it still matters:</strong> Strong baseline. Interpretable. Useful contrast with heuristics. Blending-ready for future similarity models.
+            </p>
           </section>
 
           {/* 8. Learning notes */}
@@ -552,12 +574,16 @@ export default function ModelLabPage() {
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               9. Future model directions
             </h2>
+            <div className="mb-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <p className="text-[13px] font-medium text-[var(--foreground)]">Next ML step: semantic similarity</p>
+              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
+                Current model answers &quot;what am I likely to rate 8+?&quot; Next model answers &quot;what is semantically similar to this?&quot; — embeddings (title + plot), artifact storage, local sentence-transformers or OpenAI. See docs/similar-to-embeddings-phase2.md.
+              </p>
+            </div>
             <ul className="space-y-2 text-[14px] leading-[1.55] text-[var(--muted-soft)]">
               <li><strong>7+ model</strong> — Broader target (&quot;likely to like&quot;) than strong favorites</li>
               <li><strong>Multi-tier / ordinal</strong> — Model 7 vs 8 vs 9+ instead of binary</li>
-              <li><strong>Similarity-based</strong> — Content or embedding similarity to titles you loved</li>
               <li><strong>Blended heuristic + ML</strong> — Combine High-Fit and ML scores</li>
-              <li><strong>Grounded LLM watchlist search</strong> — Natural-language queries over your watchlist, grounded in your data</li>
             </ul>
           </section>
         </div>

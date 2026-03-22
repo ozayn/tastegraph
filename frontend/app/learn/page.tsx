@@ -51,6 +51,38 @@ export default function LearnPage() {
             </div>
           </section>
 
+          {/* 1b. Current ML snapshot */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              Current ML snapshot
+            </h2>
+            <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <div>
+                <p className="font-medium text-[var(--foreground)]">What it is</p>
+                <p className="mt-1">Logistic regression baseline. Predicts P(rate 8+ | title). Trained on your rated history. Used for ML recommendation mode.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Features</p>
+                <p className="mt-1">Genres, countries, decade, title type (min-support filtered). Taste flags: favorite_people_match, in_favorite_list.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Good for</p>
+                <p className="mt-1">Learned preference ranking. Interpretable coefficients. Contrast with heuristic High-Fit. Strong baseline for future blending.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Not for</p>
+                <p className="mt-1">Semantic similarity. &quot;Similar to X&quot; reasoning. Collaborative filtering. Full rating-scale nuance.</p>
+              </div>
+              <div>
+                <p className="font-medium text-[var(--foreground)]">Next step</p>
+                <p className="mt-1">Current model answers &quot;what am I likely to rate 8+?&quot; The next model answers &quot;what is semantically similar to this?&quot; — a different question requiring embeddings.</p>
+              </div>
+            </div>
+            <p className="mt-4 text-[12px] text-[var(--muted-subtle)]">
+              See <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> for coefficients and comparison. Technical details in docs/ml-current-snapshot.md.
+            </p>
+          </section>
+
           {/* 2. How to interpret results */}
           <section>
             <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
