@@ -2,6 +2,8 @@
 
 Design for adding semantic similarity to grounded Search mode when `similar_to` is present.
 
+**Status:** Implemented. Uses sentence-transformers `all-MiniLM-L6-v2`, artifact-file storage (`data/embeddings/title_embeddings.npz`), cosine similarity blended with metadata/taste. Still being tuned for result quality.
+
 ## Problem
 
 Metadata/keyword-based similar_to ranking has hit its limit. Queries like "movies similar to The Lobster" or "movies similar to Black Mirror" still surface generic prestige films rather than conceptually similar titles. The system resolves titles correctly and uses plot word overlap, but broad genres (Drama, Crime) and country (UK) dominate. Semantic/concept-level similarity needs embeddings.

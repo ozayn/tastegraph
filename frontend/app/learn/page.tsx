@@ -32,7 +32,7 @@ export default function LearnPage() {
               The same data feeds both heuristic and ML paths, which surface across Home, Insights, Studies, and Model Lab. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings.
             </p>
             <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
-              Future: similarity model, blended heuristic + ML, grounded conversational assistant.
+              Future: blended heuristic + ML, personal similarity, grounded conversational assistant.
             </p>
           </section>
 
@@ -43,10 +43,19 @@ export default function LearnPage() {
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search mode</strong> is grounded natural-language search over your real watchlist—Groq interprets your query into structured intent; the backend retrieves and ranks only from your actual data.
+                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search mode</strong> is grounded natural-language search over your real watchlist and watched history—Groq interprets your query into structured intent; the backend retrieves and ranks only from your actual data.
+              </p>
+              <p>
+                <strong>Semantic similarity layer:</strong> &quot;Similar to X&quot; queries are now supported by embedding-based semantic similarity. Title + plot embeddings (precomputed, artifact-file) are compared via cosine similarity. This improves concept-level similarity (e.g. absurdist dystopia, anthology tech horror) beyond metadata alone. Explicit constraints (movie/series, year, filters) remain hard filters. If embeddings are unavailable, metadata-only fallback still works. This is a meaningful step forward—but &quot;similar to X&quot; is improved, not solved; fully personalized &quot;similar for me&quot; remains a future direction.
               </p>
               <p>
                 <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
+              </p>
+            </div>
+            <div className="mt-4 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-3">
+              <p className="text-[12px] font-medium text-[var(--foreground)]">Current recommender stack</p>
+              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
+                Heuristic content/taste overlap → interpretable 8+ baseline classifier → grounded LLM search → embedding-based semantic similarity for similar_to. Future: blended ranking, personal similarity.
               </p>
             </div>
           </section>
@@ -71,11 +80,11 @@ export default function LearnPage() {
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Not for</p>
-                <p className="mt-1">Semantic similarity. &quot;Similar to X&quot; reasoning. Collaborative filtering. Full rating-scale nuance.</p>
+                <p className="mt-1">Collaborative filtering. Full rating-scale nuance. &quot;Similar to X&quot; is handled by a separate semantic layer (embeddings), not by logistic regression.</p>
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Next step</p>
-                <p className="mt-1">Current model answers &quot;what am I likely to rate 8+?&quot; The next model answers &quot;what is semantically similar to this?&quot; — a different question requiring embeddings.</p>
+                <p className="mt-1">Blending preference prediction with semantic similarity. Personal similarity (&quot;similar for me&quot;) remains a future direction.</p>
               </div>
             </div>
             <p className="mt-4 text-[12px] text-[var(--muted-subtle)]">
@@ -117,10 +126,16 @@ export default function LearnPage() {
               <li><strong className="text-[var(--foreground)]">Scope</strong> — Watchlist (unrated items) or Watched (your rated history).</li>
               <li><strong className="text-[var(--foreground)]">Interpretation</strong> — Groq turns the query into structured filters: genres, countries, decade, title type, similar-to, min rating (watched), disagreed-with-critics (watched).</li>
               <li><strong className="text-[var(--foreground)]">Retrieval</strong> — Backend queries IMDbWatchlistItem (watchlist) or IMDbRating (watched) with TitleMetadata. Only real rows; no invented titles.</li>
-              <li><strong className="text-[var(--foreground)]">Similar-to</strong> — For &quot;similar to X&quot;, we look up X in ratings or watchlist and reuse its genres, country, decade as signals.</li>
-              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items scored by metadata and taste signals (genre overlap, favorite directors, user rating).</li>
+              <li><strong className="text-[var(--foreground)]">Similar-to</strong> — For &quot;similar to X&quot;, we look up X in ratings or watchlist and reuse its genres, country, decade as signals. When embeddings exist, semantic similarity is blended in (see below).</li>
+              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items scored by metadata, taste signals (genre overlap, favorite directors, user rating), and—for similar_to—embedding cosine similarity.</li>
               <li><strong className="text-[var(--foreground)]">Explanations</strong> — Matched genres, countries, people—all from actual metadata.</li>
             </ol>
+            <div className="mt-6 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <p className="text-[13px] font-medium text-[var(--foreground)]">How semantic similarity works</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted-soft)]">
+                The reference title (&quot;X&quot;) resolves to a real title in your data. Its title + plot embedding is compared against watchlist or rated items via cosine similarity. Semantic scores are blended with metadata and taste signals. Results stay grounded in real data—no invented titles. Quality is still being tuned; concept-heavy queries improve over metadata-only but are not yet perfect.
+              </p>
+            </div>
             <p className="mt-4 text-[13px] text-[var(--muted-subtle)]">
               <strong className="text-[var(--foreground)]">Reliability:</strong> The LLM does not invent titles. Results come only from your real data. If <code>GROQ_API_KEY</code> is missing, the system falls back to heuristic search. Retrieval-first design—not a freeform chatbot.
             </p>
@@ -132,6 +147,7 @@ export default function LearnPage() {
               3. Recent additions
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
+              <li>Embedding-based semantic similarity for &quot;similar to X&quot; queries (title + plot embeddings, artifact-file storage)</li>
               <li>LLM search: grounded natural-language search over watchlist and watched history</li>
               <li>ML recommendation mode: watchlist ranked by predicted 8+ probability</li>
               <li>Learning layer: &quot;How to read this&quot; help on key sections (Insights, Studies, recommendations)</li>
@@ -146,7 +162,8 @@ export default function LearnPage() {
               4. What&apos;s next
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>Search: semantic similarity, blended ML + search ranking, grounded conversational assistant</li>
+              <li>Search: continue tuning semantic similarity; blended ML + search ranking; grounded conversational assistant</li>
+              <li>Personal similarity: &quot;similar for me&quot;—combining semantic match with your taste</li>
               <li>Richer ML model (e.g. XGBoost, more features) and model comparison</li>
               <li>Alternative targets: 7+ model for &quot;likely to like&quot;; multi-tier / ordinal rating model</li>
             </ul>

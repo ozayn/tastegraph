@@ -41,8 +41,7 @@ Technical reference for the existing ML recommender. For product understanding, 
 
 ## 4. What it is not for
 
-- **Not semantic similarity** — Cannot reason about "like The Lobster" conceptually; metadata only
-- **Not "similar to X"** — No embedding or concept-level matching
+- **Not semantic similarity** — "Similar to X" is handled by a separate embedding layer in Search, not by logistic regression
 - **Not collaborative filtering** — Single-user; no cross-user signals
 - **Not a general-purpose recommender** — Trained on one user's data; not applicable to all users
 - **Not a full rating-scale model** — Binary 8+ vs not; does not model 7 vs 8 vs 9+
@@ -58,22 +57,44 @@ Technical reference for the existing ML recommender. For product understanding, 
 
 ---
 
-## 6. Why the next ML step is different
+## 6. Second ML layer: embedding similarity (similar_to)
 
-| Current model | Next model |
-|---------------|------------|
-| Answers: "What am I likely to rate 8+?" | Answers: "What is semantically similar to this?" |
-| Content-based: genres, countries, decade, type | Semantic: plot, concept, theme |
-| Trained on your ratings | Uses embeddings / similarity search |
-| Predicts preference from metadata overlap | Matches conceptual likeness |
+A separate layer handles "similar to X" in Search mode:
 
-The current model learns *your preferences* from metadata. The next model will capture *conceptual similarity* between titles (e.g. "movies like The Lobster") — a different question that requires embeddings or semantic signals.
+| Aspect | Details |
+|--------|---------|
+| **Question** | "What is conceptually similar to this?" |
+| **Method** | Title + plot embeddings, cosine similarity |
+| **Storage** | Artifact file `data/embeddings/title_embeddings.npz` |
+| **Model** | sentence-transformers `all-MiniLM-L6-v2` |
+| **Fallback** | Metadata-only when embeddings unavailable |
+
+This answers a different question than logistic regression. Blended with metadata and taste signals. Still being tuned; results can skew toward generic classics. "Similar for me" (personalized) is a future direction.
 
 ---
 
-## 7. Quick reference
+## 7. Next ML step: personal similarity
 
+| Logistic regression | Embedding similarity (now) | Future: personal similarity |
+|---------------------|---------------------------|-----------------------------|
+| "What am I likely to rate 8+?" | "What is conceptually similar?" | "What is similar *for me*?" |
+| Content-based | Semantic | Blend semantic + taste |
+| Trained on ratings | Precomputed embeddings | Combine both |
+
+The logistic model learns *your preferences*. The embedding layer captures *conceptual similarity*. The next step is blending them into "similar for me."
+
+---
+
+## 8. Quick reference
+
+**Logistic regression (P(8+))**
 - **Train:** `python -m app.ml.train_8plus_baseline`
 - **Predict:** Used by `/recommendations/watchlist-ml`
 - **Artifacts:** `backend/data/ml/models/`
-- **Model Lab:** Coefficient inspection, ML vs High-Fit comparison
+
+**Embedding similarity (similar_to)**
+- **Generate:** `python -m app.scripts.generate_title_embeddings`
+- **Artifacts:** `data/embeddings/title_embeddings.npz`
+- **Used by:** Search mode when `similar_to` is present
+
+**Model Lab:** Coefficient inspection, ML vs High-Fit comparison

@@ -87,7 +87,15 @@ Support thresholds (e.g. minimum 15 rated titles) avoid one-off patterns from do
 
 ---
 
-## 9. How sync/local/remote workflows work
+## 9. How Search works
+
+Natural-language search over your watchlist or watched history. Groq parses the query into structured intent (genres, countries, decade, title type, similar-to, min rating). Retrieval is only from your real data—no invented titles.
+
+**Semantic similarity for "similar to X"** — When you ask for titles similar to a reference (e.g. "movies similar to The Lobster"), the system resolves the reference to a real title in your data. Title + plot embeddings (precomputed, artifact-file) are compared via cosine similarity. Semantic scores are blended with metadata and taste signals. Explicit filters (movie/series, year) remain hard constraints. If embeddings are unavailable, metadata-only fallback still works. Quality is still being tuned; concept-heavy queries improve over metadata-only but are not yet perfect.
+
+---
+
+## 10. How sync/local/remote workflows work
 
 **Enrich locally** — Runs migrations, then fetches metadata from OMDb for titles in ratings or watchlist that are missing or incomplete. Writes to your local database.
 
@@ -97,7 +105,7 @@ Support thresholds (e.g. minimum 15 rated titles) avoid one-off patterns from do
 
 ---
 
-## 10. Key design choices
+## 11. Key design choices
 
 **United States not auto-boosted** — Countries only count when your 8+ rate for that country is meaningfully above your overall rate (lift > 1.01). Being common alone (e.g. many US titles) does not make a country a positive signal.
 
@@ -109,6 +117,6 @@ Support thresholds (e.g. minimum 15 rated titles) avoid one-off patterns from do
 
 ---
 
-## 11. Short summary
+## 12. Short summary
 
 TasteGraph uses your IMDb ratings, watchlist, favorite people, and favorite list to learn your taste. It enriches titles with metadata, then recommends what to watch from your watchlist based on genres, countries, decades, and creators you tend to rate highly. It avoids boosting common-but-neutral patterns (like United States) and focuses on features that actually predict 8+ ratings. Insights and studies show how your taste evolves and which features matter most.

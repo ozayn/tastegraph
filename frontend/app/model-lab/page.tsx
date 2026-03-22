@@ -175,6 +175,10 @@ export default function ModelLabPage() {
                   <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]">
                     ML: P(8+)
                   </span>
+                  <span className="text-[12px] text-[var(--muted-subtle)]">+</span>
+                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]">
+                    Search: semantic similar_to
+                  </span>
                 </div>
               </div>
               <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
@@ -206,8 +210,14 @@ export default function ModelLabPage() {
               The same underlying data feeds both heuristic and ML recommendation paths. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings. Both produce ranked watchlist suggestions—disagreement between them is expected and informative.
             </p>
             <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
-              Future: similarity model, blended heuristic + ML, grounded LLM watchlist search.
+              Future: blended heuristic + ML, personal similarity, grounded conversational assistant.
             </p>
+            <div className="mt-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <p className="text-[12px] font-medium text-[var(--foreground)]">Current ML stack</p>
+              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
+                <strong>1. Logistic regression</strong> — P(rate 8+) from genres, countries, decade, taste flags. Answers &quot;what am I likely to rate 8+?&quot; <strong>2. Embedding similarity</strong> — Title + plot embeddings, cosine similarity for &quot;similar to X&quot; in Search. Answers &quot;what is conceptually similar to this?&quot; Different problems; both grounded in your data.
+              </p>
+            </div>
           </section>
 
           {/* 1. ML Model Summary */}
@@ -226,11 +236,11 @@ export default function ModelLabPage() {
               </p>
               <p className="text-[13px] font-medium text-[var(--foreground)]">Not for</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Semantic similarity. &quot;Similar to X&quot; reasoning. Collaborative filtering. Full rating-scale nuance.
+                Semantic similarity (&quot;similar to X&quot;) — that&apos;s handled by the embedding layer in Search. Collaborative filtering. Full rating-scale nuance.
               </p>
               <p className="text-[13px] font-medium text-[var(--foreground)]">Next step</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Current model answers &quot;what am I likely to rate 8+?&quot; Next model answers &quot;what is semantically similar to this?&quot; — a different question requiring embeddings.
+                Blending P(8+) with semantic similarity. Personal similarity (&quot;similar for me&quot;) is a future direction.
               </p>
             </div>
             {!diag?.available ? (
@@ -531,16 +541,23 @@ export default function ModelLabPage() {
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
               7. Limitations — what it&apos;s not for
             </h2>
+            <p className="mb-3 text-[13px] font-medium text-[var(--foreground)]">Logistic regression (P(8+))</p>
             <ul className="space-y-2 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
-              <li><strong>Not semantic similarity</strong> — Cannot reason about &quot;like The Lobster&quot; conceptually; metadata only.</li>
               <li><strong>Not collaborative filtering</strong> — Single-user; your data only.</li>
               <li><strong>Not a general-purpose recommender</strong> — Trained on one user; not applicable to all users.</li>
               <li><strong>Not a full rating-scale model</strong> — Binary 8+ vs not; does not model 7 vs 8 vs 9+.</li>
               <li><strong>Metadata-dependent</strong> — Missing country, genres, or cast weakens the score.</li>
               <li><strong>Association, not causation</strong> — Features correlate with 8+; predictions are estimates, not guarantees.</li>
             </ul>
+            <p className="mt-4 text-[13px] font-medium text-[var(--foreground)]">Embedding similarity (similar_to)</p>
+            <ul className="mt-2 space-y-2 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
+              <li><strong>Improved, not solved</strong> — &quot;Similar to X&quot; is now supported by semantic similarity, but results can still skew toward generic classics depending on metadata and embedding behavior.</li>
+              <li><strong>Not personalized similarity</strong> — &quot;Similar for me&quot;—combining semantic match with your taste—is a future direction, not the current layer.</li>
+              <li><strong>Not collaborative filtering</strong> — Embeddings are content-based; no cross-user signals.</li>
+              <li><strong>Still being tuned</strong> — Artifact-file embeddings + cosine similarity; strongest for concept/tone matching, but blend weights and fallback behavior continue to be refined.</li>
+            </ul>
             <p className="mt-4 text-[13px] text-[var(--muted-soft)]">
-              <strong className="text-[var(--foreground)]">Why it still matters:</strong> Strong baseline. Interpretable. Useful contrast with heuristics. Blending-ready for future similarity models.
+              <strong className="text-[var(--foreground)]">Why it still matters:</strong> Strong baseline (P(8+)). Interpretable. Semantic layer improves concept-level similarity. Both blending-ready for future personal similarity.
             </p>
           </section>
 
@@ -569,18 +586,35 @@ export default function ModelLabPage() {
             </div>
           </section>
 
-          {/* 9. Future model directions */}
-          <section className="rounded-xl border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/50 px-5 py-5 sm:px-6 sm:py-6">
+          {/* 9. Embedding similarity (current semantic layer) */}
+          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
             <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              9. Future model directions
+              9. Embedding similarity — current semantic layer
             </h2>
-            <div className="mb-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
-              <p className="text-[13px] font-medium text-[var(--foreground)]">Next ML step: semantic similarity</p>
-              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
-                Current model answers &quot;what am I likely to rate 8+?&quot; Next model answers &quot;what is semantically similar to this?&quot; — embeddings (title + plot), artifact storage, local sentence-transformers or OpenAI. See docs/similar-to-embeddings-phase2.md.
+            <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <p>
+                A second ML layer handles &quot;similar to X&quot; in Search. Uses precomputed title + plot embeddings (artifact-file storage, sentence-transformers). Cosine similarity between reference and candidates; blended with metadata and taste signals.
+              </p>
+              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+                <p className="text-[12px] font-medium text-[var(--foreground)]">Two ML layers, two questions</p>
+                <ul className="mt-1.5 space-y-1 text-[13px]">
+                  <li><strong>Logistic regression</strong> — &quot;What am I likely to rate 8+?&quot; (preference prediction)</li>
+                  <li><strong>Embedding similarity</strong> — &quot;What is conceptually similar to this?&quot; (semantic match)</li>
+                </ul>
+              </div>
+              <p>
+                Strongest for concept/tone matching (e.g. absurdist dystopia, anthology tech horror). Still being tuned for result quality. Metadata-only fallback when embeddings unavailable. See docs/similar-to-embeddings-phase2.md for design.
               </p>
             </div>
+          </section>
+
+          {/* 10. Future model directions */}
+          <section className="rounded-xl border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/50 px-5 py-5 sm:px-6 sm:py-6">
+            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              10. Future model directions
+            </h2>
             <ul className="space-y-2 text-[14px] leading-[1.55] text-[var(--muted-soft)]">
+              <li><strong>Personal similarity</strong> — &quot;Similar for me&quot;: blend semantic match with your taste</li>
               <li><strong>7+ model</strong> — Broader target (&quot;likely to like&quot;) than strong favorites</li>
               <li><strong>Multi-tier / ordinal</strong> — Model 7 vs 8 vs 9+ instead of binary</li>
               <li><strong>Blended heuristic + ML</strong> — Combine High-Fit and ML scores</li>
