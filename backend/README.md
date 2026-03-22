@@ -79,3 +79,14 @@ Import from IMDb watchlist export (watchlist.csv). Columns: Position, Const, Cre
 ```bash
 python -m app.scripts.import_watchlist_default
 ```
+
+## Embeddings (semantic similarity)
+
+For "similar to X" queries, Search uses semantic similarity when embeddings exist. Generate embeddings from titles in ratings/watchlist:
+
+```bash
+pip install sentence-transformers   # if not already installed
+python -m app.scripts.generate_title_embeddings
+```
+
+Saves to `data/embeddings/title_embeddings.npz`. Re-run after metadata updates. Without this file, similar_to falls back to metadata-only ranking.

@@ -23,6 +23,7 @@ from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 from app.services.taste_signals import load_taste_signals, score_watchlist_item
+from app.services.title_embeddings import embedding_similarity_score, get_embedding
 
 # Validation limits: LLM output is untrusted; clamp before use
 _MAX_GENRES = 8
@@ -154,6 +155,7 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
 
 
 _PLOT_MATCH_BOOST = 0.5  # per mood_keyword found in plot; soft signal
+_EMBEDDING_SIMILARITY_WEIGHT = 2.5  # when similar_to + embeddings available; primary semantic signal
 _PLOT_STOPWORDS = frozenset(
     "the and for with have has had was were been being be is are was were "
     "that this these those from into through during before after about "
@@ -626,6 +628,7 @@ def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
     resolved_type = getattr(row, "title_type", None) or ""
     genre_list = [g.strip() for g in genres.split(",") if g.strip()]
     return {
+        "imdb_title_id": imdb_id,
         "genres": genre_list,
         "countries": list(parse_and_normalize_countries(country)) if country else [],
         "directors": _parse_names(meta.directors if meta else None),
@@ -654,8 +657,12 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
 
     # similar_to: use only for soft ranking; do NOT merge into intent (borrowed metadata stays soft)
     similar_to_signals: dict | None = None
+    ref_embedding = None
     if intent.similar_to:
         similar_to_signals = _lookup_similar_title(db, intent.similar_to)
+        if similar_to_signals:
+            ref_id = similar_to_signals.get("imdb_title_id")
+            ref_embedding = get_embedding(ref_id) if ref_id else None
 
     # Build base query: watchlist items, unrated, with metadata (including plot for soft mood matching)
     q = (
@@ -773,6 +780,14 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
+            # Semantic similarity when embeddings available
+            if ref_embedding is not None:
+                cand_emb = get_embedding(r.imdb_title_id)
+                emb_score = embedding_similarity_score(ref_embedding, cand_emb, _EMBEDDING_SIMILARITY_WEIGHT)
+                total_score += emb_score
+                if emb_score > 0:
+                    existing = explanation.get("similar_to_matched", [])
+                    explanation["similar_to_matched"] = ["semantic match"] + (existing if isinstance(existing, list) else [existing])
         total_score += _recency_boost(r.year)
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
@@ -847,6 +862,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
                     "resolved_title_type": sig.get("resolved_title_type"),
                     "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
+                debug["embedding_similarity_used"] = ref_embedding is not None
         result["debug"] = debug
     return result
 
@@ -865,8 +881,12 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
         intent.title_type = prefix_type
 
     similar_to_signals: dict | None = None
+    ref_embedding = None
     if intent.similar_to:
         similar_to_signals = _lookup_similar_title(db, intent.similar_to)
+        if similar_to_signals:
+            ref_id = similar_to_signals.get("imdb_title_id")
+            ref_embedding = get_embedding(ref_id) if ref_id else None
 
     # Base: rated titles with metadata (including plot for soft mood matching)
     q = (
@@ -992,6 +1012,13 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
+            if ref_embedding is not None:
+                cand_emb = get_embedding(r.imdb_title_id)
+                emb_score = embedding_similarity_score(ref_embedding, cand_emb, _EMBEDDING_SIMILARITY_WEIGHT)
+                total_score += emb_score
+                if emb_score > 0:
+                    existing = explanation.get("similar_to_matched", [])
+                    explanation["similar_to_matched"] = ["semantic match"] + (existing if isinstance(existing, list) else [existing])
         total_score += _recency_boost(r.year)
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
@@ -1071,5 +1098,6 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
                     "resolved_title_type": sig.get("resolved_title_type"),
                     "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
+                debug["embedding_similarity_used"] = ref_embedding is not None
         result["debug"] = debug
     return result
