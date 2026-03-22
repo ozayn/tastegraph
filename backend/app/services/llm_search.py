@@ -23,7 +23,7 @@ from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 from app.services.taste_signals import load_taste_signals, score_watchlist_item
-from app.services.title_embeddings import embedding_similarity_score, get_embedding
+from app.services.title_embeddings import cosine_similarity, embedding_similarity_score, get_embedding
 
 # Validation limits: LLM output is untrusted; clamp before use
 _MAX_GENRES = 8
@@ -155,7 +155,8 @@ def _validate_and_normalize_intent(data: object) -> SearchIntent | None:
 
 
 _PLOT_MATCH_BOOST = 0.5  # per mood_keyword found in plot; soft signal
-_EMBEDDING_SIMILARITY_WEIGHT = 2.5  # when similar_to + embeddings available; primary semantic signal
+_EMBEDDING_SIMILARITY_WEIGHT = 4.0  # when similar_to + embeddings; primary semantic signal (was 2.5)
+_SIMILAR_TO_METADATA_CAP_WHEN_EMBEDDINGS = 2.0  # cap metadata boost when embeddings used (keeps semantic dominant)
 _PLOT_STOPWORDS = frozenset(
     "the and for with have has had was were been being be is are was were "
     "that this these those from into through during before after about "
@@ -765,33 +766,51 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        taste_weight = 0.3 if similar_to_signals else 1.0
-        total_score = fit_score * taste_weight + boost * 2
+        taste_weight = 0.2 if similar_to_signals else 1.0
+        taste_contrib = fit_score * taste_weight + boost * 2
+        total_score = taste_contrib
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
         if similar_to_signals:
             plot_boost *= 0.3  # demote generic mood overlap when similar_to present
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
+        sim_boost = 0.0
+        emb_score = 0.0
+        raw_cosine: float | None = None
         if similar_to_signals:
             sim_boost, sim_reasons = _similar_to_boost(
                 genres_str, country, directors, writer, actors, plot, similar_to_signals
             )
+            if ref_embedding is not None:
+                sim_boost = min(sim_boost, _SIMILAR_TO_METADATA_CAP_WHEN_EMBEDDINGS)
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
             # Semantic similarity when embeddings available
             if ref_embedding is not None:
                 cand_emb = get_embedding(r.imdb_title_id)
+                raw_cosine = cosine_similarity(ref_embedding, cand_emb) if cand_emb is not None else None
                 emb_score = embedding_similarity_score(ref_embedding, cand_emb, _EMBEDDING_SIMILARITY_WEIGHT)
                 total_score += emb_score
                 if emb_score > 0:
                     existing = explanation.get("similar_to_matched", [])
                     explanation["similar_to_matched"] = ["semantic match"] + (existing if isinstance(existing, list) else [existing])
-        total_score += _recency_boost(r.year)
+        recency_contrib = _recency_boost(r.year)
+        total_score += recency_contrib
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
-        scored.append((total_score, r, poster, explanation))
+        breakdown = None
+        if similar_to_signals:
+            breakdown = {
+                "emb_cos": round(raw_cosine, 3) if raw_cosine is not None else None,
+                "emb": round(emb_score, 2) if emb_score else None,
+                "meta": round(sim_boost, 2),
+                "taste": round(taste_contrib, 2),
+                "plot": round(plot_boost, 2),
+                "recency": round(recency_contrib, 2),
+            }
+        scored.append((total_score, r, poster, explanation, breakdown))
 
     scored.sort(key=lambda x: -x[0])
     top = scored[:limit]
@@ -839,7 +858,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
                     "top_reasons": exp.get("top_reasons", [])[:5],
                 },
             }
-            for _, r, poster, exp in top
+            for _, r, poster, exp, _ in top
         ],
         "intent_summary": summary,
         "fallback": fallback,
@@ -863,6 +882,11 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
                     "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
                 debug["embedding_similarity_used"] = ref_embedding is not None
+                debug["score_breakdown"] = [
+                    {"title": r.title, "year": r.year, **bd}
+                    for _, r, _, _, bd in top
+                    if bd is not None
+                ]
         result["debug"] = debug
     return result
 
@@ -997,32 +1021,50 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
         fit_score, explanation = score_watchlist_item(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
-        taste_weight = 0.3 if similar_to_signals else 1.0
-        total_score = fit_score * taste_weight + boost * 2
+        taste_weight = 0.2 if similar_to_signals else 1.0
+        taste_contrib = fit_score * taste_weight + boost * 2
+        total_score = taste_contrib
         plot_boost, plot_matched = _plot_match_score(plot, intent.mood_keywords)
         if similar_to_signals:
             plot_boost *= 0.3  # demote generic mood overlap when similar_to present
         total_score += plot_boost
         if plot_matched:
             explanation["plot_matched"] = plot_matched
+        sim_boost = 0.0
+        emb_score = 0.0
+        raw_cosine = None
         if similar_to_signals:
             sim_boost, sim_reasons = _similar_to_boost(
                 genres_str, country, directors, writer, actors, plot, similar_to_signals
             )
+            if ref_embedding is not None:
+                sim_boost = min(sim_boost, _SIMILAR_TO_METADATA_CAP_WHEN_EMBEDDINGS)
             total_score += sim_boost
             if sim_reasons:
                 explanation["similar_to_matched"] = sim_reasons
             if ref_embedding is not None:
                 cand_emb = get_embedding(r.imdb_title_id)
+                raw_cosine = cosine_similarity(ref_embedding, cand_emb) if cand_emb is not None else None
                 emb_score = embedding_similarity_score(ref_embedding, cand_emb, _EMBEDDING_SIMILARITY_WEIGHT)
                 total_score += emb_score
                 if emb_score > 0:
                     existing = explanation.get("similar_to_matched", [])
                     explanation["similar_to_matched"] = ["semantic match"] + (existing if isinstance(existing, list) else [existing])
-        total_score += _recency_boost(r.year)
+        recency_contrib = _recency_boost(r.year)
+        total_score += recency_contrib
         if intent.emphasize_high_fit:
             total_score = total_score * 2 + fit_score
-        scored.append((total_score, r, poster, explanation))
+        breakdown = None
+        if similar_to_signals:
+            breakdown = {
+                "emb_cos": round(raw_cosine, 3) if raw_cosine is not None else None,
+                "emb": round(emb_score, 2) if emb_score else None,
+                "meta": round(sim_boost, 2),
+                "taste": round(taste_contrib, 2),
+                "plot": round(plot_boost, 2),
+                "recency": round(recency_contrib, 2),
+            }
+        scored.append((total_score, r, poster, explanation, breakdown))
 
     scored.sort(key=lambda x: (-x[0], -(x[1].user_rating or 0)))
     top = scored[:limit]
@@ -1075,7 +1117,7 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
                     "top_reasons": exp.get("top_reasons", [])[:5],
                 },
             }
-            for _, r, poster, exp in top
+            for _, r, poster, exp, _ in top
         ],
         "intent_summary": summary,
         "fallback": fallback,
@@ -1099,5 +1141,10 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
                     "resolved_plot_snippet": sig.get("resolved_plot_snippet"),
                 }
                 debug["embedding_similarity_used"] = ref_embedding is not None
+                debug["score_breakdown"] = [
+                    {"title": r.title, "year": r.year, **bd}
+                    for _, r, _, _, bd in top
+                    if bd is not None
+                ]
         result["debug"] = debug
     return result
