@@ -12,6 +12,7 @@ import { MLRecommendations } from "./MLRecommendations";
 import { RecommendationComparison } from "./RecommendationComparison";
 import { SimpleRecommendations } from "./SimpleRecommendations";
 import { WatchlistRecommendations } from "./WatchlistRecommendations";
+import { BritBoxRecommendations } from "./BritBoxRecommendations";
 
 export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
@@ -46,6 +47,9 @@ export function RecommendationsContainer() {
           {mode === "search" && (
             <LLMWatchlistSearch />
           )}
+          {mode === "britbox" && (
+            <BritBoxModeContent />
+          )}
         </div>
       </div>
     </section>
@@ -78,6 +82,22 @@ function MLModeContent() {
         </SectionHelp>
       </p>
       <MLRecommendations />
+    </div>
+  );
+}
+
+function BritBoxModeContent() {
+  return (
+    <div>
+      <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+        British series and films from the BritBox catalog, ranked for your taste. Prototype&mdash;catalog is approximate.
+        <SectionHelp title="How this works">
+          <p>Candidate pool from JustWatch&apos;s <strong>BritBox</strong> provider listing (US). This is an approximation&mdash;JustWatch may include titles not on your specific BritBox subscription (e.g. Amazon Channel vs direct), or titles that have rotated off.</p>
+          <p>Titles are matched to your metadata and scored with your taste signals. UK-origin titles get a ranking boost. Default view is <strong>Series</strong>.</p>
+          <p>Refresh: <code>cd backend && python -m app.scripts.fetch_britbox_catalog</code></p>
+        </SectionHelp>
+      </p>
+      <BritBoxRecommendations />
     </div>
   );
 }

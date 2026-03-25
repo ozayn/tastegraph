@@ -5,7 +5,7 @@
  * To add ML, Similarity, AI Search: extend RecommendationMode and MODES,
  * then add the corresponding content block in RecommendationsContainer.
  */
-export type RecommendationMode = "for-you" | "watchlist" | "high-fit" | "ml" | "search";
+export type RecommendationMode = "for-you" | "watchlist" | "high-fit" | "ml" | "search" | "britbox";
 
 export const MODES: { id: RecommendationMode; label: string }[] = [
   { id: "for-you", label: "Explore your favorites" },
@@ -13,6 +13,7 @@ export const MODES: { id: RecommendationMode; label: string }[] = [
   { id: "high-fit", label: "High-Fit" },
   { id: "ml", label: "ML" },
   { id: "search", label: "Search" },
+  { id: "britbox", label: "BritBox" },
 ];
 
 const MODE_ACCENT: Record<RecommendationMode, string> = {
@@ -21,6 +22,7 @@ const MODE_ACCENT: Record<RecommendationMode, string> = {
   "high-fit": "var(--mondrian-red)",
   ml: "var(--mondrian-blue)",
   search: "var(--mondrian-yellow)",
+  britbox: "var(--mondrian-red)",
 };
 
 export function RecommendationModeSwitcher({

@@ -23,6 +23,7 @@ type HighFitCardProps = {
   explanation: HighFitExplanation;
   user_rating?: number | null;
   date_rated?: string | null;
+  provider?: string | null;
 };
 
 const chipBase =
@@ -122,6 +123,7 @@ export function HighFitCard({
   explanation,
   user_rating,
   date_rated,
+  provider,
 }: HighFitCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const displayTitle = title ?? imdb_title_id;
@@ -163,6 +165,11 @@ export function HighFitCard({
             {title_type && (
               <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
                 {title_type}
+              </span>
+            )}
+            {provider && (
+              <span className="rounded-md bg-[var(--mondrian-red)]/15 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[var(--mondrian-red)]">
+                {provider}
               </span>
             )}
             {user_rating != null && (

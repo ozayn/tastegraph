@@ -56,6 +56,9 @@ yarn-error.log*
 data/imdb/*.csv
 !data/imdb/title_metadata.template.csv
 
+# Provider catalog snapshots (generated, large)
+data/britbox/catalog.json
+
 # ML artifacts (trained models) — 8plus_baseline_*.joblib committed for production deploy
 # backend/data/ml/models/*.joblib
 

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, health, insights, model_lab, ratings, recommendations, studies, watchlist
+from app.api.routes import admin, health, insights, model_lab, provider_recommendations, ratings, recommendations, studies, watchlist
 from app.core.config import get_cors_origins, settings
 
 app = FastAPI(title=settings.APP_NAME)
@@ -20,6 +20,7 @@ app.include_router(insights.router)
 app.include_router(studies.router)
 app.include_router(ratings.router)
 app.include_router(recommendations.router)
+app.include_router(provider_recommendations.router)
 app.include_router(watchlist.router)
 
 
