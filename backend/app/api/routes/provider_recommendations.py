@@ -6,6 +6,7 @@ Catalog sourced from a JustWatch snapshot stored in data/britbox/catalog.json.
 
 from fastapi import APIRouter, Query
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.provider_catalog import get_provider_high_fit, get_provider_ml, load_catalog
 
@@ -51,10 +52,10 @@ def recommendations_britbox_stats():
     """BritBox catalog snapshot stats."""
     catalog = load_catalog("britbox-us")
     if catalog is None:
-        return {
-            "loaded": False,
-            "message": "No catalog. Run: cd backend && python -m app.scripts.fetch_britbox_catalog",
-        }
+        msg = "BritBox catalog snapshot is not available."
+        if settings.DEBUG:
+            msg += " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
+        return {"loaded": False, "message": msg}
     return {
         "loaded": True,
         "provider": catalog.get("provider_clear_name", "BritBox"),

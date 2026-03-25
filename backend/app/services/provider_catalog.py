@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.imdb_rating import IMDbRating
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
@@ -75,10 +76,10 @@ def get_provider_high_fit(
 ) -> dict:
     catalog = load_catalog(provider_slug)
     if catalog is None:
-        return {
-            "error": "no_catalog",
-            "message": f"No catalog for {provider_slug}. Run: cd backend && python -m app.scripts.fetch_britbox_catalog",
-        }
+        msg = f"BritBox catalog snapshot is not available."
+        if settings.DEBUG:
+            msg += f" Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
+        return {"error": "no_catalog", "message": msg}
 
     is_britbox = "britbox" in provider_slug.lower()
 
@@ -210,7 +211,10 @@ def get_provider_ml(
 
     catalog = load_catalog(provider_slug)
     if catalog is None:
-        return {"error": "no_catalog", "message": f"No catalog for {provider_slug}."}
+        msg = "BritBox catalog snapshot is not available."
+        if settings.DEBUG:
+            msg += " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
+        return {"error": "no_catalog", "message": msg}
 
     model_path = MODELS_DIR / "8plus_baseline_model.joblib"
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"

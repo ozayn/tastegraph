@@ -219,14 +219,11 @@ export function BritBoxRecommendations() {
     return (
       <div className="rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-8 text-center">
         <p className="text-[14px] font-medium text-[var(--foreground)]">
-          No BritBox catalog loaded
+          BritBox catalog snapshot is not available
         </p>
         <p className="mt-2 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
-          Fetch the catalog snapshot first:
+          {activeData.message || "The BritBox catalog data could not be loaded in this environment."}
         </p>
-        <code className="mt-3 block rounded-md bg-[var(--card-bg)] px-3 py-2 text-[12px] text-[var(--muted-soft)]">
-          cd backend && python -m app.scripts.fetch_britbox_catalog
-        </code>
       </div>
     );
   }
