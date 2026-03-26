@@ -44,14 +44,14 @@ export function RecommendationModeSwitcher({
           role="tab"
           aria-selected={mode === id}
           onClick={() => onChange(id)}
-          className={`shrink-0 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[14px] ${
+          className={`shrink-0 rounded-md px-3 py-2 text-[13px] transition-colors sm:px-4 sm:py-2.5 sm:text-[14px] ${
             mode === id
-              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
-              : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
+              ? "bg-[var(--background)] font-semibold text-[var(--foreground)] shadow-sm ring-1 ring-[var(--card-border)]"
+              : "font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
           }`}
           style={
             mode === id
-              ? { boxShadow: `inset 0 -2px 0 0 ${MODE_ACCENT[id]}` }
+              ? { boxShadow: `inset 0 -3px 0 0 ${MODE_ACCENT[id]}` }
               : undefined
           }
         >

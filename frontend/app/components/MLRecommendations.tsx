@@ -28,17 +28,22 @@ function MLRecommendationCard({ item }: { item: MLItem }) {
   const displayTitle = item.title ?? item.imdb_title_id;
   const hasUsablePoster = item.poster && item.poster.trim() && item.poster !== "N/A";
   const showPoster = hasUsablePoster && !imageFailed;
+  const metaParts: string[] = [];
+  if (item.year != null) metaParts.push(String(item.year));
+  if (item.title_type?.trim()) metaParts.push(item.title_type.trim());
+  const meta = metaParts.length ? metaParts.join(" · ") : null;
+  const pct = (item.prob_8plus * 100).toFixed(0);
 
   return (
     <a
       href={`https://www.imdb.com/title/${item.imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
+      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md"
     >
-      <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
+      <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
         {showPoster && (
-          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
             <img
               src={item.poster!}
               alt=""
@@ -47,37 +52,23 @@ function MLRecommendationCard({ item }: { item: MLItem }) {
             />
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
-            {displayTitle}
-          </h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {item.year != null && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
-                {item.year}
-              </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
+              {displayTitle}
+            </h3>
+            {meta && (
+              <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{meta}</p>
             )}
-            {item.title_type && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                {item.title_type}
-              </span>
+            {item.top_features && item.top_features.length > 0 && (
+              <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+                {item.top_features.slice(0, 4).map(formatFeature).join(" · ")}
+              </p>
             )}
-            <span className="rounded-md bg-[var(--accent-muted)]/40 px-2 py-0.5 text-[12px] font-medium text-[var(--accent)]">
-              {(item.prob_8plus * 100).toFixed(0)}% 8+
-            </span>
           </div>
-          {item.top_features && item.top_features.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {item.top_features.map((f) => (
-                <span
-                  key={f}
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium bg-[var(--muted-subtle)]/20 text-[var(--muted-soft)]"
-                >
-                  {formatFeature(f)}
-                </span>
-              ))}
-            </div>
-          )}
+          <span className="w-fit shrink-0 self-start rounded-md bg-[var(--accent-muted)] px-3 py-1.5 text-[15px] font-semibold tabular-nums tracking-tight text-[var(--accent)] ring-1 ring-[var(--accent)]/15 sm:py-2">
+            {pct}%
+          </span>
         </div>
       </div>
     </a>
@@ -138,7 +129,7 @@ export function MLRecommendations() {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4 sm:space-y-5">
       {data.items.map((item) => (
         <li key={item.imdb_title_id}>
           <MLRecommendationCard item={item} />

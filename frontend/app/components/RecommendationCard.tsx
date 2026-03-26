@@ -14,6 +14,25 @@ type RecommendationCardProps = {
   reasons?: string[];
 };
 
+function metaLine(
+  year: number | null | undefined,
+  title_type: string | null | undefined,
+  genres: string | null | undefined,
+): string | null {
+  const parts: string[] = [];
+  if (year != null) parts.push(String(year));
+  if (title_type?.trim()) parts.push(title_type.trim());
+  if (genres?.trim()) {
+    const g = genres
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    if (g.length) parts.push(g.join(", "));
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export function RecommendationCard({
   imdb_title_id,
   title,
@@ -35,17 +54,18 @@ export function RecommendationCard({
   }, [poster]);
 
   const showPoster = hasUsablePoster && !imageFailed;
+  const meta = metaLine(year, title_type, genres);
 
   return (
     <a
       href={`https://www.imdb.com/title/${imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
+      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md"
     >
-      <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
+      <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
         {showPoster && (
-          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
             <img
               src={poster!}
               alt=""
@@ -54,43 +74,22 @@ export function RecommendationCard({
             />
           </div>
         )}
-        <div className="min-w-0 flex-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <h3 className="break-words text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
               {displayTitle}
             </h3>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              {year != null && (
-                <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
-                  {year}
-                </span>
-              )}
-              {title_type && (
-                <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                  {title_type}
-                </span>
-              )}
-              {genres &&
-                genres
-                  .split(",")
-                  .slice(0, 3)
-                  .map((g) => (
-                    <span
-                      key={g}
-                      className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]"
-                    >
-                      {g.trim()}
-                    </span>
-                  ))}
-            </div>
+            {meta && (
+              <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{meta}</p>
+            )}
             {reasons && reasons.length > 0 && (
-              <p className="mt-1.5 text-[12px] leading-[1.4] text-[var(--muted-soft)]">
+              <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 {reasons.slice(0, 3).join(" · ")}
               </p>
             )}
           </div>
           {rating != null && (
-            <span className="w-fit shrink-0 self-start rounded-lg bg-[var(--accent-muted)] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-[var(--accent)]">
+            <span className="w-fit shrink-0 self-start rounded-md bg-[var(--accent-muted)] px-3 py-1.5 text-[15px] font-semibold tabular-nums tracking-tight text-[var(--accent)] ring-1 ring-[var(--accent)]/15 sm:py-2">
               {rating}
             </span>
           )}

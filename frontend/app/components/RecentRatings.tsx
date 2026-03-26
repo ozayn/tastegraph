@@ -25,7 +25,7 @@ export function RecentRatings() {
 
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--overview-muted)]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-soft)]">
         Recent
       </p>
       <OverviewTitleRows

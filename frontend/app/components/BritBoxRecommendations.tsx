@@ -281,7 +281,7 @@ export function BritBoxRecommendations() {
               improve matching.
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4 sm:space-y-5">
               {highFitData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <HighFitCard
@@ -319,7 +319,7 @@ export function BritBoxRecommendations() {
               No scoreable BritBox {typeLabel} for ML ranking.
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4 sm:space-y-5">
               {mlData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <BritBoxMLCard item={item} />

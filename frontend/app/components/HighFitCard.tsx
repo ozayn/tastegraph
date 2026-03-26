@@ -27,91 +27,19 @@ type HighFitCardProps = {
 };
 
 const chipBase =
-  "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium";
+  "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide";
 
-function SignalChips({ explanation }: { explanation: HighFitExplanation }) {
-  const strongDirs = explanation.matched_strong_directors ?? [];
-  const plotMatched = explanation.plot_matched ?? [];
-  const similarToMatched = explanation.similar_to_matched ?? [];
-  const hasAny =
-    explanation.in_favorite_list ||
-    explanation.matched_genres.length > 0 ||
-    explanation.matched_countries.length > 0 ||
-    explanation.matched_decade ||
-    explanation.matched_people.length > 0 ||
-    strongDirs.length > 0 ||
-    plotMatched.length > 0 ||
-    similarToMatched.length > 0;
-
-  if (!hasAny) return null;
-
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {explanation.in_favorite_list && (
-        <span className={`${chipBase} bg-[var(--accent-muted)]/40 text-[var(--accent)]`}>
-          Curated favorite
-        </span>
-      )}
-      {explanation.matched_genres.map((g) => (
-        <span
-          key={g}
-          className={`${chipBase} bg-[var(--accent-muted)]/30 text-[var(--accent)]`}
-        >
-          {g}
-        </span>
-      ))}
-      {explanation.matched_countries.map((c) => (
-        <span
-          key={c}
-          className={`${chipBase} bg-[var(--muted-subtle)]/25 text-[var(--muted-soft)]`}
-        >
-          {c}
-        </span>
-      ))}
-      {explanation.matched_decade && (
-        <span
-          className={`${chipBase} bg-[var(--muted-subtle)]/25 text-[var(--muted-soft)]`}
-        >
-          {explanation.matched_decade}
-        </span>
-      )}
-      {explanation.matched_people.map((p) => {
-        const roleAbbr = { director: "dir", actor: "act", writer: "wri" }[p.role] ?? p.role;
-        return (
-          <span
-            key={`${p.role}-${p.name}`}
-            className={`${chipBase} bg-[var(--muted-subtle)]/20 text-[var(--muted-soft)]`}
-          >
-            {p.name} ({roleAbbr})
-          </span>
-        );
-      })}
-      {strongDirs.map((d) => (
-        <span
-          key={d}
-          className={`${chipBase} bg-[var(--accent-muted)]/25 text-[var(--accent)]`}
-        >
-          Strong director: {d}
-        </span>
-      ))}
-      {plotMatched.map((m) => (
-        <span
-          key={m}
-          className={`${chipBase} bg-[var(--muted-subtle)]/20 text-[var(--muted-soft)]`}
-        >
-          Plot: {m}
-        </span>
-      ))}
-      {similarToMatched.map((s) => (
-        <span
-          key={s}
-          className={`${chipBase} bg-[var(--accent-muted)]/35 text-[var(--accent)]`}
-        >
-          {s}
-        </span>
-      ))}
-    </div>
-  );
+function condensedSignals(explanation: HighFitExplanation): string | null {
+  const bits: string[] = [];
+  if (explanation.in_favorite_list) bits.push("Curated list");
+  explanation.matched_genres.slice(0, 2).forEach((g) => bits.push(g));
+  if (explanation.matched_decade) bits.push(explanation.matched_decade);
+  explanation.matched_countries.slice(0, 1).forEach((c) => bits.push(c));
+  explanation.matched_strong_directors?.slice(0, 1).forEach((d) => bits.push(d));
+  explanation.matched_people.slice(0, 1).forEach((p) => bits.push(p.name));
+  explanation.plot_matched?.slice(0, 1).forEach((m) => bits.push(m));
+  explanation.similar_to_matched?.slice(0, 1).forEach((s) => bits.push(s));
+  return bits.length ? bits.slice(0, 5).join(" · ") : null;
 }
 
 export function HighFitCard({
@@ -122,28 +50,37 @@ export function HighFitCard({
   poster,
   explanation,
   user_rating,
-  date_rated,
   provider,
 }: HighFitCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const displayTitle = title ?? imdb_title_id;
   const hasUsablePoster = poster && poster.trim() && poster !== "N/A";
   const showPoster = hasUsablePoster && !imageFailed;
+  const reasonsText =
+    explanation.top_reasons?.length > 0
+      ? explanation.top_reasons.slice(0, 2).join(" · ")
+      : null;
+  const signalsLine = condensedSignals(explanation);
 
   useEffect(() => {
     setImageFailed(false);
   }, [poster]);
+
+  const metaParts: string[] = [];
+  if (year != null) metaParts.push(String(year));
+  if (title_type?.trim()) metaParts.push(title_type.trim());
+  const meta = metaParts.length ? metaParts.join(" · ") : null;
 
   return (
     <a
       href={`https://www.imdb.com/title/${imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
+      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md"
     >
-      <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
+      <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
         {showPoster && (
-          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
             <img
               src={poster!}
               alt=""
@@ -153,32 +90,40 @@ export function HighFitCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="break-words text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
-            {displayTitle}
-          </h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {year != null && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
-                {year}
-              </span>
-            )}
-            {title_type && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                {title_type}
-              </span>
-            )}
-            {provider && (
-              <span className="rounded-md bg-[var(--mondrian-red)]/15 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[var(--mondrian-red)]">
-                {provider}
-              </span>
-            )}
-            {user_rating != null && (
-              <span className="rounded-md bg-[var(--accent-muted)]/40 px-2 py-0.5 text-[12px] font-medium text-[var(--accent)]">
-                You: {user_rating}
-              </span>
-            )}
+          <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+            <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
+              {displayTitle}
+            </h3>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              {provider && (
+                <span
+                  className={`${chipBase} bg-[var(--mondrian-red)]/12 text-[var(--mondrian-red)]`}
+                >
+                  {provider}
+                </span>
+              )}
+              {user_rating != null && (
+                <span
+                  className={`${chipBase} bg-[var(--accent-muted)] text-[var(--accent)] ring-1 ring-[var(--accent)]/15`}
+                >
+                  {user_rating}
+                </span>
+              )}
+            </div>
           </div>
-          <SignalChips explanation={explanation} />
+          {meta && (
+            <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{meta}</p>
+          )}
+          {reasonsText && (
+            <p className="mt-2 text-[13px] font-medium leading-relaxed text-[var(--foreground)]">
+              {reasonsText}
+            </p>
+          )}
+          {signalsLine && (
+            <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+              {signalsLine}
+            </p>
+          )}
         </div>
       </div>
     </a>

@@ -203,7 +203,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           Loading…
         </div>
       ) : items.length > 0 ? (
-        <ul className={embedded ? "mt-5 grid gap-4 sm:gap-5" : "mt-6 grid gap-4 sm:mt-7 sm:gap-5"}>
+        <ul className={embedded ? "mt-5 grid gap-5 sm:gap-6" : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
           {items.map((r) => (
             <li key={r.imdb_title_id}>
               <RecommendationCard

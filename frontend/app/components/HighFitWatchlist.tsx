@@ -53,7 +53,7 @@ export function HighFitWatchlist() {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4 sm:space-y-5">
       {items.map((item) => (
         <li key={item.imdb_title_id}>
           <HighFitCard
