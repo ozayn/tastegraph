@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://localhost:5432/tastegraph"
     OMDB_API_KEY: str = ""
     OMDB_API_KEY_FALLBACK: str = ""
+    # TMDB (optional): poster fallback when OMDb URL is missing or unreachable
+    TMDB_API_KEY: str = ""
     # CORS: comma-separated origins, e.g. "http://localhost:3000,http://127.0.0.1:3000"
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     PORT: int = 8000

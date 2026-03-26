@@ -2,6 +2,7 @@
 
 Also picks up titles with NULL/empty posters.
 Uses concurrent HEAD requests for fast checking, then re-enriches broken ones sequentially via OMDb.
+Stored poster is resolved in upsert: reachable OMDb URL, else optional TMDB (TMDB_API_KEY).
 
 Usage:
     python -m app.scripts.repair_broken_posters          # check + fix (default batch of 50 broken)
@@ -11,28 +12,17 @@ Usage:
 
 import sys
 import time
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from sqlalchemy import or_
 
 from app.core.database import SessionLocal
 from app.models.title_metadata import TitleMetadata
 from app.scripts.enrich_one_title import upsert_metadata_result
-from app.services.omdb import fetch_title_metadata, is_global_omdb_unavailable, fetch_title_metadata_with_error
+from app.services.omdb import is_global_omdb_unavailable, fetch_title_metadata_with_error
+from app.services.poster_url import is_poster_url_broken
 
-_CHECK_TIMEOUT = 5
 _CHECK_THREADS = 20
 _OMDB_DELAY = 1.0
-
-
-def _is_url_broken(url: str) -> bool:
-    try:
-        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
-        resp = urllib.request.urlopen(req, timeout=_CHECK_TIMEOUT)
-        return resp.status != 200
-    except Exception:
-        return True
 
 
 def _find_broken(rows: list[tuple[str, str, str | None]]) -> list[tuple[str, str]]:
@@ -46,7 +36,7 @@ def _find_broken(rows: list[tuple[str, str, str | None]]) -> list[tuple[str, str
 
     print(f"Checking {len(has_url)} poster URLs ({_CHECK_THREADS} threads)...")
     with ThreadPoolExecutor(max_workers=_CHECK_THREADS) as pool:
-        futures = {pool.submit(_is_url_broken, url): (iid, title) for iid, title, url in has_url}
+        futures = {pool.submit(is_poster_url_broken, url): (iid, title) for iid, title, url in has_url}
         done = 0
         for future in as_completed(futures):
             done += 1
@@ -103,12 +93,17 @@ def main() -> None:
             print(f"  FAIL {iid} | {title} — {reason}")
             failed += 1
         else:
-            new_poster = "yes" if result.poster else "still null"
             db = SessionLocal()
             try:
                 upsert_metadata_result(result, db)
+                poster_after = (
+                    db.query(TitleMetadata.poster)
+                    .filter(TitleMetadata.imdb_title_id == iid)
+                    .scalar()
+                )
             finally:
                 db.close()
+            new_poster = "yes" if poster_after else "still null"
             print(f"  OK   {iid} | {title} — poster: {new_poster}")
             fixed += 1
         if i < len(to_fix) - 1:

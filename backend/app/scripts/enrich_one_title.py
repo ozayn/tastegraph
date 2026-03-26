@@ -18,6 +18,15 @@ def _truncate(s: str | None, max_len: int) -> str | None:
 
 def upsert_metadata_result(result: TitleMetadataResult, db: Session) -> Literal["inserted", "updated"]:
     """Upsert TitleMetadataResult into TitleMetadata. Returns 'inserted' or 'updated'."""
+    from dataclasses import replace
+
+    from app.services.poster_fallback import resolve_poster_for_title
+
+    result = replace(
+        result,
+        poster=resolve_poster_for_title(result.imdb_title_id, result.poster),
+    )
+
     existing = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == result.imdb_title_id).first()
 
     if existing:
