@@ -21,11 +21,11 @@ export function TasteHints() {
   if (!data) return null;
 
   return (
-    <div>
-      <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
+    <div className="flex flex-col gap-1">
+      <p className="text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[24px]">
         {data.strong_positive_threshold}+ / &lt;{data.weak_negative_threshold}
       </p>
-      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">strong / weak</p>
+      <p className="text-[12px] leading-snug text-[var(--overview-muted)]">Strong / weak signals</p>
     </div>
   );
 }

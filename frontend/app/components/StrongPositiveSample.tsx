@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { OverviewTitleRows } from "./OverviewTitleRows";
 
 type Item = {
   imdb_title_id: string;
@@ -24,29 +25,17 @@ export function StrongPositiveSample() {
 
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-[var(--overview-muted)]">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--overview-muted)]">
         Strong signals
       </p>
-      <p className="mt-1.5 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
-        {items.map((r, i) => (
-          <span key={r.imdb_title_id}>
-            {i > 0 && " · "}
-            {r.imdb_title_id ? (
-              <a
-                href={`https://www.imdb.com/title/${r.imdb_title_id}/`}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-[var(--muted-soft)] underline decoration-[var(--muted-subtle)] underline-offset-2 transition-colors hover:text-[var(--foreground)] hover:decoration-[var(--muted-soft)]"
-              >
-                {r.title ?? r.imdb_title_id}
-              </a>
-            ) : (
-              <span>{r.title ?? "—"}</span>
-            )}{" "}
+      <OverviewTitleRows
+        items={items}
+        trailing={(r) => (
+          <span className="shrink-0 tabular-nums text-[12px] text-[var(--muted-soft)]">
             {r.user_rating ?? "—"}
           </span>
-        ))}
-      </p>
+        )}
+      />
     </div>
   );
 }

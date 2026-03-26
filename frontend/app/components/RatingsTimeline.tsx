@@ -25,12 +25,17 @@ export function RatingsTimeline() {
   const span = parseInt(endYear, 10) - parseInt(startYear, 10) + 1;
 
   return (
-    <div>
-      <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
+    <div className="flex flex-col gap-1">
+      <p className="text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[24px]">
         {startYear}–{endYear}
       </p>
-      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">
-        year span{span > 1 && ` · ${span} yrs`}
+      <p className="text-[12px] leading-snug text-[var(--overview-muted)]">
+        Year span{span > 1 && (
+          <>
+            <span className="text-[var(--muted-subtle)]"> · </span>
+            {span} yrs
+          </>
+        )}
       </p>
     </div>
   );

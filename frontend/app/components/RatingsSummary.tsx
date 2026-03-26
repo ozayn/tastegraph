@@ -39,32 +39,39 @@ export function RatingsSummary() {
   if (!summary) return null;
 
   return (
-    <section>
-      <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">
+    <section aria-labelledby="home-ratings-heading">
+      <h2 id="home-ratings-heading" className="text-[12px] font-medium uppercase tracking-[0.08em] text-[var(--overview-muted)]">
         Your ratings
-      </p>
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2 sm:mt-4 sm:gap-x-8">
-        <div>
-          <span className="text-[28px] font-semibold tabular-nums tracking-tight text-[var(--foreground)] sm:text-[32px]">
+      </h2>
+      <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3 sm:mt-4 sm:gap-x-10">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[28px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[32px]">
             {summary.total_ratings.toLocaleString()}
           </span>
-          <span className="ml-1.5 text-[15px] text-[var(--muted-soft)] sm:text-[16px]">titles</span>
+          <span className="text-[12px] text-[var(--muted-soft)]">Titles rated</span>
         </div>
-        <div>
-          <span className="text-[22px] font-semibold tabular-nums tracking-tight text-[var(--foreground)] sm:text-[26px]">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[24px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[28px]">
             {summary.average_rating?.toFixed(1) ?? "—"}
           </span>
-          <span className="ml-1.5 text-[15px] text-[var(--muted-soft)] sm:text-[16px]">avg</span>
+          <span className="text-[12px] text-[var(--muted-soft)]">Average</span>
         </div>
         {summary.min_rating != null && summary.max_rating != null && (
-          <div className="text-[14px] text-[var(--overview-muted)]">
-            {summary.min_rating}–{summary.max_rating} range
+          <div className="flex flex-col gap-0.5 pb-px">
+            <span className="text-[15px] font-medium tabular-nums text-[var(--foreground)] sm:text-[16px]">
+              {summary.min_rating}–{summary.max_rating}
+            </span>
+            <span className="text-[12px] text-[var(--overview-muted)]">Range</span>
           </div>
         )}
       </div>
       {distribution?.most_common_rating != null && (
-        <p className="mt-3 text-[12px] leading-[1.5] text-[var(--overview-muted)] sm:mt-4">
-          Most common: {distribution.most_common_rating} · {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus
+        <p className="mt-4 max-w-xl text-[12px] leading-relaxed text-[var(--overview-muted)] sm:mt-5">
+          Most common score {distribution.most_common_rating}
+          <span className="mx-1.5 text-[var(--muted-subtle)]" aria-hidden>
+            ·
+          </span>
+          {distribution.count_rated_6} sixes, {distribution.count_rated_7} sevens, {distribution.count_rated_8_plus} eight-plus
         </p>
       )}
     </section>

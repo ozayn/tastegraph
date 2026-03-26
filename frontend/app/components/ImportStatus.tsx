@@ -32,12 +32,13 @@ export function ImportStatus() {
     : null;
 
   return (
-    <div>
-      <p className="text-[18px] font-semibold tabular-nums text-[var(--foreground)] sm:text-[20px]">
+    <div className="flex flex-col gap-1">
+      <p className="text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[24px]">
         {count}
       </p>
-      <p className="mt-0.5 text-[12px] text-[var(--overview-muted)]">
-        ratings{lastImported && ` · ${lastImported}`}
+      <p className="text-[12px] leading-snug text-[var(--overview-muted)]">
+        Ratings{lastImported && <span className="text-[var(--muted-subtle)]"> · </span>}
+        {lastImported}
       </p>
     </div>
   );
