@@ -39,8 +39,8 @@ export function RatingsSummary() {
   if (!summary) return null;
 
   return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--card-bg)] px-5 py-4 sm:px-6 sm:py-5 shadow-sm">
-      <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
+    <section>
+      <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">
         Your ratings
       </p>
       <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2 sm:mt-4 sm:gap-x-8">

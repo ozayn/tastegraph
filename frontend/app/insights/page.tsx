@@ -55,33 +55,15 @@ function StatCard({
   children: React.ReactNode;
 }) {
   const isHero = variant === "hero";
-  const isList = variant === "list";
-  const isChart = variant === "chart";
   return (
-    <div
-      className={`rounded-xl border px-5 py-5 sm:px-6 sm:py-6 ${
-        isHero
-          ? "border-[var(--section-border)] border-t-2 border-t-[var(--mondrian-yellow)] bg-[var(--card-bg)] shadow-sm"
-          : isList
-            ? "border-[var(--section-border)] bg-[var(--card-bg)]"
-            : isChart
-              ? "border-[var(--section-border)] bg-[var(--section-bg)]"
-              : "border-[var(--section-border)] bg-[var(--section-bg)]"
-      }`}
-    >
-      <p
-        className={
-          isHero
-            ? "text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]"
-            : "text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]"
-        }
-      >
+    <div className={isHero ? "py-1" : "py-1"}>
+      <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">
         {title}
       </p>
       {subtitle && (
         <p className="mt-0.5 text-[11px] text-[var(--muted-subtle)]">{subtitle}</p>
       )}
-      <div className={isHero ? "mt-5" : "mt-4"}>{children}</div>
+      <div className={isHero ? "mt-4" : "mt-3"}>{children}</div>
     </div>
   );
 }
@@ -410,11 +392,11 @@ export default function InsightsPage() {
           slideIndex={slideIndex}
           onSlideChange={setSlideIndex}
           ariaLabel="Insights slides"
-          scrollClassName="space-y-14 sm:space-y-16 md:space-y-20"
+          scrollClassName="space-y-16 sm:space-y-20 md:space-y-24"
         >
           {/* Overview */}
-          <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-6">
-            <h2 className="mb-1 text-[18px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[19px]">
+          <section>
+            <h2 className="mb-1 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               Overview
               <SectionHelp title="How to read this">
                 <p><strong>Top genres by count</strong> = what you watch most. <strong>Favorite genres by avg</strong> = what you rate highest (min 3 titles to reduce noise).</p>
@@ -511,8 +493,8 @@ export default function InsightsPage() {
           </section>
 
           {/* People */}
-          <section className="border-t border-[var(--section-border)] pt-8">
-            <h2 className="mb-1 text-[18px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[19px]">
+          <section>
+            <h2 className="mb-1 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               People
               <SectionHelp title="How to read this">
                 <p>Most-watched = highest count in your rated titles. Avg rating shows how you tend to rate their work.</p>
@@ -578,8 +560,8 @@ export default function InsightsPage() {
           </section>
 
           {/* Trends */}
-          <section className="border-t border-[var(--section-border)] pt-8">
-            <h2 className="mb-1 text-[18px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[19px]">
+          <section>
+            <h2 className="mb-1 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               Trends
             </h2>
             <p className="mb-6 text-[13px] leading-relaxed text-[var(--muted-soft)]">
@@ -628,8 +610,8 @@ export default function InsightsPage() {
           </section>
 
           {/* Taste signals */}
-          <section className="border-t-2 border-t-[var(--mondrian-red)]/40 pt-8">
-            <h2 className="mb-1 text-[18px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[19px]">
+          <section>
+            <h2 className="mb-1 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               Taste signals
               <SectionHelp title="How to read this">
                 <p>Patterns in titles you rated <strong>8+</strong>. Strong genres/countries = frequent in your favorites. Recurring people = directors/actors/writers in 2+ titles you rated 8+.</p>

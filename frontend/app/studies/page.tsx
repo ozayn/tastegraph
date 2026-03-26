@@ -205,14 +205,14 @@ function StatCard({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6${className ? ` ${className}` : ""}`}>
-      <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
+    <div className={`py-1${className ? ` ${className}` : ""}`}>
+      <p className="text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">
         {title}
       </p>
       {subtitle && (
         <p className="mt-0.5 text-[11px] text-[var(--muted-subtle)]">{subtitle}</p>
       )}
-      <div className="mt-4">{children}</div>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
@@ -621,8 +621,8 @@ export default function StudiesPage() {
           ariaLabel="Studies slides"
         >
           {/* 1. How has my taste changed over time? */}
-          <section className="border-t-2 border-t-[var(--mondrian-yellow)] pt-4">
-            <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section>
+            <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               How has my taste changed over time?
               <SectionHelp title="How to read this">
                 <p>Tracks how your ratings and genre/country mix change by <strong>year watched</strong> (when you rated, not release year).</p>
@@ -762,8 +762,8 @@ export default function StudiesPage() {
 
           {/* What did I outgrow? / What did I grow into? */}
           {outgrew_grew_into && !outgrew_grew_into.note && (outgrew_grew_into.outgrew?.length ?? 0) + (outgrew_grew_into.grew_into?.length ?? 0) > 0 && (
-            <section className="border-t border-[var(--section-border)] pt-8">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section>
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 What did I outgrow? What did I grow into?
                 <SectionHelp title="How to read this">
                   <p><strong>Outgrew</strong> = what you watched less of in the recent period.</p>
@@ -819,8 +819,8 @@ export default function StudiesPage() {
 
           {/* 2. What distinguishes my 8s from my 7s? */}
           {eights_vs_sevens && !("note" in eights_vs_sevens) && (eights_vs_sevens.genre_signals?.length || eights_vs_sevens.country_signals?.length || eights_vs_sevens.decade_signals?.length) ? (
-            <section className="border-t border-[var(--section-border)] pt-8">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section>
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 What distinguishes my 8s from my 7s?
                 <SectionHelp title="How to read this">
                   <p>Features that appear <strong>more often</strong> in titles you rated 8+ than in titles you rated 7.</p>
@@ -868,8 +868,8 @@ export default function StudiesPage() {
 
           {/* 4. What do I watch often but not love as much? */}
           {volume_vs_reward && (volume_vs_reward.watch_lot_love_less_genres?.length || volume_vs_reward.watch_less_love_more_genres?.length) ? (
-            <section className="border-t border-[var(--section-border)] pt-8">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section>
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 What do I watch often but not love as much?
                 <SectionHelp title="How to read this">
                   <p><strong>Watch a lot, love less</strong> = genres/countries you consume frequently but rate lower on average.</p>
@@ -909,8 +909,8 @@ export default function StudiesPage() {
 
           {/* Director discovery and follow-through */}
           {director_discovery && !director_discovery.note && (director_discovery.top_follow_through?.length ?? 0) > 0 && (
-            <section className="border-t border-[var(--section-border)] pt-8">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section>
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 Which directors did I discover and return to?
                 <SectionHelp title="How to read this">
                   <p><strong>First rated year</strong> = when you first rated a title by this director.</p>
@@ -970,8 +970,8 @@ export default function StudiesPage() {
 
           {/* Score disagreement: me vs IMDb vs Metascore */}
           {score_disagreement && score_disagreement.n_titles >= 5 && !score_disagreement.note && (
-            <section className="border-t border-[var(--section-border)] pt-8">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section>
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 Where do my ratings align or diverge from critics and audiences?
                 <SectionHelp title="How to read this">
                   <p>Compares <strong>your rating</strong> to <strong>IMDb</strong> (audiences) and <strong>Metascore</strong> (critics, scaled 0–10).</p>
@@ -1095,9 +1095,8 @@ export default function StudiesPage() {
 
           {/* 5. Features associated with 8+ */}
           <section>
-            <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
-              Features associated with 8+ ratings
-              <SectionHelp title="How to read this">
+            <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              Features associated with 8+ ratings<SectionHelp title="How to read this">
                 <p>This measures <strong>association</strong>, not causation: genres, countries, decades, etc. that appear more often in titles you rated 8+ than in your library overall.</p>
                 <p><strong>Lift</strong> = (8+ rate for this feature) ÷ (your global 8+ rate). Lift &gt; 1 means you tend to rate higher when this feature is present.</p>
                 <p><strong>Caution:</strong> Small sample sizes (low n) can produce noisy lift. The min support threshold filters out unreliable signals.</p>
@@ -1133,7 +1132,7 @@ export default function StudiesPage() {
 
           {/* 3. Watchlist taste alignment */}
           <section>
-            <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               Watchlist taste alignment
               <SectionHelp title="How to read this">
                 <p>Genres and countries that appear in your <strong>watchlist</strong> and that you tend to rate 8+ when you <em>do</em> rate them.</p>
@@ -1176,7 +1175,7 @@ export default function StudiesPage() {
           {/* 4. Curated favorites list */}
           {favorite_list_summary && favorite_list_summary.count > 0 && (
             <section>
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 Curated favorites list
                 <SectionHelp title="How to read this">
                   <p>Your hand-picked &quot;would recommend&quot; list.</p>
@@ -1214,7 +1213,7 @@ export default function StudiesPage() {
           {/* 5. Genre combination analysis */}
           {genre_combinations && genre_combinations.pairs.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 Genre combination analysis
                 <SectionHelp title="How to read this">
                   <p>Some genre <strong>pairs</strong> (e.g. Drama + Romance) correlate with higher 8+ rates than either genre alone.</p>
@@ -1224,23 +1223,21 @@ export default function StudiesPage() {
               <p className="mb-8 text-[13px] leading-relaxed text-[var(--muted-soft)]">
                 Genre pairs associated with higher 8+ rate (min {genre_combinations.min_support} titles per pair).
               </p>
-              <div className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-                <BarList
-                  items={genre_combinations.pairs}
-                  getValue={(x) => x.rate_8plus}
-                  renderLabel={(x) => x.genres}
-                  renderSub={(x) =>
-                    `${(x.rate_8plus * 100).toFixed(0)}% · n=${x.count}`
-                  }
-                />
-              </div>
+              <BarList
+                items={genre_combinations.pairs}
+                getValue={(x) => x.rate_8plus}
+                renderLabel={(x) => x.genres}
+                renderSub={(x) =>
+                  `${(x.rate_8plus * 100).toFixed(0)}% · n=${x.count}`
+                }
+              />
             </section>
           )}
 
           {/* 6. Favorite creators (min support) */}
           {best_creators && (best_creators.directors.length > 0 || best_creators.actors.length > 0 || best_creators.writers.length > 0) && (
             <section>
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 Favorite creators (min {best_creators.min_support} rated titles)
                 <SectionHelp title="How to read this">
                   <p>Creators whose work you consistently rate highly. The min-support threshold ensures they&apos;re based on enough data—one 10/10 doesn&apos;t make a favorite.</p>

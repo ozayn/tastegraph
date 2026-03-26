@@ -36,7 +36,7 @@ export function RecommendationModeSwitcher({
     <div
       role="tablist"
       aria-label="Recommendation mode"
-      className="flex flex-wrap gap-1 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] p-0.5"
+      className="flex flex-wrap gap-1 rounded-lg bg-[var(--section-bg)] p-0.5"
     >
       {MODES.map(({ id, label }) => (
         <button

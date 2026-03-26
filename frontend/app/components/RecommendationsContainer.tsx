@@ -18,16 +18,16 @@ export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
 
   return (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-5 sm:px-8 sm:py-8">
-      <div className="flex flex-col gap-6 sm:gap-7">
+    <section>
+      <div className="flex flex-col gap-6 sm:gap-8">
         <div>
-          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
+          <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[22px]">
             Recommendations
               <SectionHelp title="How this works">
                 <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood. <strong>Search</strong> uses natural language over your watchlist—grounded, no invented titles.</p>
               </SectionHelp>
           </h2>
-          <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+          <p className="mt-2 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
             Explore different ways to find what to watch
           </p>
         </div>

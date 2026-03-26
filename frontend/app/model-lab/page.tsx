@@ -133,99 +133,48 @@ export default function ModelLabPage() {
           </div>
         </header>
 
-        <div className="space-y-12 sm:space-y-16">
+        <div className="space-y-14 sm:space-y-20">
           {/* 0. How the pipeline works */}
-          <section className="rounded-xl border border-[var(--section-border)] border-t-2 border-t-[var(--mondrian-yellow)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section>
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               How the pipeline works
             </h2>
-            <div className="space-y-0">
-              {/* 1. Data sources */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">1. Data</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["ratings", "watchlist", "favorite people", "favorite list", "title metadata"].map((label) => (
-                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                      {label}
-                    </span>
-                  ))}
-                </div>
+            <div className="space-y-3 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Data</span>
+                <p>Ratings, watchlist, favorite people, favorite list, title metadata</p>
               </div>
-              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
-              {/* 2. Features */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">2. Features</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["genres", "countries", "decades", "title type", "favorite matches", "strong directors", "support-thresholded"].map((label) => (
-                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                      {label}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Features</span>
+                <p>Genres, countries, decades, title type, favorite matches, strong directors (support-thresholded)</p>
               </div>
-              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
-              {/* 3. Recommendation paths */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">3. Paths</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]">
-                    High-Fit: rule-based
-                  </span>
-                  <span className="text-[12px] text-[var(--muted-subtle)]">+</span>
-                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]">
-                    ML: P(8+)
-                  </span>
-                  <span className="text-[12px] text-[var(--muted-subtle)]">+</span>
-                  <span className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)]">
-                    Search: semantic similar_to
-                  </span>
-                </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Paths</span>
+                <p><strong className="text-[var(--foreground)]">High-Fit</strong> (rule-based) · <strong className="text-[var(--foreground)]">ML</strong> P(8+) · <strong className="text-[var(--foreground)]">Search</strong> (semantic similar_to)</p>
               </div>
-              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
-              {/* 4. Comparison */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">4. Compare</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["overlap", "ML-only", "High-Fit-only", "coefficients", "explanations"].map((label) => (
-                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                      {label}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Compare</span>
+                <p>Overlap, ML-only, High-Fit-only, coefficients, explanations</p>
               </div>
-              <div className="ml-6 h-3 w-px bg-[var(--section-border)] sm:ml-28" aria-hidden />
-              {/* 5. Outputs */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <p className="w-24 shrink-0 text-[11px] font-medium uppercase tracking-wider text-[var(--overview-muted)]">5. Outputs</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["homepage modes", "insights", "studies", "model lab"].map((label) => (
-                    <span key={label} className="rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                      {label}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Outputs</span>
+                <p>Homepage modes, insights, studies, model lab</p>
               </div>
             </div>
-            <p className="mt-4 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
-              The same underlying data feeds both heuristic and ML recommendation paths. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings. Both produce ranked watchlist suggestions—disagreement between them is expected and informative.
+            <p className="mt-6 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
+              The same data feeds both heuristic and ML paths. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings. Disagreement between them is expected and informative.
             </p>
-            <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
-              Future: blended heuristic + ML, personal similarity, grounded conversational assistant.
+            <p className="mt-3 text-[13px] leading-snug text-[var(--muted-soft)]">
+              <span className="font-medium text-[var(--foreground)]">Current ML stack:</span> <strong>1.</strong> Logistic regression — P(rate 8+) from genres, countries, decade, taste flags. <strong>2.</strong> Embedding similarity — cosine similarity for &quot;similar to X&quot; in Search. Different problems; both grounded in your data.
             </p>
-            <div className="mt-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
-              <p className="text-[12px] font-medium text-[var(--foreground)]">Current ML stack</p>
-              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
-                <strong>1. Logistic regression</strong> — P(rate 8+) from genres, countries, decade, taste flags. Answers &quot;what am I likely to rate 8+?&quot; <strong>2. Embedding similarity</strong> — Title + plot embeddings, cosine similarity for &quot;similar to X&quot; in Search. Answers &quot;what is conceptually similar to this?&quot; Different problems; both grounded in your data.
-              </p>
-            </div>
           </section>
 
           {/* 1. ML Model Summary */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               1. Current ML model snapshot
             </h2>
-            <div className="mb-5 space-y-3 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+            <div className="mb-5 space-y-3">
               <p className="text-[13px] font-medium text-[var(--foreground)]">What it is</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
                 Logistic regression baseline. Predicts P(rate 8+ | title). Trained on your rated history. One row per rated title; target = 1 if rating ≥ 8 else 0.
@@ -277,7 +226,7 @@ export default function ModelLabPage() {
                 {diag.training_notes && (
                   <p className="text-[13px] text-[var(--muted-soft)]">{diag.training_notes}</p>
                 )}
-                <div className="mt-4 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+                <div className="mt-4 rounded-lg bg-[var(--section-bg)] px-4 py-3">
                   <p className="text-[12px] font-medium text-[var(--foreground)]">How to interpret metrics</p>
                   <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted-soft)]">
                     <strong>Accuracy</strong> = % of test titles correctly classified as 8+ or not. <strong>ROC-AUC</strong> = how well the model ranks positives above negatives across all thresholds. ROC-AUC is especially useful here because we care about ranking (which watchlist items to try first), not a single cutoff. These metrics do not mean the model &quot;understands taste perfectly&quot;—they measure fit to past data, not future surprises.
@@ -288,17 +237,17 @@ export default function ModelLabPage() {
           </section>
 
           {/* 2. What the model sees */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               2. What the model sees
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+                <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                   <p className="text-[12px] font-medium text-[var(--foreground)]">Training</p>
                   <p className="mt-1 text-[13px]">One row = one rated title. Each row has a target (8+ or not) and features built from that title&apos;s metadata.</p>
                 </div>
-                <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+                <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                   <p className="text-[12px] font-medium text-[var(--foreground)]">Prediction</p>
                   <p className="mt-1 text-[13px]">One candidate = one watchlist title. Each unrated watchlist item gets a feature vector and a predicted 8+ probability.</p>
                 </div>
@@ -320,8 +269,8 @@ export default function ModelLabPage() {
           </section>
 
           {/* 3. How this model was built */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               3. How this model was built
             </h2>
             <div className="space-y-5 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
@@ -358,12 +307,12 @@ export default function ModelLabPage() {
           </section>
 
           {/* 4. How prediction works */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               4. How one prediction is formed
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                 <p className="text-[12px] font-medium text-[var(--foreground)]">Scoring flow</p>
                 <p className="mt-1 text-[13px]">
                   Title metadata → feature vector → logistic regression applies learned weights → positive weights push score up, negative push down → logistic function converts score into a probability. See the prediction comparison below for concrete examples.
@@ -374,7 +323,7 @@ export default function ModelLabPage() {
                 <p className="mt-1">
                   Each watchlist title becomes a feature vector (genres, country, decade, title type, taste flags). Logistic regression combines these with learned coefficients. The logistic function squashes the weighted sum into a probability between 0 and 1.
                 </p>
-                <div className="mt-3 space-y-3 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-3">
+                <div className="mt-3 space-y-3 rounded-lg bg-[var(--section-bg)] px-4 py-3">
                   <div className="space-y-1">
                     <MathBlock tex={String.raw`P(y=1 \mid x) = \sigma(w^\top x + b)`} />
                     <p className="text-[12px] leading-snug text-[var(--muted-soft)]">Probability of 8+ given features: weighted sum passed through the logistic function.</p>
@@ -393,8 +342,8 @@ export default function ModelLabPage() {
 
           {/* 5. Coefficient inspection */}
           {diag?.available && (diag.top_positive?.length || diag.top_negative?.length) && (
-            <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-              <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <section className="py-1">
+              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
                 5. Coefficient inspection
               </h2>
               <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
@@ -447,8 +396,8 @@ export default function ModelLabPage() {
           )}
 
           {/* 6. Prediction inspection & recommender comparison */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-2 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               6. Compare ML vs High-Fit
             </h2>
             <p className="mb-3 text-[13px] text-[var(--muted-soft)]">
@@ -537,8 +486,8 @@ export default function ModelLabPage() {
           </section>
 
           {/* 7. Model limitations — what it&apos;s not for */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               7. Limitations — what it&apos;s not for
             </h2>
             <p className="mb-3 text-[13px] font-medium text-[var(--foreground)]">Logistic regression (P(8+))</p>
@@ -562,8 +511,8 @@ export default function ModelLabPage() {
           </section>
 
           {/* 8. Learning notes */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               8. Learning notes
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
@@ -574,7 +523,7 @@ export default function ModelLabPage() {
               <div>
                 <p className="font-medium text-[var(--foreground)]">Lift (Studies)</p>
                 <p>Lift = (8+ rate for a feature) ÷ (global 8+ rate). Lift &gt; 1 = you rate higher when this feature is present. Used in heuristic analysis, not in the ML model.</p>
-                <div className="mt-2 space-y-1 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-2.5">
+                <div className="mt-2 space-y-1 rounded-lg bg-[var(--section-bg)] px-4 py-2.5">
                   <MathBlock tex={String.raw`\text{lift} = \frac{P(8+ \mid \text{feature})}{P(8+)}`} />
                   <p className="text-[12px] leading-snug text-[var(--muted-soft)]">How much more often you rate 8+ when the feature is present vs. overall.</p>
                 </div>
@@ -587,15 +536,15 @@ export default function ModelLabPage() {
           </section>
 
           {/* 9. Embedding similarity (current semantic layer) */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               9. Embedding similarity — current semantic layer
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
                 A second ML layer handles &quot;similar to X&quot; in Search. Uses precomputed title + plot embeddings (artifact-file storage, sentence-transformers). Cosine similarity between reference and candidates; blended with metadata and taste signals.
               </p>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+              <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                 <p className="text-[12px] font-medium text-[var(--foreground)]">Two ML layers, two questions</p>
                 <ul className="mt-1.5 space-y-1 text-[13px]">
                   <li><strong>Logistic regression</strong> — &quot;What am I likely to rate 8+?&quot; (preference prediction)</li>
@@ -609,8 +558,8 @@ export default function ModelLabPage() {
           </section>
 
           {/* 10. Future model directions */}
-          <section className="rounded-xl border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/50 px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section className="py-1">
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               10. Future model directions
             </h2>
             <ul className="space-y-2 text-[14px] leading-[1.55] text-[var(--muted-soft)]">

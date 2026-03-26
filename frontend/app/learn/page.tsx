@@ -21,10 +21,10 @@ export default function LearnPage() {
           </p>
         </header>
 
-        <div className="space-y-12 sm:space-y-16">
+        <div className="space-y-14 sm:space-y-20">
           {/* 0. How the pipeline works — flowchart */}
-          <section className="rounded-xl border border-[var(--section-border)] border-t-2 border-t-[var(--mondrian-yellow)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-8">
-            <h2 className="mb-6 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section>
+            <h2 className="mb-6 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               How the pipeline works
             </h2>
             <TasteGraphFlowchart />
@@ -38,7 +38,7 @@ export default function LearnPage() {
 
           {/* 1. How TasteGraph works today */}
           <section>
-            <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               1. How TasteGraph works today
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
@@ -52,17 +52,14 @@ export default function LearnPage() {
                 <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
               </p>
             </div>
-            <div className="mt-4 rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-3">
-              <p className="text-[12px] font-medium text-[var(--foreground)]">Current recommender stack</p>
-              <p className="mt-1 text-[13px] leading-snug text-[var(--muted-soft)]">
-                Heuristic content/taste overlap → interpretable 8+ baseline classifier → grounded LLM search → embedding-based semantic similarity for similar_to. Future: blended ranking, personal similarity.
-              </p>
-            </div>
+            <p className="mt-4 text-[13px] leading-snug text-[var(--muted-soft)]">
+              <span className="font-medium text-[var(--foreground)]">Current stack:</span> Heuristic content/taste overlap → interpretable 8+ baseline classifier → grounded LLM search → embedding-based semantic similarity for similar_to.
+            </p>
           </section>
 
           {/* 1b. Current ML snapshot */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-5 sm:px-6 sm:py-6">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section>
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               Current ML snapshot
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
@@ -94,7 +91,7 @@ export default function LearnPage() {
 
           {/* 2. How to interpret results */}
           <section>
-            <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               2. How to interpret results
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
@@ -118,8 +115,8 @@ export default function LearnPage() {
           </section>
 
           {/* 2b. How Search works */}
-          <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-6 sm:px-6 sm:py-8">
-            <h2 className="mb-4 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+          <section>
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               How Search works
             </h2>
             <ol className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)] list-decimal pl-5">
@@ -130,10 +127,10 @@ export default function LearnPage() {
               <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items scored by metadata, taste signals (genre overlap, favorite directors, user rating), and—for similar_to—embedding cosine similarity.</li>
               <li><strong className="text-[var(--foreground)]">Explanations</strong> — Matched genres, countries, people—all from actual metadata.</li>
             </ol>
-            <div className="mt-6 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]/50 px-4 py-3">
+            <div className="mt-6">
               <p className="text-[13px] font-medium text-[var(--foreground)]">How semantic similarity works</p>
               <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted-soft)]">
-                The reference title (&quot;X&quot;) resolves to a real title in your data. Its title + plot embedding is compared against watchlist or rated items via cosine similarity. Semantic scores are blended with metadata and taste signals. Results stay grounded in real data—no invented titles. Quality is still being tuned; concept-heavy queries improve over metadata-only but are not yet perfect.
+                The reference title (&quot;X&quot;) resolves to a real title in your data. Its title + plot embedding is compared against watchlist or rated items via cosine similarity. Semantic scores are blended with metadata and taste signals. Results stay grounded in real data — no invented titles.
               </p>
             </div>
             <p className="mt-4 text-[13px] text-[var(--muted-subtle)]">
@@ -143,7 +140,7 @@ export default function LearnPage() {
 
           {/* 3. Recent additions */}
           <section>
-            <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               3. Recent additions
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
@@ -158,7 +155,7 @@ export default function LearnPage() {
 
           {/* 4. What&apos;s next */}
           <section>
-            <h2 className="mb-3 text-[17px] font-semibold text-[var(--foreground)] sm:text-[18px]">
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
               4. What&apos;s next
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">

@@ -14,57 +14,54 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-8 sm:px-8 sm:pt-10 sm:pb-32 md:max-w-3xl md:px-10 md:pt-12 md:pb-40 lg:max-w-4xl lg:px-12">
-        <header className="mb-8 sm:mb-10">
-          <p className="max-w-xl text-[15px] leading-[1.55] text-[var(--muted)] sm:text-[16px]">
-            Discover what to watch from your IMDb ratings and watchlist—personalized recommendations by genre, country, and year.
+        <header className="mb-10 sm:mb-12">
+          <p className="max-w-xl text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
+            Discover what to watch from your IMDb ratings and watchlist — personalized recommendations by genre, country, and year.
           </p>
         </header>
 
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-6 sm:space-y-8">
           <RatingsSummary />
-          <section
-            className="rounded-xl border border-[var(--section-border)] bg-[var(--card-bg)] px-5 py-4 sm:px-6 sm:py-5 shadow-sm"
-            aria-label="Data overview"
-          >
-            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
+          <section aria-label="Data overview">
+            <p className="mb-4 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">
               Your library
               <SectionHelp title="What these mean">
                 <p><strong>Strong signals</strong> = sample of titles you rated 8+. <strong>8+ / &lt;5</strong> = thresholds for strong vs weak taste signals.</p>
                 <p>More ratings and metadata improve recommendations. Studies and high-fit watchlist use these signals.</p>
               </SectionHelp>
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="px-1 py-2">
                 <ImportStatus />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="px-1 py-2">
                 <WatchlistImportStatus />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="px-1 py-2">
                 <MetadataCoverage />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="px-1 py-2">
                 <RatingsTimeline />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="px-1 py-2">
                 <TasteHints />
               </div>
             </div>
-            <div className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-3 sm:gap-3">
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+            <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-3">
+              <div className="border-t border-[var(--section-border)] px-1 pt-3">
                 <StrongPositiveSample />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="border-t border-[var(--section-border)] px-1 pt-3">
                 <EnrichedSample />
               </div>
-              <div className="rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="border-t border-[var(--section-border)] px-1 pt-3">
                 <RecentRatings />
               </div>
             </div>
           </section>
         </div>
 
-        <div className="mt-16 sm:mt-20 md:mt-24">
+        <div className="mt-20 sm:mt-24 md:mt-28">
           <RecommendationsContainer />
         </div>
 
