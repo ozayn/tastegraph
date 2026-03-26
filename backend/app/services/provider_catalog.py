@@ -18,7 +18,7 @@ from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import _load_favorites_by_role, _parse_names, compute_favorite_boost
 from app.services.taste_signals import load_taste_signals, score_watchlist_item
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 
 def _catalog_path(provider_slug: str) -> Path:

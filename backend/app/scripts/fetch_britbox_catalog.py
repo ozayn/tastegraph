@@ -20,7 +20,7 @@ import httpx
 
 JUSTWATCH_GRAPHQL = "https://apis.justwatch.com/graphql"
 
-CATALOG_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "britbox"
+CATALOG_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "britbox"
 CATALOG_PATH = CATALOG_DIR / "catalog.json"
 
 PACKAGES_QUERY = """
