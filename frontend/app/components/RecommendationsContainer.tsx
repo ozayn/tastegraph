@@ -18,38 +18,34 @@ export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
 
   return (
-    <section>
-      <div className="flex flex-col gap-6 sm:gap-8">
-        <div>
-          <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[22px]">
+    <section aria-labelledby="home-recommendations-heading">
+      <div className="flex flex-col gap-7 sm:gap-9">
+        <div className="max-w-2xl">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--overview-muted)]">
+            Discover
+          </p>
+          <h2 id="home-recommendations-heading" className="mt-1.5 text-[20px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[22px]">
             Recommendations
-              <SectionHelp title="How this works">
-                <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood. <strong>Search</strong> uses natural language over your watchlist—grounded, no invented titles.</p>
-              </SectionHelp>
+            <SectionHelp title="How this works">
+              <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood. <strong>Search</strong> uses natural language over your watchlist—grounded, no invented titles.</p>
+            </SectionHelp>
           </h2>
           <p className="mt-2 text-[14px] leading-[1.6] text-[var(--muted-soft)]">
             Explore different ways to find what to watch
           </p>
         </div>
 
-        <RecommendationModeSwitcher mode={mode} onChange={setMode} />
-
-        <div className="min-h-[12rem]">
-          {mode === "for-you" && <SimpleRecommendations embedded />}
-          {mode === "watchlist" && <WatchlistRecommendations embedded />}
-          {mode === "high-fit" && (
-            <HighFitModeContent />
-          )}
-          {mode === "ml" && (
-            <MLModeContent />
-          )}
-          {mode === "ml" && <RecommendationComparison />}
-          {mode === "search" && (
-            <LLMWatchlistSearch />
-          )}
-          {mode === "britbox" && (
-            <BritBoxModeContent />
-          )}
+        <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-3 sm:p-4">
+          <RecommendationModeSwitcher mode={mode} onChange={setMode} />
+          <div className="mt-5 min-h-[12rem] sm:mt-6">
+            {mode === "for-you" && <SimpleRecommendations embedded />}
+            {mode === "watchlist" && <WatchlistRecommendations embedded />}
+            {mode === "high-fit" && <HighFitModeContent />}
+            {mode === "ml" && <MLModeContent />}
+            {mode === "ml" && <RecommendationComparison />}
+            {mode === "search" && <LLMWatchlistSearch />}
+            {mode === "britbox" && <BritBoxModeContent />}
+          </div>
         </div>
       </div>
     </section>

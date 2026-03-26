@@ -17,10 +17,10 @@ export function NavBar() {
 
   return (
     <nav
-      className="sticky top-0 z-10 border-b border-[var(--section-border)] bg-[var(--background)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--background)]/80"
+      className="sticky top-0 z-10 border-b border-[var(--card-border)] bg-[var(--card-bg)]"
       aria-label="Main navigation"
     >
-      <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-x-1 gap-y-2 px-4 py-3 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+      <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-x-1 gap-y-2 px-4 py-3.5 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
         <Link
           href="/"
           className="mr-2 shrink-0 sm:mr-4"

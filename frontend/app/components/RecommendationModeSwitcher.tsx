@@ -36,7 +36,7 @@ export function RecommendationModeSwitcher({
     <div
       role="tablist"
       aria-label="Recommendation mode"
-      className="flex flex-wrap gap-1 rounded-lg bg-[var(--section-bg)] p-0.5"
+      className="flex flex-wrap gap-1 rounded-md bg-[var(--section-bg)] p-0.5"
     >
       {MODES.map(({ id, label }) => (
         <button
@@ -46,7 +46,7 @@ export function RecommendationModeSwitcher({
           onClick={() => onChange(id)}
           className={`shrink-0 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:py-2 sm:text-[14px] ${
             mode === id
-              ? "bg-[var(--card-bg)] text-[var(--foreground)] shadow-sm"
+              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
               : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
           }`}
           style={
