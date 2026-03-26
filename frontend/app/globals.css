@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
+  --background: #ffffff;
   --foreground: #111111;
   --muted: rgba(17, 17, 17, 0.72);
   --muted-soft: rgba(17, 17, 17, 0.48);
   --muted-subtle: rgba(17, 17, 17, 0.28);
-  --section-bg: rgba(0, 0, 0, 0.018);
+  --section-bg: rgba(0, 0, 0, 0.02);
   --section-border: rgba(17, 17, 17, 0.06);
   --overview-muted: rgba(17, 17, 17, 0.40);
-  --card-bg: #ffffff;
-  --card-border: rgba(17, 17, 17, 0.06);
+  --card-bg: #f8f8f8;
+  --card-border: rgba(17, 17, 17, 0.10);
   --card-hover: rgba(17, 17, 17, 0.02);
   --accent: #1d4ed8;
   --accent-muted: rgba(29, 78, 216, 0.08);
@@ -90,6 +90,7 @@
 
 html {
   color-scheme: light dark;
+  background: var(--background);
 }
 
 body {
