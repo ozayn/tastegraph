@@ -68,8 +68,51 @@ def _has_value(val) -> bool:
     return not _is_missing(val)
 
 
-def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, int]:
-    """Import metadata from CSV. Upserts by imdb_title_id. Returns (inserted, updated)."""
+def _parsed_row_values(row: dict[str, str]) -> dict[str, object | None]:
+    """Map CSV row to TitleMetadata field values (parsed)."""
+    return {
+        "title": _parse_str(row.get("title", ""), 500),
+        "title_type": _parse_str(row.get("title_type", ""), 50),
+        "year": _parse_int(row.get("year", "")),
+        "genres": _parse_str(row.get("genres", ""), 500),
+        "languages": _parse_str(row.get("languages", ""), 500),
+        "country": _parse_str(row.get("country", ""), 500),
+        "runtime_mins": _parse_int(row.get("runtime_mins", "")),
+        "release_date": _parse_date(row.get("release_date", "")),
+        "directors": _parse_str(row.get("directors", ""), 500),
+        "actors": _parse_str(row.get("actors", ""), 500),
+        "writer": _parse_str(row.get("writer", ""), 500),
+        "plot": _parse_str(row.get("plot", ""), 2000),
+        "poster": _parse_str(row.get("poster", ""), 500),
+        "metascore": _parse_int(row.get("metascore", "")),
+        "awards": _parse_str(row.get("awards", ""), 500),
+        "rated": _parse_str(row.get("rated", ""), 20),
+        "imdb_rating": _parse_float(row.get("imdb_rating", "")),
+        "num_votes": _parse_int(row.get("num_votes", "")),
+        "url": _parse_str(row.get("url", ""), 500),
+    }
+
+
+def _overwrite_metadata_from_row(existing: TitleMetadata, row: dict[str, str]) -> bool:
+    """Apply all parsed CSV fields onto existing row (replace values, including None). Returns True if any column changed."""
+    values = _parsed_row_values(row)
+    changed = False
+    for attr, new_val in values.items():
+        old_val = getattr(existing, attr)
+        if old_val != new_val:
+            setattr(existing, attr, new_val)
+            changed = True
+    return changed
+
+
+def import_title_metadata_from_csv(
+    db: Session, csv_path: Path, *, overwrite: bool = False
+) -> tuple[int, int]:
+    """Import metadata from CSV. Upserts by imdb_title_id. Returns (inserted, updated).
+
+    Default (overwrite=False): fill missing fields only on existing rows (safe).
+    overwrite=True: replace all mapped columns from CSV for existing rows (parity with export).
+    """
     inserted = 0
     updated = 0
 
@@ -83,117 +126,99 @@ def import_title_metadata_from_csv(db: Session, csv_path: Path) -> tuple[int, in
             existing = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id == imdb_id).first()
 
             if existing:
-                row_updated = False
-                v = _parse_str(row.get("title", ""), 500)
-                if _is_missing(existing.title) and _has_value(v):
-                    existing.title = v
-                    row_updated = True
-                v = _parse_str(row.get("title_type", ""), 50)
-                if _is_missing(existing.title_type) and _has_value(v):
-                    existing.title_type = v
-                    row_updated = True
-                v = _parse_int(row.get("year", ""))
-                if _is_missing(existing.year) and _has_value(v):
-                    existing.year = v
-                    row_updated = True
-                v = _parse_str(row.get("genres", ""), 500)
-                if _is_missing(existing.genres) and _has_value(v):
-                    existing.genres = v
-                    row_updated = True
-                v = _parse_str(row.get("languages", ""), 500)
-                if _is_missing(existing.languages) and _has_value(v):
-                    existing.languages = v
-                    row_updated = True
-                v = _parse_str(row.get("country", ""), 500)
-                if _is_missing(existing.country) and _has_value(v):
-                    existing.country = v
-                    row_updated = True
-                v = _parse_int(row.get("runtime_mins", ""))
-                if _is_missing(existing.runtime_mins) and _has_value(v):
-                    existing.runtime_mins = v
-                    row_updated = True
-                v = _parse_date(row.get("release_date", ""))
-                if _is_missing(existing.release_date) and _has_value(v):
-                    existing.release_date = v
-                    row_updated = True
-                v = _parse_str(row.get("directors", ""), 500)
-                if _is_missing(existing.directors) and _has_value(v):
-                    existing.directors = v
-                    row_updated = True
-                v = _parse_str(row.get("actors", ""), 500)
-                if _is_missing(existing.actors) and _has_value(v):
-                    existing.actors = v
-                    row_updated = True
-                v = _parse_str(row.get("writer", ""), 500)
-                if _is_missing(existing.writer) and _has_value(v):
-                    existing.writer = v
-                    row_updated = True
-                v = _parse_str(row.get("plot", ""), 2000)
-                if _is_missing(existing.plot) and _has_value(v):
-                    existing.plot = v
-                    row_updated = True
-                v = _parse_str(row.get("poster", ""), 500)
-                if _is_missing(existing.poster) and _has_value(v):
-                    existing.poster = v
-                    row_updated = True
-                v = _parse_int(row.get("metascore", ""))
-                if _is_missing(existing.metascore) and _has_value(v):
-                    existing.metascore = v
-                    row_updated = True
-                v = _parse_str(row.get("awards", ""), 500)
-                if _is_missing(existing.awards) and _has_value(v):
-                    existing.awards = v
-                    row_updated = True
-                v = _parse_str(row.get("rated", ""), 20)
-                if _is_missing(existing.rated) and _has_value(v):
-                    existing.rated = v
-                    row_updated = True
-                v = _parse_float(row.get("imdb_rating", ""))
-                if _is_missing(existing.imdb_rating) and _has_value(v):
-                    existing.imdb_rating = v
-                    row_updated = True
-                v = _parse_int(row.get("num_votes", ""))
-                if _is_missing(existing.num_votes) and _has_value(v):
-                    existing.num_votes = v
-                    row_updated = True
-                v = _parse_str(row.get("url", ""), 500)
-                if _is_missing(existing.url) and _has_value(v):
-                    existing.url = v
-                    row_updated = True
-                if row_updated:
-                    updated += 1
+                if overwrite:
+                    if _overwrite_metadata_from_row(existing, row):
+                        updated += 1
+                else:
+                    row_updated = False
+                    v = _parse_str(row.get("title", ""), 500)
+                    if _is_missing(existing.title) and _has_value(v):
+                        existing.title = v
+                        row_updated = True
+                    v = _parse_str(row.get("title_type", ""), 50)
+                    if _is_missing(existing.title_type) and _has_value(v):
+                        existing.title_type = v
+                        row_updated = True
+                    v = _parse_int(row.get("year", ""))
+                    if _is_missing(existing.year) and _has_value(v):
+                        existing.year = v
+                        row_updated = True
+                    v = _parse_str(row.get("genres", ""), 500)
+                    if _is_missing(existing.genres) and _has_value(v):
+                        existing.genres = v
+                        row_updated = True
+                    v = _parse_str(row.get("languages", ""), 500)
+                    if _is_missing(existing.languages) and _has_value(v):
+                        existing.languages = v
+                        row_updated = True
+                    v = _parse_str(row.get("country", ""), 500)
+                    if _is_missing(existing.country) and _has_value(v):
+                        existing.country = v
+                        row_updated = True
+                    v = _parse_int(row.get("runtime_mins", ""))
+                    if _is_missing(existing.runtime_mins) and _has_value(v):
+                        existing.runtime_mins = v
+                        row_updated = True
+                    v = _parse_date(row.get("release_date", ""))
+                    if _is_missing(existing.release_date) and _has_value(v):
+                        existing.release_date = v
+                        row_updated = True
+                    v = _parse_str(row.get("directors", ""), 500)
+                    if _is_missing(existing.directors) and _has_value(v):
+                        existing.directors = v
+                        row_updated = True
+                    v = _parse_str(row.get("actors", ""), 500)
+                    if _is_missing(existing.actors) and _has_value(v):
+                        existing.actors = v
+                        row_updated = True
+                    v = _parse_str(row.get("writer", ""), 500)
+                    if _is_missing(existing.writer) and _has_value(v):
+                        existing.writer = v
+                        row_updated = True
+                    v = _parse_str(row.get("plot", ""), 2000)
+                    if _is_missing(existing.plot) and _has_value(v):
+                        existing.plot = v
+                        row_updated = True
+                    v = _parse_str(row.get("poster", ""), 500)
+                    if _is_missing(existing.poster) and _has_value(v):
+                        existing.poster = v
+                        row_updated = True
+                    v = _parse_int(row.get("metascore", ""))
+                    if _is_missing(existing.metascore) and _has_value(v):
+                        existing.metascore = v
+                        row_updated = True
+                    v = _parse_str(row.get("awards", ""), 500)
+                    if _is_missing(existing.awards) and _has_value(v):
+                        existing.awards = v
+                        row_updated = True
+                    v = _parse_str(row.get("rated", ""), 20)
+                    if _is_missing(existing.rated) and _has_value(v):
+                        existing.rated = v
+                        row_updated = True
+                    v = _parse_float(row.get("imdb_rating", ""))
+                    if _is_missing(existing.imdb_rating) and _has_value(v):
+                        existing.imdb_rating = v
+                        row_updated = True
+                    v = _parse_int(row.get("num_votes", ""))
+                    if _is_missing(existing.num_votes) and _has_value(v):
+                        existing.num_votes = v
+                        row_updated = True
+                    v = _parse_str(row.get("url", ""), 500)
+                    if _is_missing(existing.url) and _has_value(v):
+                        existing.url = v
+                        row_updated = True
+                    if row_updated:
+                        updated += 1
             else:
-                db.add(
-                    TitleMetadata(
-                        imdb_title_id=imdb_id,
-                        title=_parse_str(row.get("title", ""), 500),
-                        title_type=_parse_str(row.get("title_type", ""), 50),
-                        year=_parse_int(row.get("year", "")),
-                        genres=_parse_str(row.get("genres", ""), 500),
-                        languages=_parse_str(row.get("languages", ""), 500),
-                        country=_parse_str(row.get("country", ""), 500),
-                        runtime_mins=_parse_int(row.get("runtime_mins", "")),
-                        release_date=_parse_date(row.get("release_date", "")),
-                        directors=_parse_str(row.get("directors", ""), 500),
-                        actors=_parse_str(row.get("actors", ""), 500),
-                        writer=_parse_str(row.get("writer", ""), 500),
-                        plot=_parse_str(row.get("plot", ""), 2000),
-                        poster=_parse_str(row.get("poster", ""), 500),
-                        metascore=_parse_int(row.get("metascore", "")),
-                        awards=_parse_str(row.get("awards", ""), 500),
-                        rated=_parse_str(row.get("rated", ""), 20),
-                        imdb_rating=_parse_float(row.get("imdb_rating", "")),
-                        num_votes=_parse_int(row.get("num_votes", "")),
-                        url=_parse_str(row.get("url", ""), 500),
-                    )
-                )
+                pv = _parsed_row_values(row)
+                db.add(TitleMetadata(imdb_title_id=imdb_id, **pv))
                 inserted += 1
 
     db.commit()
     return inserted, updated
 
 
-def run_import(csv_path: str) -> None:
+def run_import(csv_path: str, *, overwrite: bool = False) -> None:
     """Run import and print summary."""
     from app.core.database import SessionLocal
 
@@ -204,8 +229,10 @@ def run_import(csv_path: str) -> None:
 
     db = SessionLocal()
     try:
-        inserted, updated = import_title_metadata_from_csv(db, path)
-        print(f"Import complete: {inserted} inserted, {updated} updated")
+        inserted, updated = import_title_metadata_from_csv(db, path, overwrite=overwrite)
+        print(
+            f"Import complete: {inserted} inserted, {updated} updated (overwrite={overwrite})"
+        )
     finally:
         db.close()
 
@@ -214,6 +241,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python -m app.imports.title_metadata <path/to/metadata.csv>")
+        print("Usage: python -m app.imports.title_metadata <path/to/metadata.csv> [--overwrite]")
         sys.exit(1)
-    run_import(sys.argv[1])
+    overwrite_flag = len(sys.argv) > 2 and sys.argv[2] == "--overwrite"
+    run_import(sys.argv[1], overwrite=overwrite_flag)

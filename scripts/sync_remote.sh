@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Import ratings, watchlist, and metadata to deployed backend.
-# Run from project root: ./scripts/sync_remote.sh
+# Run from project root: ./scripts/sync_remote.sh [--parity]
 # Loads REMOTE_API_URL and ADMIN_IMPORT_TOKEN from .env.sync, .env, or shell. No sourcing needed.
+#
+# Default: legacy-safe imports (new ratings rows only; metadata fill-missing only).
+# --parity: ratings upsert + metadata overwrite so remote matches local export/recommendations better.
 
 set -e
 
@@ -23,8 +26,30 @@ _load_env() {
 _load_env "${ROOT}/.env.sync"
 _load_env "${ROOT}/.env"
 
+PARITY=0
+for arg in "$@"; do
+  case "$arg" in
+    --parity)
+      PARITY=1
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--parity]"
+      echo ""
+      echo "  (no flags)  Insert-only ratings, fill-only metadata (safe default)."
+      echo "  --parity    Upsert ratings + overwrite metadata from local CSV export (recommended for parity)."
+      echo ""
+      echo "Requires REMOTE_API_URL and ADMIN_IMPORT_TOKEN (.env.sync or .env)."
+      exit 0
+      ;;
+    *)
+      echo "Error: unknown option '$arg' (use --help)"
+      exit 1
+      ;;
+  esac
+done
+
 usage() {
-  echo "Usage: $0"
+  echo "Usage: $0 [--parity]"
   echo ""
   echo "Imports ratings, watchlist, and metadata to deployed backend. Requires:"
   echo "  REMOTE_API_URL     - Backend URL (e.g. https://yourapp-backend.railway.app)"
@@ -39,8 +64,17 @@ usage() {
 
 export REMOTE_API_URL ADMIN_IMPORT_TOKEN
 
+if [[ "$PARITY" -eq 1 ]]; then
+  echo "Parity sync: ratings --upsert, metadata --overwrite (remote will match local CSV export)."
+  echo ""
+fi
+
 echo "Importing ratings..."
-"${ROOT}/scripts/import_remote.sh" ratings
+if [[ "$PARITY" -eq 1 ]]; then
+  "${ROOT}/scripts/import_remote.sh" ratings --upsert
+else
+  "${ROOT}/scripts/import_remote.sh" ratings
+fi
 echo ""
 echo "Importing watchlist..."
 "${ROOT}/scripts/import_remote.sh" watchlist
@@ -49,7 +83,11 @@ echo "Exporting local metadata..."
 "${ROOT}/scripts/export_metadata_local.sh"
 echo ""
 echo "Importing metadata..."
-"${ROOT}/scripts/import_remote.sh" metadata
+if [[ "$PARITY" -eq 1 ]]; then
+  "${ROOT}/scripts/import_remote.sh" metadata --overwrite
+else
+  "${ROOT}/scripts/import_remote.sh" metadata
+fi
 echo ""
 if [[ -f "${ROOT}/data/imdb/favorite_people.csv" ]]; then
   echo "Importing favorites..."
@@ -67,4 +105,8 @@ else
   echo "Skipping favorite list (data/imdb/favorite_list.csv not found)."
   echo ""
 fi
-echo "Sync complete."
+if [[ "$PARITY" -eq 1 ]]; then
+  echo "Parity sync complete. Check inserted/updated/skipped in the JSON summaries above."
+else
+  echo "Sync complete (legacy mode). Use --parity for upsert + metadata overwrite."
+fi

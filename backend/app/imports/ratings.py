@@ -104,11 +104,51 @@ def _row_to_rating_rich(row: dict[str, str]) -> IMDbRating | None:
     )
 
 
-def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
-    """Import ratings from CSV. Returns (inserted, skipped, errors)."""
-    existing_ids = {r.imdb_title_id for r in db.query(IMDbRating.imdb_title_id).all()}
+def _apply_rating_fields(existing: IMDbRating, incoming: IMDbRating, *, rich: bool) -> bool:
+    """Copy fields from incoming onto existing. Raw format only updates rating/date fields."""
+    changed = False
+    if rich:
+        fields = (
+            "title",
+            "title_type",
+            "year",
+            "genres",
+            "user_rating",
+            "date_rated",
+            "imdb_rating",
+            "runtime_mins",
+            "num_votes",
+            "release_date",
+            "directors",
+            "url",
+        )
+    else:
+        fields = ("user_rating", "date_rated")
+    for attr in fields:
+        new_val = getattr(incoming, attr)
+        old_val = getattr(existing, attr)
+        if old_val != new_val:
+            setattr(existing, attr, new_val)
+            changed = True
+    return changed
+
+
+def import_ratings_from_csv(
+    db: Session, csv_path: Path, *, upsert: bool = False
+) -> tuple[int, int, int, int]:
+    """Import ratings from CSV.
+
+    When upsert is False (default): insert new rows only; existing imdb_title_id rows are skipped.
+    When upsert is True: insert new rows; update existing rows when CSV values differ.
+
+    Returns (inserted, updated, skipped, errors).
+    """
+    existing_by_id: dict[str, IMDbRating] = {
+        r.imdb_title_id: r for r in db.query(IMDbRating).all()
+    }
 
     inserted = 0
+    updated = 0
     skipped = 0
     errors = 0
 
@@ -126,18 +166,25 @@ def import_ratings_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]
             if not rating:
                 errors += 1
                 continue
-            if rating.imdb_title_id in existing_ids:
+
+            ex = existing_by_id.get(rating.imdb_title_id)
+            if ex is None:
+                db.add(rating)
+                existing_by_id[rating.imdb_title_id] = rating
+                inserted += 1
+            elif upsert:
+                if _apply_rating_fields(ex, rating, rich=is_rich):
+                    updated += 1
+                else:
+                    skipped += 1
+            else:
                 skipped += 1
-                continue
-            db.add(rating)
-            existing_ids.add(rating.imdb_title_id)
-            inserted += 1
 
     db.commit()
-    return inserted, skipped, errors
+    return inserted, updated, skipped, errors
 
 
-def run_import(csv_path: str) -> None:
+def run_import(csv_path: str, *, upsert: bool = False) -> None:
     """Run import and print summary."""
     from app.core.database import SessionLocal
 
@@ -148,8 +195,10 @@ def run_import(csv_path: str) -> None:
 
     db = SessionLocal()
     try:
-        inserted, skipped, errors = import_ratings_from_csv(db, path)
-        print(f"Import complete: {inserted} inserted, {skipped} skipped, {errors} errors")
+        inserted, updated, skipped, errors = import_ratings_from_csv(db, path, upsert=upsert)
+        print(
+            f"Import complete: {inserted} inserted, {updated} updated, {skipped} skipped, {errors} errors"
+        )
     finally:
         db.close()
 
@@ -158,6 +207,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python -m app.imports.ratings <path/to/ratings.csv>")
+        print("Usage: python -m app.imports.ratings <path/to/ratings.csv> [--upsert]")
         sys.exit(1)
-    run_import(sys.argv[1])
+    upsert_flag = len(sys.argv) > 2 and sys.argv[2] == "--upsert"
+    run_import(sys.argv[1], upsert=upsert_flag)

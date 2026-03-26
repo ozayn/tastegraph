@@ -8,12 +8,8 @@ import { RecommendationCard } from "./RecommendationCard";
 import { SectionHelp } from "./SectionHelp";
 
 const DEBOUNCE_MS = 350;
+/** Top N titles to show; passed as API limit (backend still scores a wider pool first). */
 const DISPLAY_LIMIT = 5;
-const FETCH_LIMIT = 50; // Backend max; ratings have lower poster coverage than watchlist
-
-function hasUsablePoster(poster: string | null | undefined): boolean {
-  return !!(poster && poster.trim() && poster !== "N/A");
-}
 
 type Item = {
   imdb_title_id: string;
@@ -56,7 +52,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
       }
 
       const recParams = new URLSearchParams(baseParams);
-      recParams.set("limit", String(FETCH_LIMIT));
+      recParams.set("limit", String(DISPLAY_LIMIT));
 
       Promise.all([
         fetch(`${API_URL}/recommendations/simple?${recParams}`).then((res) =>
@@ -68,8 +64,9 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
       ])
         .then(([recs, expl]) => {
           if (id !== requestIdRef.current) return;
-          const withPoster = (recs as Item[]).filter((r) => hasUsablePoster(r.poster));
-          setItems(withPoster.slice(0, DISPLAY_LIMIT));
+          // Use API order as-is. Do not filter by poster—metadata poster URLs differ
+          // across environments (null vs stale URL), which was hiding different titles.
+          setItems((recs as Item[]).slice(0, DISPLAY_LIMIT));
           setExplanation(expl.explanation ?? null);
         })
         .catch(() => {
@@ -214,7 +211,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
                     : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6")
               }
             >
-              No poster-backed results for these filters yet.
+              No 8+ titles match these filters yet.
             </p>
           )}
         </>

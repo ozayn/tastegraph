@@ -317,7 +317,7 @@ def import_ratings(request: ImportRequest):
 
     db = SessionLocal()
     try:
-        inserted, skipped, errors = import_ratings_from_csv(db, path)
-        return {"inserted": inserted, "skipped": skipped, "errors": errors}
+        inserted, updated, skipped, errors = import_ratings_from_csv(db, path, upsert=False)
+        return {"inserted": inserted, "updated": updated, "skipped": skipped, "errors": errors}
     finally:
         db.close()

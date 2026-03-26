@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, UploadFile
 
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -37,6 +37,10 @@ async def _require_admin_token(
 @router.post("/import/ratings")
 async def admin_import_ratings(
     file: UploadFile,
+    upsert: bool = Query(
+        False,
+        description="If true, update existing rows when CSV values differ (parity sync).",
+    ),
     _: None = Depends(_require_admin_token),
 ):
     """Import IMDb ratings from uploaded ratings.csv. Requires X-Admin-Import-Token header."""
@@ -53,8 +57,16 @@ async def admin_import_ratings(
     try:
         db = SessionLocal()
         try:
-            inserted, skipped, errors = import_ratings_from_csv(db, tmp_path)
-            return {"inserted": inserted, "skipped": skipped, "errors": errors}
+            inserted, updated, skipped, errors = import_ratings_from_csv(
+                db, tmp_path, upsert=upsert
+            )
+            return {
+                "inserted": inserted,
+                "updated": updated,
+                "skipped": skipped,
+                "errors": errors,
+                "upsert": upsert,
+            }
         finally:
             db.close()
     finally:
@@ -91,6 +103,10 @@ async def admin_import_watchlist(
 @router.post("/import/title-metadata")
 async def admin_import_title_metadata(
     file: UploadFile,
+    overwrite: bool = Query(
+        False,
+        description="If true, replace all mapped CSV columns on existing rows (parity sync).",
+    ),
     _: None = Depends(_require_admin_token),
 ):
     """Import title metadata from uploaded CSV. Requires X-Admin-Import-Token header."""
@@ -107,8 +123,14 @@ async def admin_import_title_metadata(
     try:
         db = SessionLocal()
         try:
-            inserted, updated = import_title_metadata_from_csv(db, tmp_path)
-            return {"inserted": inserted, "updated": updated, "errors": 0}
+            inserted, updated = import_title_metadata_from_csv(
+                db, tmp_path, overwrite=overwrite
+            )
+            return {
+                "inserted": inserted,
+                "updated": updated,
+                "overwrite": overwrite,
+            }
         finally:
             db.close()
     finally:
