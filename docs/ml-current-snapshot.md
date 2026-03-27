@@ -9,7 +9,7 @@ Technical reference for the existing ML recommender. For product understanding, 
 - **Logistic regression baseline** — L2-regularized, class-weighted for imbalanced 8+ vs non-8+
 - **Target:** Predicts probability of rating a title 8+ (strong favorite)
 - **Training:** User's own rated history only (one row per rated title)
-- **Output:** P(rate 8+ | title) for each watchlist item
+- **Output:** P(rate 8+ | title) for each scored candidate (unrated watchlist items; provider-catalog rows when the ML endpoints are used and model files exist)
 
 ---
 
@@ -32,7 +32,7 @@ Technical reference for the existing ML recommender. For product understanding, 
 ## 3. What it is good for
 
 - **Learned preference ranking** — Weights derived from your past ratings, not hand-tuned rules
-- **ML recommendation mode** — Watchlist ranked by predicted 8+ probability
+- **ML recommendation mode** — Watchlist and provider catalog tabs (e.g. `mubi-ml`) ranked by the same trained weights when artifacts are present
 - **Comparison with heuristic High-Fit** — ML vs rule-based overlap; disagreement is informative
 - **Interpretable** — Inspectable coefficients; positive = associated with 8+, negative = less associated
 - **Strong baseline** — Simple, fast, interpretable; good foundation for future blending
@@ -89,7 +89,7 @@ The logistic model learns *your preferences*. The embedding layer captures *conc
 
 **Logistic regression (P(8+))**
 - **Train:** `python -m app.ml.train_8plus_baseline`
-- **Predict:** Used by `/recommendations/watchlist-ml`
+- **Predict:** Used by `/recommendations/watchlist-ml` and catalog routes such as `/recommendations/mubi-ml` / `britbox-ml` (same joblib artifacts)
 - **Artifacts:** `backend/data/ml/models/`
 
 **Embedding similarity (similar_to)**

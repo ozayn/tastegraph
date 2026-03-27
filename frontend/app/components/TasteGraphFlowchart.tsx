@@ -98,8 +98,10 @@ export function TasteGraphFlowchart() {
         <div className="flex flex-wrap justify-center gap-2">
           <FlowNode variant="heuristic">Explore favorites</FlowNode>
           <FlowNode variant="heuristic">Watchlist browse</FlowNode>
-          <FlowNode variant="heuristic">High-Fit (rule-based)</FlowNode>
-          <FlowNode variant="ml">ML (8+ likelihood)</FlowNode>
+          <FlowNode variant="heuristic">High-Fit (rules)</FlowNode>
+          <FlowNode variant="ml">ML (P 8+)</FlowNode>
+          <FlowNode variant="heuristic">Search (grounded)</FlowNode>
+          <FlowNode variant="heuristic">Catalogs (BritBox · MUBI)</FlowNode>
         </div>
       </div>
 

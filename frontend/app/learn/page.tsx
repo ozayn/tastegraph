@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { TasteGraphFlowchart } from "../components/TasteGraphFlowchart";
+import {
+  SlideOrScrollContainer,
+  ViewModeToggle,
+  type ViewMode,
+} from "../components/SlideOrScrollView";
 
 /**
  * Learn page: living project explanation.
@@ -9,19 +15,38 @@ import { TasteGraphFlowchart } from "../components/TasteGraphFlowchart";
  */
 
 export default function LearnPage() {
+  const [mode, setMode] = useState<ViewMode>("scroll");
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const handleModeChange = useCallback((m: ViewMode) => {
+    setMode(m);
+    if (m === "slide") setSlideIndex(0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
-        <header className="mb-14 sm:mb-16 md:mb-20">
-          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
-            How it works
-          </h1>
-          <p className="mt-3 max-w-lg text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
-            TasteGraph&apos;s recommender logic, signals, and how to interpret results. Updated as the system evolves.
-          </p>
+        <header className="mb-10 sm:mb-12 md:mb-14">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
+                How it works
+              </h1>
+              <p className="mt-3 max-w-lg text-[15px] leading-[1.6] text-[var(--muted-soft)] sm:text-[16px]">
+                TasteGraph&apos;s recommender logic, signals, and how to interpret results. Updated as the system evolves.
+              </p>
+            </div>
+            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="shrink-0" />
+          </div>
         </header>
 
-        <div className="space-y-14 sm:space-y-20">
+        <SlideOrScrollContainer
+          mode={mode}
+          slideIndex={slideIndex}
+          onSlideChange={setSlideIndex}
+          ariaLabel="Learn slides"
+          scrollClassName="space-y-14 sm:space-y-20"
+        >
           {/* 0. How the pipeline works — flowchart */}
           <section>
             <h2 className="mb-6 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
@@ -29,149 +54,190 @@ export default function LearnPage() {
             </h2>
             <TasteGraphFlowchart />
             <p className="mt-6 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
-              The same data feeds both heuristic and ML paths, which surface across Home, Insights, Studies, and Model Lab. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings.
-            </p>
-            <p className="mt-2 text-[12px] text-[var(--muted-subtle)]">
-              Future: blended heuristic + ML, personal similarity, grounded conversational assistant.
+              Your library data (ratings, watchlist, metadata) feeds every mode on Home. High-Fit scores explicit overlap with taste signals; ML learns weights from your rated history; Search and catalogs add grounded retrieval and external snapshot pools.
             </p>
           </section>
 
-          {/* 1. How TasteGraph works today */}
+          {/* 1. Recommendation modes on Home */}
           <section>
             <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              1. How TasteGraph works today
+              1. Recommendation modes on Home
+            </h2>
+            <ul className="space-y-2.5 text-[14px] leading-[1.6] text-[var(--muted-soft)] list-disc pl-5">
+              <li>
+                <strong className="text-[var(--foreground)]">Explore your favorites</strong> — Titles you already rated 8+, browsable by genre, country, decade, and type. Not &quot;new&quot; picks; it&apos;s a filterable view of your strong favorites.
+              </li>
+              <li>
+                <strong className="text-[var(--foreground)]">Watchlist</strong> — Unrated items you saved, filtered the same way. Optional &quot;include rated&quot; for comparison.
+              </li>
+              <li>
+                <strong className="text-[var(--foreground)]">High-Fit</strong> — Rule-based taste alignment: overlap with genres, countries, decades, people, and lists derived from your 8+ history. Explainable scores and reasons per title.
+              </li>
+              <li>
+                <strong className="text-[var(--foreground)]">ML</strong> — Same watchlist pool, ranked by a model that estimates <strong>P(rate 8+ | title)</strong> from your past ratings and metadata. Answers &quot;what might land as a strong favorite?&quot; rather than &quot;what matches these tags?&quot;
+              </li>
+              <li>
+                <strong className="text-[var(--foreground)]">Search</strong> — Natural-language queries over <strong>your</strong> watchlist or watched titles only. Not open web search: results always come from rows already in your library.
+              </li>
+              <li>
+                <strong className="text-[var(--foreground)]">BritBox · MUBI (Providers)</strong> — Separate tabs that rank titles from a <strong>provider catalog snapshot</strong> (e.g. from Watchmode), matched to your local <code>TitleMetadata</code>, then scored with the same taste machinery. High-Fit and ML are both available there as scoring styles (see below).
+              </li>
+            </ul>
+          </section>
+
+          {/* 1b. Provider catalogs */}
+          <section>
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              Provider catalogs (BritBox, MUBI)
             </h2>
             <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <p>
-                <strong>Active recommendation methods:</strong> Explore your favorites (browse titles you&apos;ve already rated 8+). Watchlist and High-Fit use heuristic content-overlap. <strong>ML mode</strong> uses a logistic-regression model trained on your ratings to predict strong-favorite (8+) likelihood for watchlist items. <strong>Search mode</strong> is grounded natural-language search over your real watchlist and watched history—Groq interprets your query into structured intent; the backend retrieves and ranks only from your actual data.
+                These modes start from an on-disk snapshot of what&apos;s on the service—not your watchlist. Only titles with an IMDb id in the snapshot <em>and</em> matching rows in your database can be ranked. Decade, country, genre, type, and &quot;similar to&quot; narrow that pool before scoring.
               </p>
               <p>
-                <strong>Semantic similarity layer:</strong> &quot;Similar to X&quot; queries are now supported by embedding-based semantic similarity. Title + plot embeddings (precomputed, artifact-file) are compared via cosine similarity. This improves concept-level similarity (e.g. absurdist dystopia, anthology tech horror) beyond metadata alone. Explicit constraints (movie/series, year, filters) remain hard filters. If embeddings are unavailable, metadata-only fallback still works. This is a meaningful step forward—but &quot;similar to X&quot; is improved, not solved; fully personalized &quot;similar for me&quot; remains a future direction.
-              </p>
-              <p>
-                <strong>Signals & data sources:</strong> Your IMDb ratings (8+ = strong positive / highly likely favorite; 7 is still a good rating). Watchlist, optional curated favorites list. Metadata: genres, countries, release decade, directors/actors/writers. No collaborative filtering—all from your own data.
+                If a catalog title has no (or thin) local metadata, it contributes less to ranking and may not appear at all. Enrichment improves coverage; snapshots need periodic refresh to stay current with the real catalog.
               </p>
             </div>
-            <p className="mt-4 text-[13px] leading-snug text-[var(--muted-soft)]">
-              <span className="font-medium text-[var(--foreground)]">Current stack:</span> Heuristic content/taste overlap → interpretable 8+ baseline classifier → grounded LLM search → embedding-based semantic similarity for similar_to.
+          </section>
+
+          {/* 1c. High-Fit vs ML */}
+          <section>
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              High-Fit vs ML (same system, different question)
+            </h2>
+            <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <p>
+                <strong className="text-[var(--foreground)]">High-Fit</strong> is interpretable: fixed rules and bonuses for overlap with signals you can see (genres you love, lift-based countries, favorite people, etc.).
+              </p>
+              <p>
+                <strong className="text-[var(--foreground)]">ML</strong> is a logistic model trained on which titles you actually rated 8+. It outputs a probability, not a story—use it when you want a learned ordering from history.
+              </p>
+              <p>
+                On watchlist and on provider tabs, you can <strong>narrow the pool first</strong> (decade, country, genres, type, similar-to where offered), then switch between High-Fit and ML to rank inside that slice. Disagreement between the two is normal and informative.
+              </p>
+            </div>
+          </section>
+
+          {/* 1d. Signals: 8+ and 7 */}
+          <section>
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              Taste signals: 8+ and 7-rated titles
+            </h2>
+            <div className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              <p>
+                <strong className="text-[var(--foreground)]">8+</strong> remains the core definition of &quot;strong favorite&quot; for building genres, decades, lift-based countries, and most taste signals.
+              </p>
+              <p>
+                <strong className="text-[var(--foreground)]">7</strong> is still a good rating—not a penalty. In some heuristic paths, titles you rated exactly <strong>7</strong> contribute a <em>softer</em> layer (smaller weights, separate caps) so overlap with &quot;things you found fine&quot; can nudge explanations and scores without diluting how 8+ signals are built.
+              </p>
+              <p>
+                The watchlist <strong>ML</strong> model is still trained as binary <strong>8+ vs not</strong>; it does not treat 7 as a separate class. Watchlist, favorite people, favorite list, and enriched metadata round out the data. No collaborative filtering.
+              </p>
+            </div>
+          </section>
+
+          {/* 1e. Semantic similarity (similar to) */}
+          <section>
+            <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              &quot;Similar to&quot; and embeddings
+            </h2>
+            <p className="text-[14px] leading-[1.65] text-[var(--muted-soft)]">
+              When Search (or similar-to hints) resolve a real title in your data, optional <strong>title + plot embeddings</strong> add cosine-similarity scores on top of metadata and taste overlap. Hard filters (type, decade, etc.) still apply. If embeddings are missing, metadata-backed behavior still runs. Quality is improved over metadata-only for many queries, not perfect; fully personalized &quot;similar for me&quot; is still on the roadmap.
             </p>
           </section>
 
-          {/* 1b. Current ML snapshot */}
+          {/* 2. Current ML snapshot */}
           <section>
             <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              Current ML snapshot
+              2. Current ML snapshot
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <div>
                 <p className="font-medium text-[var(--foreground)]">What it is</p>
-                <p className="mt-1">Logistic regression baseline. Predicts P(rate 8+ | title). Trained on your rated history. Used for ML recommendation mode.</p>
+                <p className="mt-1">
+                  Logistic regression on <strong>your rated history</strong>, target = rated 8+ vs not. Outputs <strong>P(rate 8+ | title)</strong> for candidates. Used on the <strong>Watchlist ML</strong> tab and, when the model files are present, as the <strong>ML</strong> scoring mode inside <strong>provider catalog</strong> tabs (same trained weights applied to catalog titles that have feature rows).
+                </p>
               </div>
               <div>
                 <p className="font-medium text-[var(--foreground)]">Features</p>
-                <p className="mt-1">Genres, countries, decade, title type (min-support filtered). Taste flags: favorite_people_match, in_favorite_list.</p>
+                <p className="mt-1">Genres, countries, decade, title type (support-thresholded), plus taste flags such as favorite-people match and favorite-list membership.</p>
               </div>
               <div>
-                <p className="font-medium text-[var(--foreground)]">Good for</p>
-                <p className="mt-1">Learned preference ranking. Interpretable coefficients. Contrast with heuristic High-Fit. Strong baseline for future blending.</p>
-              </div>
-              <div>
-                <p className="font-medium text-[var(--foreground)]">Not for</p>
-                <p className="mt-1">Collaborative filtering. Full rating-scale nuance. &quot;Similar to X&quot; is handled by a separate semantic layer (embeddings), not by logistic regression.</p>
-              </div>
-              <div>
-                <p className="font-medium text-[var(--foreground)]">Next step</p>
-                <p className="mt-1">Blending preference prediction with semantic similarity. Personal similarity (&quot;similar for me&quot;) remains a future direction.</p>
+                <p className="font-medium text-[var(--foreground)]">Not the same as Search similarity</p>
+                <p className="mt-1">&quot;Similar to X&quot; in Search uses the embedding layer when available, not this classifier.</p>
               </div>
             </div>
             <p className="mt-4 text-[12px] text-[var(--muted-subtle)]">
-              See <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> for coefficients and comparison. Technical details in docs/ml-current-snapshot.md.
+              Train: <code className="text-[11px]">python -m app.ml.train_8plus_baseline</code>. Inspect coefficients and ML vs High-Fit overlap on{" "}
+              <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link>
+              . Deeper reference: <code className="text-[11px]">docs/ml-current-snapshot.md</code>.
             </p>
           </section>
 
-          {/* 2. How to interpret results */}
+          {/* 3. How to interpret results */}
           <section>
             <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              2. How to interpret results
+              3. How to interpret results
             </h2>
             <div className="space-y-4 text-[14px] leading-[1.65] text-[var(--muted-soft)]">
               <div>
-                <p className="font-medium text-[var(--foreground)]">Heuristic recommendations</p>
-                <p className="mt-1">Content overlap with your 8+ history. Higher overlap suggests stronger fit, but it&apos;s not predictive—your next favorite might surprise you.</p>
+                <p className="font-medium text-[var(--foreground)]">Heuristic / High-Fit</p>
+                <p className="mt-1">Higher overlap with your signals usually means a better <em>story</em> for why something fits—not a guarantee you&apos;ll rate it 8+.</p>
               </div>
               <div>
-                <p className="font-medium text-[var(--foreground)]">Studies / lift / support thresholds</p>
-                <p className="mt-1">Lift = (8+ rate for a feature) ÷ (your global 8+ rate). Lift &gt; 1 means you tend to rate higher when that feature is present. Min-support filters out noisy small-n signals. Association ≠ causation.</p>
+                <p className="font-medium text-[var(--foreground)]">ML probabilities</p>
+                <p className="mt-1">Treat percentages as <strong>ordering hints</strong> from past behavior, not promises. The model is binary (8+ vs not) and metadata-sparse rows score weaker.</p>
               </div>
               <div>
-                <p className="font-medium text-[var(--foreground)]">ML model outputs</p>
-                <p className="mt-1">ML mode shows predicted P(rate 8+ | title) for watchlist items—i.e. likelihood of a strong favorite. 8+ means highly likely favorite; 7 is still a good rating, not a negative. Logistic-regression baseline on genres, countries, decade, title type, and taste-derived features. Interpret as likelihood, not certainty. Requires trained model (run <code>python -m app.ml.train_8plus_baseline</code>).</p>
-              </div>
-              <div>
-                <p className="font-medium text-[var(--foreground)]">Search mode</p>
-                <p className="mt-1">Natural-language search over your <strong>watchlist</strong> or <strong>watched</strong> history. Groq parses your query into structured intent—genres, countries, decades, &quot;similar to&quot;, min rating (e.g. 8+). Retrieval is always from real data only. Watchlist: unrated items to discover. Watched: titles you&apos;ve rated (e.g. &quot;documentaries I rated 8+&quot;, &quot;movies from Japan in the 2000s&quot;). Requires <code>GROQ_API_KEY</code> in backend .env.</p>
+                <p className="font-medium text-[var(--foreground)]">Studies / lift</p>
+                <p className="mt-1">Lift compares your 8+ rate when a feature appears to your overall 8+ rate. Min-support cuts noise. Association ≠ causation.</p>
               </div>
             </div>
           </section>
 
-          {/* 2b. How Search works */}
+          {/* 4. How Search works */}
           <section>
             <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              How Search works
+              4. How Search works
             </h2>
-            <ol className="space-y-3 text-[14px] leading-[1.65] text-[var(--muted-soft)] list-decimal pl-5">
-              <li><strong className="text-[var(--foreground)]">Scope</strong> — Watchlist (unrated items) or Watched (your rated history).</li>
-              <li><strong className="text-[var(--foreground)]">Interpretation</strong> — Groq turns the query into structured filters: genres, countries, decade, title type, similar-to, min rating (watched), disagreed-with-critics (watched).</li>
-              <li><strong className="text-[var(--foreground)]">Retrieval</strong> — Backend queries IMDbWatchlistItem (watchlist) or IMDbRating (watched) with TitleMetadata. Only real rows; no invented titles.</li>
-              <li><strong className="text-[var(--foreground)]">Similar-to</strong> — For &quot;similar to X&quot;, we look up X in ratings or watchlist and reuse its genres, country, decade as signals. When embeddings exist, semantic similarity is blended in (see below).</li>
-              <li><strong className="text-[var(--foreground)]">Ranking</strong> — Items scored by metadata, taste signals (genre overlap, favorite directors, user rating), and—for similar_to—embedding cosine similarity.</li>
-              <li><strong className="text-[var(--foreground)]">Explanations</strong> — Matched genres, countries, people—all from actual metadata.</li>
+            <ol className="space-y-2.5 text-[14px] leading-[1.65] text-[var(--muted-soft)] list-decimal pl-5">
+              <li><strong className="text-[var(--foreground)]">Scope</strong> — Watchlist or Watched only. Nothing outside your imported library.</li>
+              <li><strong className="text-[var(--foreground)]">UI pool</strong> — You can optionally constrain by <strong>release decade</strong> before search runs; that limit applies regardless of wording in the query.</li>
+              <li><strong className="text-[var(--foreground)]">Intent</strong> — Groq maps text to filters (genres, countries, type, similar-to, min rating on watched, etc.). If <code>GROQ_API_KEY</code> is missing, a heuristic fallback still searches your data.</li>
+              <li><strong className="text-[var(--foreground)]">Similar-to</strong> — Resolves to a real title, then blends metadata/taste overlap with embedding cosine similarity when artifacts exist.</li>
+              <li><strong className="text-[var(--foreground)]">Output</strong> — Ranked rows from your DB, with explanations drawn from real metadata. Not a web-wide or open-ended chat.</li>
             </ol>
-            <div className="mt-6">
-              <p className="text-[13px] font-medium text-[var(--foreground)]">How semantic similarity works</p>
-              <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted-soft)]">
-                The reference title (&quot;X&quot;) resolves to a real title in your data. Its title + plot embedding is compared against watchlist or rated items via cosine similarity. Semantic scores are blended with metadata and taste signals. Results stay grounded in real data — no invented titles.
-              </p>
-            </div>
-            <p className="mt-4 text-[13px] text-[var(--muted-subtle)]">
-              <strong className="text-[var(--foreground)]">Reliability:</strong> The LLM does not invent titles. Results come only from your real data. If <code>GROQ_API_KEY</code> is missing, the system falls back to heuristic search. Retrieval-first design—not a freeform chatbot.
-            </p>
           </section>
 
-          {/* 3. Recent additions */}
+          {/* 5. Where things live */}
           <section>
             <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              3. Recent additions
+              5. Where else to look
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>Embedding-based semantic similarity for &quot;similar to X&quot; queries (title + plot embeddings, artifact-file storage)</li>
-              <li>LLM search: grounded natural-language search over watchlist and watched history</li>
-              <li>ML recommendation mode: watchlist ranked by predicted 8+ probability</li>
-              <li>Learning layer: &quot;How to read this&quot; help on key sections (Insights, Studies, recommendations)</li>
-              <li>High-fit watchlist with explainable reasons per item</li>
-              <li>Studies: taste evolution, 8+ predictors, genre combinations, favorite creators</li>
+              <li><strong className="text-[var(--foreground)]">Insights &amp; Studies</strong> — Distributions, evolution, lift, and creator stats from your ratings and watchlist.</li>
+              <li><strong className="text-[var(--foreground)]">Model Lab</strong> — ML diagnostics, coefficients, side-by-side ML vs High-Fit on watchlist, and notes on embeddings and catalog data.</li>
             </ul>
           </section>
 
-          {/* 4. What&apos;s next */}
+          {/* 6. What&apos;s next (brief) */}
           <section>
             <h2 className="mb-3 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-              4. What&apos;s next
+              6. What&apos;s next
             </h2>
             <ul className="space-y-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)] list-disc pl-5">
-              <li>Search: continue tuning semantic similarity; blended ML + search ranking; grounded conversational assistant</li>
-              <li>Personal similarity: &quot;similar for me&quot;—combining semantic match with your taste</li>
-              <li>Richer ML model (e.g. XGBoost, more features) and model comparison</li>
-              <li>Alternative targets: 7+ model for &quot;likely to like&quot;; multi-tier / ordinal rating model</li>
+              <li>Richer blending of semantic similarity with personal taste (&quot;similar for me&quot;)</li>
+              <li>Stronger or additional models (e.g. ordinal / &quot;likely to enjoy&quot; targets) alongside today&apos;s 8+ baseline</li>
+              <li>Tighter integration between Search ranking and catalog/provider modes where it makes sense</li>
             </ul>
           </section>
 
           <section className="pt-8 border-t border-[var(--section-border)]">
             <p className="text-[13px] text-[var(--muted-soft)]">
-              <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> — internal page for inspecting ML coefficients, prediction comparison, and learning notes.
+              <Link href="/model-lab" className="underline underline-offset-2 hover:text-[var(--foreground)]">Model Lab</Link> — coefficients, ML vs High-Fit comparison, embeddings notes, and catalog snapshot caveats.
             </p>
           </section>
-        </div>
+        </SlideOrScrollContainer>
       </main>
     </div>
   );

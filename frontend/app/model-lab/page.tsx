@@ -6,9 +6,14 @@
  */
 
 import katex from "katex";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../lib/api";
 import Link from "next/link";
+import {
+  SlideOrScrollContainer,
+  ViewModeToggle,
+  type ViewMode,
+} from "../components/SlideOrScrollView";
 import "katex/dist/katex.min.css";
 
 function MathBlock({ tex, className = "" }: { tex: string; className?: string }) {
@@ -71,6 +76,13 @@ export default function ModelLabPage() {
   const [diag, setDiag] = useState<Diagnostics | null>(null);
   const [comparison, setComparison] = useState<{ ml: MLItem[]; highfit: HighFitItem[]; modelAvailable: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<ViewMode>("scroll");
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const handleModeChange = useCallback((m: ViewMode) => {
+    setMode(m);
+    if (m === "slide") setSlideIndex(0);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -115,25 +127,35 @@ export default function ModelLabPage() {
     <div className="model-lab min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
         <header className="mb-10 sm:mb-12">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
                 Model Lab
               </h1>
               <p className="mt-2 text-[14px] text-[var(--muted-soft)]">
-                Internal page for understanding ML and recommender logic. Technical reference: docs/ml-current-snapshot.md.
+                ML coefficients, watchlist comparisons, and how catalog modes relate to the same stack. See also{" "}
+                <code className="text-[12px]">docs/ml-current-snapshot.md</code>.
               </p>
             </div>
-            <Link
-              href="/learn"
-              className="shrink-0 text-[13px] text-[var(--muted-soft)] underline underline-offset-2 hover:text-[var(--foreground)]"
-            >
-              ← Learn
-            </Link>
+            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              <ViewModeToggle mode={mode} onModeChange={handleModeChange} />
+              <Link
+                href="/learn"
+                className="text-center text-[13px] text-[var(--muted-soft)] underline underline-offset-2 hover:text-[var(--foreground)] sm:text-right"
+              >
+                ← Learn
+              </Link>
+            </div>
           </div>
         </header>
 
-        <div className="space-y-14 sm:space-y-20">
+        <SlideOrScrollContainer
+          mode={mode}
+          slideIndex={slideIndex}
+          onSlideChange={setSlideIndex}
+          ariaLabel="Model Lab slides"
+          scrollClassName="space-y-14 sm:space-y-20"
+        >
           {/* 0. How the pipeline works */}
           <section>
             <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
@@ -141,8 +163,12 @@ export default function ModelLabPage() {
             </h2>
             <div className="space-y-3 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
               <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
-                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Data</span>
-                <p>Ratings, watchlist, favorite people, favorite list, title metadata</p>
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Library</span>
+                <p>IMDb ratings, watchlist, favorite people, favorite list, enriched <code className="text-[11px]">TitleMetadata</code></p>
+              </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Catalogs</span>
+                <p>On-disk provider snapshots (e.g. Watchmode → BritBox, MUBI) ∩ IMDb ids with local metadata → same High-Fit / ML scorers, after optional pool filters</p>
               </div>
               <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
                 <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Features</span>
@@ -150,23 +176,43 @@ export default function ModelLabPage() {
               </div>
               <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
                 <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Paths</span>
-                <p><strong className="text-[var(--foreground)]">High-Fit</strong> (rule-based) · <strong className="text-[var(--foreground)]">ML</strong> P(8+) · <strong className="text-[var(--foreground)]">Search</strong> (semantic similar_to)</p>
+                <p>
+                  <strong className="text-[var(--foreground)]">High-Fit</strong> — interpretable overlap ·{" "}
+                  <strong className="text-[var(--foreground)]">ML</strong> — learned P(8+) ·{" "}
+                  <strong className="text-[var(--foreground)]">Search</strong> — NL → filters + optional embeddings for similar_to
+                </p>
               </div>
               <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
-                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Compare</span>
-                <p>Overlap, ML-only, High-Fit-only, coefficients, explanations</p>
-              </div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
-                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">Outputs</span>
-                <p>Homepage modes, insights, studies, model lab</p>
+                <span className="w-20 shrink-0 text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--overview-muted)]">This page</span>
+                <p>Watchlist ML vs High-Fit overlap, classifier math, coefficients, embedding layer notes</p>
               </div>
             </div>
             <p className="mt-6 text-[13px] leading-[1.55] text-[var(--muted-soft)]">
-              The same data feeds both heuristic and ML paths. High-Fit uses explicit overlap with your 8+ taste signals; ML learns weights from past ratings. Disagreement between them is expected and informative.
+              High-Fit and ML answer different questions but share the same philosophy: single-user, your data only. On Home, pool filters (decade, country, genres, type, similar-to) narrow candidates <em>before</em> ranking for watchlist and for provider tabs.
             </p>
             <p className="mt-3 text-[13px] leading-snug text-[var(--muted-soft)]">
-              <span className="font-medium text-[var(--foreground)]">Current ML stack:</span> <strong>1.</strong> Logistic regression — P(rate 8+) from genres, countries, decade, taste flags. <strong>2.</strong> Embedding similarity — cosine similarity for &quot;similar to X&quot; in Search. Different problems; both grounded in your data.
+              <span className="font-medium text-[var(--foreground)]">Two ML-ish layers:</span>{" "}
+              <strong>1.</strong> Logistic regression — P(8+) from metadata + taste flags (watchlist + catalog ML when model files exist).{" "}
+              <strong>2.</strong> Embeddings — cosine similarity for &quot;similar to X&quot; in Search, separate artifacts.
             </p>
+          </section>
+
+          {/* 0b. Provider snapshots & maintenance */}
+          <section>
+            <h2 className="mb-4 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              Provider snapshots &amp; local coverage
+            </h2>
+            <div className="space-y-3 text-[13px] leading-[1.6] text-[var(--muted-soft)]">
+              <p>
+                BritBox and MUBI modes are driven by <strong>fetched catalog JSON</strong>, not live provider APIs at request time. Titles must appear in the snapshot <em>and</em> resolve to <code className="text-[11px]">TitleMetadata</code> rows to be scored well—or at all.
+              </p>
+              <p>
+                After large metadata backfills or catalog refreshes, expect to <strong>retrain</strong> the 8+ baseline if you want the model to reflect new genre/country/decade columns, and to <strong>regenerate embedding artifacts</strong> if you rely on semantic similar_to for newly enriched titles.
+              </p>
+              <p className="text-[12px] text-[var(--overview-muted)]">
+                Snapshot fetch scripts live under <code className="text-[11px]">app.scripts</code> per provider; enrichment commands are linked from each provider&apos;s help copy on Home.
+              </p>
+            </div>
           </section>
 
           {/* 1. ML Model Summary */}
@@ -177,19 +223,19 @@ export default function ModelLabPage() {
             <div className="mb-5 space-y-3">
               <p className="text-[13px] font-medium text-[var(--foreground)]">What it is</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Logistic regression baseline. Predicts P(rate 8+ | title). Trained on your rated history. One row per rated title; target = 1 if rating ≥ 8 else 0.
+                Logistic regression. Trained on <strong>one row per rated title</strong>; target = 1 if rating ≥ 8, else 0. At inference time it scores <strong>unrated watchlist</strong> rows and, when artifacts exist, <strong>catalog candidates</strong> (BritBox/MUBI) using the same feature pipeline.
               </p>
               <p className="text-[13px] font-medium text-[var(--foreground)]">Good for</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Learned preference ranking. Interpretable coefficients. Contrast with heuristic High-Fit. Strong baseline for future blending.
+                Ordering candidates by learned P(8+). Side-by-side contrast with rule-based High-Fit on the same pool (watchlist comparison below; catalog behaves analogously in product).
               </p>
               <p className="text-[13px] font-medium text-[var(--foreground)]">Not for</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Semantic similarity (&quot;similar to X&quot;) — that&apos;s handled by the embedding layer in Search. Collaborative filtering. Full rating-scale nuance.
+                Open-web discovery, collaborative filtering, or full ordinal ratings (7 vs 8 vs 9). Search &quot;similar to X&quot; semantics are embedding-driven, not this classifier.
               </p>
               <p className="text-[13px] font-medium text-[var(--foreground)]">Next step</p>
               <p className="text-[13px] leading-snug text-[var(--muted-soft)]">
-                Blending P(8+) with semantic similarity. Personal similarity (&quot;similar for me&quot;) is a future direction.
+                Deeper blending of P(8+) with semantic and heuristic scores; richer targets than binary 8+.
               </p>
             </div>
             {!diag?.available ? (
@@ -249,7 +295,9 @@ export default function ModelLabPage() {
                 </div>
                 <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                   <p className="text-[12px] font-medium text-[var(--foreground)]">Prediction</p>
-                  <p className="mt-1 text-[13px]">One candidate = one watchlist title. Each unrated watchlist item gets a feature vector and a predicted 8+ probability.</p>
+                  <p className="mt-1 text-[13px]">
+                    Each unrated watchlist row (and each catalog row passed to the ML endpoint) gets a feature vector and a P(8+). Sparse metadata → weaker or default-heavy features.
+                  </p>
                 </div>
               </div>
               <div>
@@ -283,7 +331,7 @@ export default function ModelLabPage() {
               <div>
                 <p className="font-medium text-[var(--foreground)]">Target construction</p>
                 <p className="mt-1">
-                  Target = 1 if rating ≥ 8, else 0. This models &quot;strong favorite / highly likely 8+&quot;—the model predicts whether you&apos;re likely to rate a title 8 or higher. In this system, 7 is still a good rating; it&apos;s not a negative. The binary split is a design choice for interpretability.
+                  Target = 1 if rating ≥ 8, else 0. Ratings of exactly 7 count as negatives for training but are <em>not</em> &quot;bad&quot;—they&apos;re the softer middle. Separately, <strong>heuristic High-Fit</strong> can use a small <strong>7-only</strong> layer (reduced weights) so overlap with titles you rated 7 can appear in explanations without changing how 8+ signals are defined. The classifier itself stays binary for clarity.
                 </p>
               </div>
               <div>
@@ -335,65 +383,71 @@ export default function ModelLabPage() {
                 </div>
               </div>
               <p className="text-[13px]">
-                Watchlist titles are sorted by predicted 8+ probability. Highest first. Top contributing features per title can be shown for interpretability.
+                Watchlist (and catalog ML responses) sort by predicted P(8+), highest first. Top contributing features per title aid interpretability when exposed by the API.
               </p>
             </div>
           </section>
 
-          {/* 5. Coefficient inspection */}
-          {diag?.available && (diag.top_positive?.length || diag.top_negative?.length) && (
-            <section className="py-1">
-              <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
-                5. Coefficient inspection
-              </h2>
-              <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
-                Positive coefficient = more associated with 8+ (strong favorite) ratings. Negative = less associated. 7 is still a good rating—not a negative. Post-scaler; magnitude reflects relative importance.
-              </p>
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top positive (predict 8+)</p>
-                  <ul className="space-y-1">
-                    {(diag.top_positive ?? []).map(({ name, coef }, i) => (
-                      <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
-                        <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
-                        <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef > 0 ? "+" : ""}{coef}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top negative (predict &lt;8+; 7 is still good)</p>
-                  <ul className="space-y-1">
-                    {(diag.top_negative ?? []).map(({ name, coef }, i) => (
-                      <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
-                        <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
-                        <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              {diag.grouped_positive && Object.keys(diag.grouped_positive).length > 0 && (
-                <div className="mt-6">
-                  <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">By feature type (positive)</p>
-                  <div className="flex flex-wrap gap-4">
-                    {Object.entries(diag.grouped_positive).map(([type, items]) => (
-                      <div key={type} className="min-w-0 basis-32 sm:basis-40">
-                        <p className="text-[11px] font-medium text-[var(--muted-soft)]">{type}</p>
-                        <ul className="mt-1 space-y-0.5">
-                          {items.slice(0, 4).map(({ name, coef }, i) => (
-                            <li key={i} className="text-[12px]">
-                              {formatFeat(name)} <span className="tabular-nums text-[var(--muted-soft)]">{coef > 0 ? "+" : ""}{coef}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+          {/* 5. Coefficient inspection — section always present so slide count is stable */}
+          <section className="py-1">
+            <h2 className="mb-2 text-[18px] font-semibold tracking-[-0.01em] text-[var(--foreground)] sm:text-[20px]">
+              5. Coefficient inspection
+            </h2>
+            {diag?.available && (diag.top_positive?.length || diag.top_negative?.length) ? (
+              <>
+                <p className="mb-4 text-[13px] text-[var(--muted-soft)]">
+                  Positive coefficient = more associated with 8+ (strong favorite) ratings. Negative = less associated. 7 is still a good rating—not a negative. Post-scaler; magnitude reflects relative importance.
+                </p>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top positive (predict 8+)</p>
+                    <ul className="space-y-1">
+                      {(diag.top_positive ?? []).map(({ name, coef }, i) => (
+                        <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef > 0 ? "+" : ""}{coef}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">Top negative (predict &lt;8+; 7 is still good)</p>
+                    <ul className="space-y-1">
+                      {(diag.top_negative ?? []).map(({ name, coef }, i) => (
+                        <li key={i} className="flex min-w-0 justify-between gap-2 text-[13px]">
+                          <span className="min-w-0 truncate text-[var(--foreground)]">{formatFeat(name)}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--muted-soft)]">{coef}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              )}
-            </section>
-          )}
+                {diag.grouped_positive && Object.keys(diag.grouped_positive).length > 0 && (
+                  <div className="mt-6">
+                    <p className="mb-2 text-[12px] font-medium text-[var(--overview-muted)]">By feature type (positive)</p>
+                    <div className="flex flex-wrap gap-4">
+                      {Object.entries(diag.grouped_positive).map(([type, items]) => (
+                        <div key={type} className="min-w-0 basis-32 sm:basis-40">
+                          <p className="text-[11px] font-medium text-[var(--muted-soft)]">{type}</p>
+                          <ul className="mt-1 space-y-0.5">
+                            {items.slice(0, 4).map(({ name, coef }, i) => (
+                              <li key={i} className="text-[12px]">
+                                {formatFeat(name)} <span className="tabular-nums text-[var(--muted-soft)]">{coef > 0 ? "+" : ""}{coef}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-[13px] text-[var(--muted-soft)]">
+                No coefficient tables yet. Train the baseline model (<code className="text-[11px]">python -m app.ml.train_8plus_baseline</code>) and ensure <code className="text-[11px]">/model-lab/ml-diagnostics</code> returns top features.
+              </p>
+            )}
+          </section>
 
           {/* 6. Prediction inspection & recommender comparison */}
           <section className="py-1">
@@ -401,7 +455,7 @@ export default function ModelLabPage() {
               6. Compare ML vs High-Fit
             </h2>
             <p className="mb-3 text-[13px] text-[var(--muted-soft)]">
-              ML learns weighted patterns from past ratings; High-Fit uses explicit taste-signal overlap. Disagreement is expected and useful.
+              This grid compares <strong>top watchlist</strong> outputs only. ML learns from past ratings; High-Fit uses explicit signal overlap. The same conceptual split applies on provider tabs after pool filters. Disagreement is expected and useful.
             </p>
             <p className="mb-4 text-[12px] text-[var(--overview-muted)]">
               Overlap: {overlap} · ML-only: {mlOnly} · High-Fit-only: {hfOnly}
@@ -496,6 +550,7 @@ export default function ModelLabPage() {
               <li><strong>Not a general-purpose recommender</strong> — Trained on one user; not applicable to all users.</li>
               <li><strong>Not a full rating-scale model</strong> — Binary 8+ vs not; does not model 7 vs 8 vs 9+.</li>
               <li><strong>Metadata-dependent</strong> — Missing country, genres, or cast weakens the score.</li>
+              <li><strong>Catalog coverage</strong> — Provider ML only sees titles that survived snapshot + metadata join; gaps in either limit the candidate set.</li>
               <li><strong>Association, not causation</strong> — Features correlate with 8+; predictions are estimates, not guarantees.</li>
             </ul>
             <p className="mt-4 text-[13px] font-medium text-[var(--foreground)]">Embedding similarity (similar_to)</p>
@@ -547,8 +602,8 @@ export default function ModelLabPage() {
               <div className="rounded-lg bg-[var(--section-bg)] px-4 py-3">
                 <p className="text-[12px] font-medium text-[var(--foreground)]">Two ML layers, two questions</p>
                 <ul className="mt-1.5 space-y-1 text-[13px]">
-                  <li><strong>Logistic regression</strong> — &quot;What am I likely to rate 8+?&quot; (preference prediction)</li>
-                  <li><strong>Embedding similarity</strong> — &quot;What is conceptually similar to this?&quot; (semantic match)</li>
+                  <li><strong>Logistic regression</strong> — &quot;What am I likely to rate 8+?&quot; (watchlist + catalog candidates)</li>
+                  <li><strong>Embedding similarity</strong> — &quot;What is conceptually similar to this?&quot; (Search similar_to)</li>
                 </ul>
               </div>
               <p>
@@ -563,13 +618,12 @@ export default function ModelLabPage() {
               10. Future model directions
             </h2>
             <ul className="space-y-2 text-[14px] leading-[1.55] text-[var(--muted-soft)]">
-              <li><strong>Personal similarity</strong> — &quot;Similar for me&quot;: blend semantic match with your taste</li>
-              <li><strong>7+ model</strong> — Broader target (&quot;likely to like&quot;) than strong favorites</li>
-              <li><strong>Multi-tier / ordinal</strong> — Model 7 vs 8 vs 9+ instead of binary</li>
-              <li><strong>Blended heuristic + ML</strong> — Combine High-Fit and ML scores</li>
+              <li><strong>Personal similarity</strong> — &quot;Similar for me&quot;: blend semantic match with taste</li>
+              <li><strong>Ordinal / multi-target models</strong> — Beyond binary 8+ (e.g. likely-to-enjoy vs strong favorite)</li>
+              <li><strong>Unified ranking</strong> — Explicit blends of High-Fit, ML, and embedding signals</li>
             </ul>
           </section>
-        </div>
+        </SlideOrScrollContainer>
       </main>
     </div>
   );
