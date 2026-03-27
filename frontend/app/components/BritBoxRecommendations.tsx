@@ -246,9 +246,9 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
 }
 
 const segActive =
-  "text-[var(--foreground)]";
+  "font-semibold text-[var(--foreground)]";
 const segInactive =
-  "text-[var(--muted-soft)] hover:text-[var(--foreground)]/90";
+  "text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]";
 
 function britboxFiltersQueryActive(f: RecommendationPoolFilterValues): boolean {
   return !!(f.decade || f.similarTo.trim());
@@ -325,7 +325,7 @@ export function BritBoxRecommendations() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div
-          className="inline-flex rounded-md bg-[var(--section-bg)] p-0.5"
+          className="inline-flex rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-0.5"
           role="tablist"
           aria-label="Ranking"
         >
@@ -338,7 +338,7 @@ export function BritBoxRecommendations() {
               onClick={() => setScoring(m)}
               className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors ${
                 scoring === m ? segActive : segInactive
-              } ${scoring === m ? "bg-[var(--card-bg)] shadow-sm" : ""}`}
+              } ${scoring === m ? "bg-[var(--control-surface)] shadow-sm ring-1 ring-[var(--card-border)]" : ""}`}
             >
               {m === "high-fit" ? "High-Fit" : "ML 8+"}
             </button>

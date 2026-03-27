@@ -80,8 +80,8 @@ export function HighFitCard({
   const meta = metaParts.length ? metaParts.join(" · ") : null;
 
   const cardShell = isBritbox
-    ? "group block overflow-hidden rounded-lg border border-[var(--section-border)]/80 bg-[var(--card-bg)] transition-colors duration-200 hover:border-[var(--muted-subtle)]"
-    : "group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md";
+    ? "group block overflow-hidden rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] transition-colors duration-200 hover:border-[var(--muted-soft)]"
+    : "group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-md";
 
   return (
     <a
@@ -101,8 +101,8 @@ export function HighFitCard({
           <div
             className={
               isBritbox
-                ? "h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--section-bg)] sm:h-[5.5rem] sm:w-[3.75rem]"
-                : "h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]"
+                ? "h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[5.5rem] sm:w-[3.75rem]"
+                : "h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[6.75rem] sm:w-[4.5rem]"
             }
           >
             <img

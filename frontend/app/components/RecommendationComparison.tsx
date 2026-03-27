@@ -110,7 +110,7 @@ export function RecommendationComparison() {
 
   return (
     <details
-      className="mt-6 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)]"
+      className="mt-6 rounded-lg border border-[var(--card-border)] bg-[var(--control-track-bg)]"
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
     >
       <summary className="cursor-pointer list-none px-4 py-3 text-[13px] font-medium text-[var(--muted-soft)] hover:text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
@@ -123,7 +123,7 @@ export function RecommendationComparison() {
           )}
         </span>
       </summary>
-      <div className="border-t border-[var(--section-border)] px-4 py-3">
+      <div className="border-t border-[var(--card-border)] px-4 py-3">
         {loading ? (
           <p className="text-[13px] text-[var(--muted-soft)]">Loading…</p>
         ) : !data ? (

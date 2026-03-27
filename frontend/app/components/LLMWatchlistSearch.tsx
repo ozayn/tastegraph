@@ -79,10 +79,10 @@ type SearchResult = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
+  "w-full rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
 const decadeSelectClass =
-  "shrink-0 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 text-[13px] text-[var(--foreground)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
+  "shrink-0 rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-3 text-[13px] text-[var(--foreground)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
 type SearchScope = "watchlist" | "watched";
 
@@ -121,7 +121,7 @@ export function LLMWatchlistSearch() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+        <p className="text-[14px] leading-[1.5] text-[var(--muted)]">
           Natural-language search. The LLM interprets your query; results stay grounded in your data. Optionally limit the pool to a single decade before ranking.
           <SectionHelp title="How this works">
             <p><strong>Grounded search</strong>: Results come only from your watchlist or watched history. The LLM maps your text to genres, countries, similar-to, ratings, etc.</p>
@@ -131,7 +131,7 @@ export function LLMWatchlistSearch() {
           </SectionHelp>
         </p>
         <div
-          className="flex rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] p-0.5"
+          className="flex rounded-lg border border-[var(--card-border)] bg-[var(--control-track-bg)] p-0.5"
           role="group"
           aria-label="Search scope"
         >
@@ -140,8 +140,8 @@ export function LLMWatchlistSearch() {
             onClick={() => setScope("watchlist")}
             className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
               scope === "watchlist"
-                ? "bg-[var(--accent)] text-white"
-                : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
+                ? "bg-[var(--accent)] text-white shadow-sm"
+                : "text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]"
             }`}
           >
             Watchlist
@@ -151,8 +151,8 @@ export function LLMWatchlistSearch() {
             onClick={() => setScope("watched")}
             className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
               scope === "watched"
-                ? "bg-[var(--accent)] text-white"
-                : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
+                ? "bg-[var(--accent)] text-white shadow-sm"
+                : "text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]"
             }`}
           >
             Watched
@@ -196,7 +196,7 @@ export function LLMWatchlistSearch() {
           type="button"
           onClick={doSearch}
           disabled={loading || !query.trim()}
-          className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-[14px] font-medium text-white transition-colors hover:bg-[var(--accent)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-3 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[var(--accent)]/92 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:cursor-not-allowed disabled:opacity-[0.58]"
         >
           {loading ? "Searching…" : "Search"}
         </button>
@@ -207,7 +207,7 @@ export function LLMWatchlistSearch() {
       {result && (
         <div className="space-y-3">
           {result.intent_summary && (
-            <p className="text-[13px] text-[var(--muted-soft)]">
+            <p className="text-[13px] text-[var(--muted)]">
               Interpreted as: {result.intent_summary}
               {result.fallback &&
             ` (LLM unavailable; showing ${scope === "watched" ? "watched" : "watchlist"} by taste fit)`}
@@ -231,7 +231,7 @@ export function LLMWatchlistSearch() {
               ))}
             </ul>
           ) : (
-            <p className="rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]">
+            <p className="rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)]">
               No {scope === "watched" ? "watched" : "watchlist"} items match. Try a broader query or different filters.
             </p>
           )}

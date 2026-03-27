@@ -32,7 +32,7 @@ export default function Home() {
               aria-labelledby="home-library-heading"
             >
               <div className="mb-5 flex flex-wrap items-baseline gap-x-2 gap-y-1 sm:mb-6">
-                <h2 id="home-library-heading" className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-soft)]">
+                <h2 id="home-library-heading" className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--overview-muted)]">
                   Your library
                 </h2>
                 <SectionHelp title="What these mean">

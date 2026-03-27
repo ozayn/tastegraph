@@ -39,11 +39,11 @@ function MLRecommendationCard({ item }: { item: MLItem }) {
       href={`https://www.imdb.com/title/${item.imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md"
+      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-md"
     >
       <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
         {showPoster && (
-          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
+          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
             <img
               src={item.poster!}
               alt=""
@@ -106,14 +106,14 @@ export function MLRecommendations() {
 
   if (!data.model_available) {
     return (
-      <div className="rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-8 text-center">
+      <div className="rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-5 py-8 text-center">
         <p className="text-[14px] font-medium text-[var(--foreground)]">
           Model not trained yet
         </p>
         <p className="mt-2 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
           Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
         </p>
-        <code className="mt-3 block rounded-md bg-[var(--card-bg)] px-3 py-2 text-[12px] text-[var(--muted-soft)]">
+        <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
           cd backend && python -m app.ml.train_8plus_baseline
         </code>
       </div>

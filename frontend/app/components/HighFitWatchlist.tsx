@@ -53,8 +53,8 @@ export function HighFitWatchlist() {
           value={poolFilters}
           onChange={setPoolFilters}
         />
-        <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+        <div className="flex items-center gap-2 text-[14px] text-[var(--muted)]">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-soft)]" />
           Loading…
         </div>
       </div>

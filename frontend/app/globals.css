@@ -1,17 +1,22 @@
 @import "tailwindcss";
 
+/* Text/border tokens tuned for readability while staying reductive (visibility pass). */
 :root {
   --background: #ffffff;
   --foreground: #111111;
-  --muted: rgba(17, 17, 17, 0.72);
-  --muted-soft: rgba(17, 17, 17, 0.48);
-  --muted-subtle: rgba(17, 17, 17, 0.28);
-  --section-bg: rgba(0, 0, 0, 0.02);
-  --section-border: rgba(17, 17, 17, 0.06);
-  --overview-muted: rgba(17, 17, 17, 0.40);
+  --muted: rgba(17, 17, 17, 0.78);
+  --muted-soft: rgba(17, 17, 17, 0.58);
+  --muted-subtle: rgba(17, 17, 17, 0.42);
+  --section-bg: rgba(0, 0, 0, 0.035);
+  --section-border: rgba(17, 17, 17, 0.12);
+  --overview-muted: rgba(17, 17, 17, 0.52);
   --card-bg: #f8f8f8;
-  --card-border: rgba(17, 17, 17, 0.10);
-  --card-hover: rgba(17, 17, 17, 0.02);
+  --card-border: rgba(17, 17, 17, 0.16);
+  --card-hover: rgba(17, 17, 17, 0.03);
+  /* Recommendations / control shells: page stays white; panel and tracks step down slightly */
+  --panel-bg: #f0f0f2;
+  --control-track-bg: #e4e5e8;
+  --control-surface: #ffffff;
   --accent: #1d4ed8;
   --accent-muted: rgba(29, 78, 216, 0.08);
   --mondrian-red: #b91c1c;
@@ -33,15 +38,18 @@
   :root:not([data-theme="light"]) {
     --background: #0a0a0c;
     --foreground: #f5f5f5;
-    --muted: rgba(245, 245, 245, 0.72);
-    --muted-soft: rgba(245, 245, 245, 0.48);
-    --muted-subtle: rgba(245, 245, 245, 0.28);
-    --section-bg: rgba(255, 255, 255, 0.03);
-    --section-border: rgba(245, 245, 245, 0.06);
-    --overview-muted: rgba(245, 245, 245, 0.36);
-    --card-bg: rgba(255, 255, 255, 0.03);
-    --card-border: rgba(245, 245, 245, 0.06);
-    --card-hover: rgba(255, 255, 255, 0.05);
+    --muted: rgba(245, 245, 245, 0.8);
+    --muted-soft: rgba(245, 245, 245, 0.6);
+    --muted-subtle: rgba(245, 245, 245, 0.45);
+    --section-bg: rgba(255, 255, 255, 0.055);
+    --section-border: rgba(245, 245, 245, 0.12);
+    --overview-muted: rgba(245, 245, 245, 0.5);
+    --card-bg: rgba(255, 255, 255, 0.045);
+    --card-border: rgba(245, 245, 245, 0.14);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --panel-bg: rgba(255, 255, 255, 0.055);
+    --control-track-bg: rgba(255, 255, 255, 0.085);
+    --control-surface: rgba(255, 255, 255, 0.11);
     --accent: #3b82f6;
     --accent-muted: rgba(59, 130, 246, 0.10);
     --mondrian-red: #dc2626;
@@ -59,15 +67,18 @@
 :root[data-theme="dark"] {
   --background: #0a0a0c;
   --foreground: #f5f5f5;
-  --muted: rgba(245, 245, 245, 0.72);
-  --muted-soft: rgba(245, 245, 245, 0.48);
-  --muted-subtle: rgba(245, 245, 245, 0.28);
-  --section-bg: rgba(255, 255, 255, 0.03);
-  --section-border: rgba(245, 245, 245, 0.06);
-  --overview-muted: rgba(245, 245, 245, 0.36);
-  --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(245, 245, 245, 0.06);
-  --card-hover: rgba(255, 255, 255, 0.05);
+  --muted: rgba(245, 245, 245, 0.8);
+  --muted-soft: rgba(245, 245, 245, 0.6);
+  --muted-subtle: rgba(245, 245, 245, 0.45);
+  --section-bg: rgba(255, 255, 255, 0.055);
+  --section-border: rgba(245, 245, 245, 0.12);
+  --overview-muted: rgba(245, 245, 245, 0.5);
+  --card-bg: rgba(255, 255, 255, 0.045);
+  --card-border: rgba(245, 245, 245, 0.14);
+  --card-hover: rgba(255, 255, 255, 0.07);
+  --panel-bg: rgba(255, 255, 255, 0.055);
+  --control-track-bg: rgba(255, 255, 255, 0.085);
+  --control-surface: rgba(255, 255, 255, 0.11);
   --accent: #3b82f6;
   --accent-muted: rgba(59, 130, 246, 0.10);
   --mondrian-red: #dc2626;

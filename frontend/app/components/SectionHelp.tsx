@@ -59,13 +59,13 @@ export function SectionHelp({
       ref={popoverRef}
       role="dialog"
       aria-label={title}
-      className="fixed z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3.5 py-3 text-left shadow-lg"
+      className="fixed z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3.5 py-3 text-left shadow-lg"
       style={{ top: pos.top, left: pos.left }}
     >
       <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--overview-muted)]">
         {title}
       </p>
-      <div className="mt-2 text-[13px] leading-[1.55] text-[var(--muted-soft)] [&>p+p]:mt-2">
+      <div className="mt-2 text-[13px] leading-[1.55] text-[var(--muted)] [&>p+p]:mt-2">
         {children}
       </div>
     </div>
@@ -80,7 +80,7 @@ export function SectionHelp({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={title}
-        className="ml-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--muted-subtle)] transition-colors hover:bg-[var(--section-bg)] hover:text-[var(--muted-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+        className="ml-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--muted-soft)] transition-colors hover:bg-[var(--section-bg)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 focus:ring-offset-2 focus:ring-offset-[var(--background)]"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

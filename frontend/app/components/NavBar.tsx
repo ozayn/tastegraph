@@ -41,8 +41,8 @@ export function NavBar() {
                 href={href}
                 className={`shrink-0 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-[14px] ${
                   isActive
-                    ? "bg-[var(--section-bg)] text-[var(--foreground)]"
-                    : "text-[var(--muted-soft)] hover:bg-[var(--section-bg)]/50 hover:text-[var(--foreground)]"
+                    ? "bg-[var(--section-bg)] text-[var(--foreground)] ring-1 ring-[var(--section-border)]"
+                    : "text-[var(--muted)] hover:bg-[var(--section-bg)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {label}

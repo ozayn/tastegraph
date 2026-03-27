@@ -34,7 +34,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-      className="rounded-md p-2 text-[var(--muted-soft)] transition-colors hover:bg-[var(--section-bg)]/50 hover:text-[var(--foreground)]"
+      className="rounded-md p-2 text-[var(--muted)] transition-colors hover:bg-[var(--section-bg)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
     >
       {theme === "light" ? (
         <SunIcon className="h-4 w-4" />

@@ -35,16 +35,16 @@ export function poolFiltersToQueryString(
 }
 
 const selectDefault =
-  "rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-1.5 text-[12px] text-[var(--foreground)] shadow-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  "rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-2 py-1.5 text-[12px] text-[var(--foreground)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/22";
 
 const selectCompact =
-  "w-full rounded-none border-0 border-b border-[var(--section-border)] bg-transparent py-1.5 pl-0 pr-6 text-[12px] text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-0";
+  "w-full rounded-none border-0 border-b border-[var(--card-border)] bg-transparent py-1.5 pl-0 pr-6 text-[12px] text-[var(--foreground)] focus:border-[var(--accent)]/55 focus:outline-none focus:ring-0";
 
 const inputDefault =
-  "min-w-0 flex-1 rounded-md border border-[var(--section-border)] bg-[var(--card-bg)] px-2 py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  "min-w-0 flex-1 rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-2 py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/22";
 
 const inputCompact =
-  "min-w-0 flex-1 rounded-none border-0 border-b border-[var(--section-border)] bg-transparent py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)]/80 focus:border-[var(--accent)] focus:outline-none focus:ring-0";
+  "min-w-0 flex-1 rounded-none border-0 border-b border-[var(--card-border)] bg-transparent py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] focus:border-[var(--accent)]/55 focus:outline-none focus:ring-0";
 
 export function RecommendationPoolFiltersBar({
   value,
@@ -75,8 +75,8 @@ export function RecommendationPoolFiltersBar({
     : "text-[10px] font-medium uppercase tracking-wide text-[var(--muted-soft)]";
 
   const wrapCls = compact
-    ? "mb-5 flex flex-col gap-3 border-b border-[var(--section-border)]/60 pb-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
-    : "mb-4 flex flex-col gap-2 rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)]/80 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-end";
+    ? "mb-5 flex flex-col gap-3 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
+    : "mb-4 flex flex-col gap-2 rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-end";
 
   return (
     <div

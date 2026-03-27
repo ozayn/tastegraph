@@ -103,7 +103,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   ]);
 
   const filterInput =
-    "rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
+    "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
   const helpContent = (
     <>
@@ -222,7 +222,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   return embedded ? (
     <div>{content}</div>
   ) : (
-    <section className="rounded-xl border border-[var(--section-border)] bg-[var(--section-bg)] px-6 py-7 sm:px-8 sm:py-8">
+    <section className="rounded-xl border border-[var(--card-border)] bg-[var(--panel-bg)] px-6 py-7 sm:px-8 sm:py-8">
       {content}
     </section>
   );

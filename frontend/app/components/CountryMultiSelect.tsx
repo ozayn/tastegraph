@@ -79,14 +79,14 @@ export function CountryMultiSelect({
         type="button"
         onClick={() => !noCountries && setOpen((o) => !o)}
         disabled={disabled || noCountries}
-        className="min-w-[6rem] rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-2.5 pr-8 text-left text-[14px] text-[var(--foreground)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[7rem]"
+        className="min-w-[6rem] rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 pr-8 text-left text-[14px] text-[var(--foreground)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[7rem]"
         aria-label={noCountries ? "Countries unavailable" : "Select countries"}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
         <span
           className={
-            selected.length === 0 || noCountries ? "text-[var(--muted-subtle)]" : ""
+            selected.length === 0 || noCountries ? "text-[var(--muted-soft)]" : ""
           }
         >
           {triggerLabel}
@@ -100,7 +100,7 @@ export function CountryMultiSelect({
           <div
             ref={dropdownRef}
             role="listbox"
-            className="fixed z-[9999] max-h-48 min-w-[10rem] overflow-y-auto rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] py-1.5 shadow-lg"
+            className="fixed z-[9999] max-h-48 min-w-[10rem] overflow-y-auto rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] py-1.5 shadow-lg"
             style={{ top: position.top, left: position.left }}
           >
             {loading ? (
