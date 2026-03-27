@@ -445,6 +445,110 @@ def _overlap_genre_display_names(genres_csv: str | None, ref_genres: set[str]) -
     return out[:4]
 
 
+def _recency_bucket_for_provider_line(year: int | None) -> str | None:
+    """Label for compact genre+recency copy (provider catalog cards only)."""
+    if year is None:
+        return None
+    if year >= 2020:
+        return "recent"
+    if year >= 2015:
+        return "newer"
+    return None
+
+
+def _genre_overlap_line(matched_genres: list[str], year: int | None) -> str | None:
+    """One line for genre fit; folds in recency when the release year is recent (prefers newer picks)."""
+    if not matched_genres:
+        return None
+    g = ", ".join(matched_genres[:3])
+    bucket = _recency_bucket_for_provider_line(year)
+    if bucket == "recent":
+        return f"Recent {g}—aligned with your taste"
+    if bucket == "newer":
+        return f"Newer {g}—fits genres you rate highly"
+    return f"Genres you love: {g}"
+
+
+def _decade_line_when_no_genre_overlap(matched_decade: str | None) -> str | None:
+    """Decade only when genre overlap is absent—compact, not the old generic filler."""
+    if not matched_decade:
+        return None
+    return f"{matched_decade}—an era you lean toward in your ratings"
+
+
+def _country_fit_line(matched_countries: list[str], *, is_britbox: bool) -> str | None:
+    """One line for country overlap. BritBox: UK is implicit—skip UK-only; prefer a non-UK match."""
+    if not matched_countries:
+        return None
+    if is_britbox:
+        for c in matched_countries:
+            if c != "United Kingdom":
+                return f"From {c}—a country you rate highly"
+        return None
+    return f"From {matched_countries[0]}—a country you rate highly"
+
+
+def _build_provider_surface_taste_lines(
+    explanation: dict, year: int | None, *, is_britbox: bool = False
+) -> list[str]:
+    """Build taste lines for catalog provider cards: genre+recency before generic decade.
+
+    Omits the watchlist-style decade sentence when genre overlap exists; prefers recency-aware
+    genre phrasing for newer titles. People and country follow—decade only when genres do not match.
+    On BritBox, United Kingdom is not surfaced as a country line (expected catalog bias).
+    """
+    lines: list[str] = []
+    if explanation.get("in_favorite_list"):
+        lines.append("On your curated favorites list")
+
+    matched_genres = explanation.get("matched_genres") or []
+    if not isinstance(matched_genres, list):
+        matched_genres = []
+    genre_line = _genre_overlap_line(matched_genres, year)
+    if genre_line:
+        lines.append(genre_line)
+
+    matched_strong_directors = explanation.get("matched_strong_directors") or []
+    for d in matched_strong_directors:
+        lines.append(f"Director you rate strongly elsewhere: {d}")
+
+    for p in explanation.get("matched_people") or []:
+        role = p.get("role", "")
+        name = p.get("name", "")
+        if not name:
+            continue
+        role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(
+            role, role
+        )
+        lines.append(f"{role_label} you follow: {name}")
+
+    matched_countries = explanation.get("matched_countries") or []
+    ctry = _country_fit_line(matched_countries, is_britbox=is_britbox)
+    if ctry:
+        lines.append(ctry)
+
+    matched_decade = explanation.get("matched_decade")
+    if matched_decade and not matched_genres:
+        dline = _decade_line_when_no_genre_overlap(matched_decade)
+        if dline:
+            lines.append(dline)
+
+    return lines[:8]
+
+
+def _uk_catalog_bonus_line_redundant_with_taste(
+    taste_lines: list[str],
+    matched_countries: list[str],
+) -> bool:
+    """True when a taste line already states UK country fit—skip duplicate BritBox UK catalog line."""
+    if any(c == "United Kingdom" for c in matched_countries):
+        return True
+    for line in taste_lines:
+        if "United Kingdom" in line:
+            return True
+    return False
+
+
 def _enrich_explanation_for_provider_surface(
     explanation: dict,
     *,
@@ -453,22 +557,38 @@ def _enrich_explanation_for_provider_surface(
     ref_genres: set[str] | None,
     similar_resolved_title: str | None,
     meta_genres: str | None,
+    year: int | None,
 ) -> dict:
-    """Prepend pool-context reasons (similar-to, BritBox UK fit) ahead of taste-signal lines."""
+    """Merge pool filters (similar-to), taste reasons, and optional BritBox UK catalog note.
+
+    Taste lines are rebuilt for provider surfaces so newer titles get recency-aware genre copy,
+    decade-only filler is avoided when genres match, and the UK catalog note stays last when used.
+    """
     out = dict(explanation)
-    prefix: list[str] = []
+    similar_prefix: list[str] = []
     if ref_genres and similar_resolved_title:
         overlap = _overlap_genre_display_names(meta_genres, ref_genres)
         if overlap:
-            prefix.append(
+            similar_prefix.append(
                 f'Shares {", ".join(overlap)} with {similar_resolved_title} in your library'
             )
         else:
-            prefix.append(f'In the "similar to" lane you set ({similar_resolved_title})')
-    if uk_bonus > 0 and is_britbox:
-        prefix.append("UK title—fits how you rate British picks on BritBox")
-    tr = list(out.get("top_reasons") or [])
-    out["top_reasons"] = (prefix + tr)[:8]
+            similar_prefix.append(f'In the "similar to" lane you set ({similar_resolved_title})')
+
+    tr = _build_provider_surface_taste_lines(out, year, is_britbox=is_britbox)
+
+    uk_line: str | None = None
+    if (
+        uk_bonus > 0
+        and is_britbox
+        and not _uk_catalog_bonus_line_redundant_with_taste(tr, out.get("matched_countries") or [])
+    ):
+        uk_line = "UK-origin title (+3 BritBox catalog lift)"
+
+    ordered = similar_prefix + tr
+    if uk_line:
+        ordered.append(uk_line)
+    out["top_reasons"] = ordered[:8]
     return out
 
 
@@ -699,6 +819,7 @@ def get_provider_high_fit(
         )
         total = _provider_high_fit_total(fit_score, boost) + uk_bonus
 
+        release_year = _year_int_for_ranking(meta.year) or _year_int_for_ranking(cat.get("year"))
         explanation_out = _enrich_explanation_for_provider_surface(
             explanation,
             uk_bonus=uk_bonus,
@@ -706,6 +827,7 @@ def get_provider_high_fit(
             ref_genres=ref_genres,
             similar_resolved_title=similar_resolved_title,
             meta_genres=meta.genres,
+            year=release_year,
         )
 
         scored.append({
