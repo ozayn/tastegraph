@@ -19,7 +19,10 @@ export type CatalogProviderUiConfig = {
   filterIdPrefix: string;
   highFitCardVariant: "britbox" | "mubi";
   poolLabel: string;
+  /** Primary line — short, direct */
   intro: string;
+  /** Optional quieter line under intro (snapshot vs watchlist, etc.) */
+  introSub?: string;
   helpPool: string;
   /** Shown after cd backend && */
   fetchModule: string;
@@ -38,10 +41,11 @@ export const CATALOG_PROVIDERS: readonly CatalogProviderUiConfig[] = [
     filterIdPrefix: "britbox",
     highFitCardVariant: "britbox",
     poolLabel: "BritBox",
-    intro:
-      "Full BritBox snapshot (series and films), ranked for you. Watchlist feeds taste only—those titles stay out of the list.",
+    intro: "BritBox US catalog—series and films ranked from your taste.",
+    introSub:
+      "Pool is the snapshot, not your watchlist; ratings and list shape how titles score.",
     helpPool:
-      "Pool = the BritBox US snapshot, not your watchlist. Decade and similar-to narrow the pool before ranking.",
+      "Filters (decade, similar-to) narrow the snapshot before ranking.",
     fetchModule: "python -m app.scripts.fetch_britbox_catalog",
     enrichModule: "python -m app.scripts.britbox_catalog_metadata --enrich",
   },
@@ -55,10 +59,11 @@ export const CATALOG_PROVIDERS: readonly CatalogProviderUiConfig[] = [
     filterIdPrefix: "mubi",
     highFitCardVariant: "mubi",
     poolLabel: "MUBI",
-    intro:
-      "MUBI US catalog from Watchmode—mostly films—ranked for your taste. Watchlist shapes scoring only; those titles are not in the pool.",
+    intro: "MUBI US catalog—films from the snapshot, ranked from your taste.",
+    introSub:
+      "Same provider flow as BritBox: snapshot pool, taste-informed scores.",
     helpPool:
-      "Pool = the MUBI US snapshot, not your watchlist. Decade and similar-to narrow the pool before ranking (same controls as other catalog providers).",
+      "Filters narrow the MUBI snapshot before ranking, like other provider tabs.",
     fetchModule: "python -m app.scripts.fetch_mubi_catalog",
     enrichModule: "python -m app.scripts.mubi_catalog_metadata --enrich",
   },

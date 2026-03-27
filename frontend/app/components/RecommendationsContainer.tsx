@@ -21,7 +21,7 @@ import { SimpleRecommendations } from "./SimpleRecommendations";
 import { WatchlistRecommendations } from "./WatchlistRecommendations";
 import { RECO_MODE_INTRO } from "./recommendationModeStyles";
 
-const CATALOG_PROVIDER_NAMES = CATALOG_PROVIDERS.map((p) => p.label).join(" and ");
+const CATALOG_PROVIDER_NAMES = CATALOG_PROVIDERS.map((p) => p.label).join(", ");
 
 export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
@@ -37,7 +37,7 @@ export function RecommendationsContainer() {
                 <strong>Favorites</strong> = 8+ you rated. <strong>Watchlist</strong> /{" "}
                 <strong>High-Fit</strong> / <strong>ML</strong> rank or filter saved titles.{" "}
                 <strong>Search</strong> is natural language over your list—grounded, no invented titles.{" "}
-                <strong>{CATALOG_PROVIDER_NAMES}</strong> use streaming snapshots (not your watchlist as the pool).
+                Under <strong>Providers</strong> ({CATALOG_PROVIDER_NAMES}), the pool is a streaming catalog snapshot—your watchlist informs taste, not which titles appear.
               </p>
             </SectionHelp>
           </h2>
@@ -99,11 +99,20 @@ function ProviderCatalogModeShell({ modeId }: { modeId: CatalogProviderModeId })
   const cfg = catalogProviderByModeId(modeId);
   return (
     <div>
-      <p className={RECO_MODE_INTRO}>
-        {cfg.intro}
+      <div className="mb-4 max-w-2xl space-y-2">
+        <div className="space-y-1">
+          <p className="text-[14px] leading-[1.5] text-[var(--foreground)]">
+            {cfg.intro}
+          </p>
+          {cfg.introSub ? (
+            <p className="text-[13px] leading-[1.45] text-[var(--muted-soft)]">
+              {cfg.introSub}
+            </p>
+          ) : null}
+        </div>
         <SectionHelp title="How this works">
-          <p>{cfg.helpPool}</p>
-          <p className="text-[13px] leading-relaxed">
+          <p className="text-[13px] leading-relaxed text-[var(--muted)]">{cfg.helpPool}</p>
+          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-soft)]">
             Refresh:{" "}
             <code className="rounded border border-[var(--card-border)] bg-[var(--control-surface)] px-1.5 py-0.5 text-[12px] text-[var(--muted-soft)]">
               cd backend && {cfg.fetchModule}
@@ -119,7 +128,7 @@ function ProviderCatalogModeShell({ modeId }: { modeId: CatalogProviderModeId })
             ) : null}
           </p>
         </SectionHelp>
-      </p>
+      </div>
       <ProviderCatalogRecommendations provider={modeId} />
     </div>
   );

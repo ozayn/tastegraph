@@ -149,9 +149,9 @@ function StatsBanner({
     stats.with_imdb_id > 0;
 
   return (
-    <div className="mb-5 space-y-1.5 border-b border-[var(--section-border)]/50 pb-3">
-      <p className="text-[12px] leading-relaxed text-[var(--muted-soft)]">
-        <span className="text-[var(--foreground)]">
+    <div className="mb-5 space-y-1 border-b border-[var(--section-border)]/50 pb-3">
+      <p className="text-[11px] leading-relaxed text-[var(--muted-soft)]">
+        <span className="text-[var(--foreground)]/90">
           {filtered ? rf!.pool_size_after_filters : stats.matched_metadata}
         </span>
         {filtered ? (
@@ -170,11 +170,13 @@ function StatsBanner({
           </>
         )}
         {date && (
-          <span className="text-[var(--muted-soft)]/70"> · snapshot {date}</span>
+          <span className="text-[var(--muted-soft)]/75"> · snapshot {date}</span>
         )}
       </p>
       {metaLine && (
-        <p className="text-[11px] text-[var(--muted-soft)]/90">{metaLine}</p>
+        <p className="text-[10px] leading-relaxed text-[var(--muted-soft)]/80">
+          {metaLine}
+        </p>
       )}
       {rf?.similar_to?.trim() && rf.similar_to_resolved_title && (
         <p className="text-[11px] text-[var(--muted-soft)]">
