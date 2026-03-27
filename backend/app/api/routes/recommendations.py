@@ -155,8 +155,9 @@ def _greedy_diversify_simple_rows(
 
 
 def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
-    """Curated first slice (posters, no shorts, strong diversity / doc spacing), then
-    remainder with light greedy diversity on score-sorted leftovers."""
+    """Curated first slice: usable poster required until the pool is exhausted (no shorts,
+    then poster + shorts); only then fill remaining prefix slots without poster. Tail fills
+    poster-backed titles first (light greedy), then no-poster rows so missing art sinks."""
     if limit <= 0:
         return []
     if len(scored_sorted) <= 1:
@@ -198,14 +199,15 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
     )
 
     if len(picked) < k:
-        relax_poster = [
+        poster_allow_short = [
             row
             for row in master
-            if row[2].imdb_title_id not in picked_ids and not _simple_is_short_film(row[2])
+            if row[2].imdb_title_id not in picked_ids
+            and _simple_has_usable_poster(row[3])
         ]
         extend_unique(
             _greedy_diversify_simple_rows(
-                relax_poster,
+                poster_allow_short,
                 k - len(picked),
                 genre_w=_SIMPLE_DIV_CURATED_GENRE_W,
                 type_w=_SIMPLE_DIV_CURATED_TYPE_W,
@@ -230,19 +232,39 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
         )
 
     if len(picked) < limit:
-        rest = [row for row in master if row[2].imdb_title_id not in picked_ids]
+        rest_unpicked = [row for row in master if row[2].imdb_title_id not in picked_ids]
+        rest_poster = [row for row in rest_unpicked if _simple_has_usable_poster(row[3])]
+        rest_no_poster = [row for row in rest_unpicked if not _simple_has_usable_poster(row[3])]
+        need = limit - len(picked)
         extend_unique(
             _greedy_diversify_simple_rows(
-                rest,
-                limit - len(picked),
+                rest_poster,
+                need,
                 genre_w=_SIMPLE_DIV_LIGHT_GENRE_W,
                 type_w=_SIMPLE_DIV_LIGHT_TYPE_W,
                 country_w=_SIMPLE_DIV_LIGHT_COUNTRY_W,
                 documentary_repeat_w=0.0,
             ),
         )
+        if len(picked) < limit:
+            extend_unique(
+                _greedy_diversify_simple_rows(
+                    rest_no_poster,
+                    limit - len(picked),
+                    genre_w=_SIMPLE_DIV_LIGHT_GENRE_W,
+                    type_w=_SIMPLE_DIV_LIGHT_TYPE_W,
+                    country_w=_SIMPLE_DIV_LIGHT_COUNTRY_W,
+                    documentary_repeat_w=0.0,
+                ),
+            )
 
     if len(picked) < limit:
+        for row in master:
+            if row[2].imdb_title_id not in picked_ids and _simple_has_usable_poster(row[3]):
+                picked.append(row)
+                picked_ids.add(row[2].imdb_title_id)
+                if len(picked) >= limit:
+                    break
         for row in master:
             if row[2].imdb_title_id not in picked_ids:
                 picked.append(row)
