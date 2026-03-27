@@ -528,15 +528,20 @@ class WatchlistSearchRequest(BaseModel):
 def recommendations_watchlist_search(
     body: WatchlistSearchRequest,
     limit: int = Query(default=8, ge=1, le=50),
+    decade: str | None = Query(
+        default=None,
+        max_length=12,
+        description="Restrict pool to release decade (e.g. 2020s) before ranking; clears LLM year_min",
+    ),
 ):
     """Grounded natural-language search. scope=watchlist (default) or watched. LLM interprets query; retrieval uses only real data."""
     db = SessionLocal()
     try:
         scope = (body.scope or "watchlist").strip().lower()
         if scope == "watched":
-            result = search_rated(db, body.q or "", limit=limit)
+            result = search_rated(db, body.q or "", limit=limit, pool_decade=decade)
         else:
-            result = search_watchlist(db, body.q or "", limit=limit)
+            result = search_watchlist(db, body.q or "", limit=limit, pool_decade=decade)
         return result
     finally:
         db.close()

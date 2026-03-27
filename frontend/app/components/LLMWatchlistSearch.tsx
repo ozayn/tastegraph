@@ -74,17 +74,22 @@ type SearchResult = {
       resolved_title_type?: string;
       resolved_plot_snippet?: string;
     };
+    ui_pool_decade?: string | null;
   };
 };
 
 const inputClass =
   "w-full rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-subtle)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
 
+const decadeSelectClass =
+  "shrink-0 rounded-lg border border-[var(--section-border)] bg-[var(--card-bg)] px-3 py-3 text-[13px] text-[var(--foreground)] transition-colors focus:border-[var(--muted-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--muted-subtle)]/30 [color-scheme:inherit]";
+
 type SearchScope = "watchlist" | "watched";
 
 export function LLMWatchlistSearch() {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<SearchScope>("watchlist");
+  const [decade, setDecade] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +99,11 @@ export function LLMWatchlistSearch() {
     setLoading(true);
     setError(null);
     setResult(null);
-    fetch(`${API_URL}/recommendations/watchlist-search?limit=8`, {
+    const decadeQ =
+      decade.trim() !== ""
+        ? `&decade=${encodeURIComponent(decade.trim())}`
+        : "";
+    fetch(`${API_URL}/recommendations/watchlist-search?limit=8${decadeQ}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ q: query.trim(), scope }),
@@ -103,7 +112,7 @@ export function LLMWatchlistSearch() {
       .then((data: SearchResult) => setResult(data))
       .catch(() => setError("Search failed. Check that GROQ_API_KEY is set and the backend is running."))
       .finally(() => setLoading(false));
-  }, [query, scope]);
+  }, [query, scope, decade]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") doSearch();
@@ -113,10 +122,11 @@ export function LLMWatchlistSearch() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-          Natural-language search. The LLM interprets your query into filters; results are always from your real data.
+          Natural-language search. The LLM interprets your query; results stay grounded in your data. Optionally limit the pool to a single decade before ranking.
           <SectionHelp title="How this works">
-            <p><strong>Grounded search</strong>: Results come only from your actual data—watchlist or watched history. The LLM interprets into genres, countries, decades, ratings, and more.</p>
-            <p>Watchlist: &quot;slow thrillers from Europe&quot;, &quot;series similar to X&quot;. Watched: &quot;documentaries I rated 8+&quot;, &quot;movies from Japan in the 2000s&quot;.</p>
+            <p><strong>Grounded search</strong>: Results come only from your watchlist or watched history. The LLM maps your text to genres, countries, similar-to, ratings, etc.</p>
+            <p>Use <strong>Decade</strong> to constrain release years (e.g. 2020s only) regardless of what the query says about time.</p>
+            <p>Watchlist: &quot;slow thrillers from Europe&quot;, &quot;series similar to X&quot;. Watched: &quot;documentaries I rated 8+&quot;.</p>
             <p>Requires <code>GROQ_API_KEY</code> in backend .env.</p>
           </SectionHelp>
         </p>
@@ -149,7 +159,25 @@ export function LLMWatchlistSearch() {
           </button>
         </div>
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+        <label className="sr-only" htmlFor="llm-search-decade">
+          Release decade (optional pool filter)
+        </label>
+        <select
+          id="llm-search-decade"
+          value={decade}
+          onChange={(e) => setDecade(e.target.value)}
+          className={decadeSelectClass}
+          aria-label="Filter by decade"
+          disabled={loading}
+        >
+          <option value="">Any decade</option>
+          <option value="1980s">1980s</option>
+          <option value="1990s">1990s</option>
+          <option value="2000s">2000s</option>
+          <option value="2010s">2010s</option>
+          <option value="2020s">2020s</option>
+        </select>
         <input
           type="text"
           value={query}
@@ -237,6 +265,11 @@ function PromptInspector({ debug }: { debug: NonNullable<SearchResult["debug"]> 
           {debug.fallback !== undefined && (
             <p className="text-[var(--muted-soft)]">
               Fallback: {String(debug.fallback)} (heuristic search when LLM unavailable or empty intent)
+            </p>
+          )}
+          {debug.ui_pool_decade != null && debug.ui_pool_decade !== "" && (
+            <p className="text-[var(--muted-soft)]">
+              UI decade pool: <span className="text-[var(--foreground)]">{debug.ui_pool_decade}</span>
             </p>
           )}
           {debug.similar_to_resolved !== undefined && (

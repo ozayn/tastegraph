@@ -23,6 +23,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
+from app.services.recommendation_filters import parse_decade_bounds
 from app.services.taste_signals import load_taste_signals, score_title_by_taste_signals
 from app.services.title_embeddings import cosine_similarity, embedding_similarity_score, get_embedding
 
@@ -665,7 +666,27 @@ def _llm_search_rank_year_tiebreak_key(year: object) -> int:
     return -iy
 
 
-def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
+def _normalize_ui_pool_decade(raw: str | None) -> str | None:
+    """Map UI value (e.g. ``2020s``) to intent ``decade`` string ``NNNNs`` for SQL filters."""
+    if not raw or not str(raw).strip():
+        return None
+    bounds = parse_decade_bounds(str(raw).strip())
+    if bounds is None:
+        return None
+    return f"{bounds[0]}s"
+
+
+def _apply_ui_pool_decade(intent: SearchIntent, pool_decade: str | None) -> bool:
+    """Apply explicit decade from API/UI: sets ``intent.decade`` and clears ``year_min`` (decade-only time gate)."""
+    norm = _normalize_ui_pool_decade(pool_decade)
+    if norm is None:
+        return False
+    intent.decade = norm
+    intent.year_min = None
+    return True
+
+
+def search_watchlist(db: Session, query: str, limit: int = 8, pool_decade: str | None = None) -> dict:
     """Grounded search: parse query, retrieve from watchlist only, rank, explain.
 
     Returns { items, intent_summary, fallback }.
@@ -681,6 +702,8 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
     prefix_type = _infer_title_type_from_query_prefix(query)
     if prefix_type is not None:
         intent.title_type = prefix_type
+
+    pool_decade_applied = _apply_ui_pool_decade(intent, pool_decade)
 
     # similar_to: use only for soft ranking; do NOT merge into intent (borrowed metadata stays soft)
     similar_to_signals: dict | None = None
@@ -865,6 +888,10 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
         if intent.mood_keywords:
             parts.append(f"mood: {', '.join(intent.mood_keywords[:3])}")
     summary = "; ".join(parts) if parts else "Watchlist items matching your query"
+    if pool_decade_applied and intent.decade:
+        note = f"only {intent.decade}"
+        if note.lower() not in summary.lower():
+            summary = f"{summary} · {note}" if summary else note
 
     result = {
         "items": [
@@ -893,6 +920,8 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
     }
     if settings.DEBUG and parse_debug is not None:
         debug = {**parse_debug, "fallback": fallback}
+        if pool_decade_applied:
+            debug["ui_pool_decade"] = intent.decade
         if intent.similar_to:
             debug["similar_to_resolved"] = (
                 similar_to_signals.get("resolved_title") if similar_to_signals else None
@@ -919,7 +948,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
     return result
 
 
-def search_rated(db: Session, query: str, limit: int = 8) -> dict:
+def search_rated(db: Session, query: str, limit: int = 8, pool_decade: str | None = None) -> dict:
     """Grounded search over rated/watched titles. Same retrieval-first design as watchlist search.
 
     Returns { items, intent_summary, fallback }.
@@ -935,6 +964,8 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
     prefix_type = _infer_title_type_from_query_prefix(query)
     if prefix_type is not None:
         intent.title_type = prefix_type
+
+    pool_decade_applied = _apply_ui_pool_decade(intent, pool_decade)
 
     similar_to_signals: dict | None = None
     ref_embedding = None
@@ -1128,6 +1159,10 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
         if intent.mood_keywords:
             parts.append(f"mood: {', '.join(intent.mood_keywords[:3])}")
     summary = "; ".join(parts) if parts else "Watched titles matching your query"
+    if pool_decade_applied and intent.decade:
+        note = f"only {intent.decade}"
+        if note.lower() not in summary.lower():
+            summary = f"{summary} · {note}" if summary else note
 
     result = {
         "items": [
@@ -1158,6 +1193,8 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
     }
     if settings.DEBUG and parse_debug is not None:
         debug = {**parse_debug, "fallback": fallback}
+        if pool_decade_applied:
+            debug["ui_pool_decade"] = intent.decade
         if intent.similar_to:
             debug["similar_to_resolved"] = (
                 similar_to_signals.get("resolved_title") if similar_to_signals else None
