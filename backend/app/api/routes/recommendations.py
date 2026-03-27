@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import case, desc, exists, or_, select
 from sqlalchemy.sql.expression import nulls_last
@@ -21,7 +21,9 @@ from app.services.recommendation_filters import (
     pool_row_matches_filters,
     resolve_similar_to_genre_set,
 )
+from app.services.catalog_provider_specs import CATALOG_PROVIDERS
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
+from app.services.provider_catalog import list_catalog_countries, list_catalog_genres
 from app.services.taste_signals import (
     build_explore_favorites_reasons,
     build_watchlist_reasons,
@@ -661,6 +663,46 @@ def recommendations_watchlist_genres():
                 if s:
                     genres.add(s)
         return sorted(genres)
+    finally:
+        db.close()
+
+
+@router.get("/catalog-genres")
+def recommendations_catalog_genres(
+    provider_slug: str = Query(
+        ...,
+        min_length=4,
+        max_length=40,
+        description="Catalog slug, e.g. mubi-us or britbox-us",
+    ),
+):
+    """Genres from DB metadata for titles in the catalog snapshot (MUBI/BritBox pool filter UI)."""
+    allowed = frozenset(p.provider_slug for p in CATALOG_PROVIDERS)
+    if provider_slug not in allowed:
+        raise HTTPException(status_code=400, detail="Unknown catalog provider_slug")
+    db = SessionLocal()
+    try:
+        return list_catalog_genres(db, provider_slug)
+    finally:
+        db.close()
+
+
+@router.get("/catalog-countries")
+def recommendations_catalog_countries(
+    provider_slug: str = Query(
+        ...,
+        min_length=4,
+        max_length=40,
+        description="Catalog slug, e.g. mubi-us or britbox-us",
+    ),
+):
+    """Countries from DB metadata for titles in the catalog snapshot (MUBI pool filter UI)."""
+    allowed = frozenset(p.provider_slug for p in CATALOG_PROVIDERS)
+    if provider_slug not in allowed:
+        raise HTTPException(status_code=400, detail="Unknown catalog provider_slug")
+    db = SessionLocal()
+    try:
+        return list_catalog_countries(db, provider_slug)
     finally:
         db.close()
 

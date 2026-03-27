@@ -42,6 +42,7 @@ type CatalogStats = {
     decade?: string | null;
     year_min?: number | null;
     country_contains?: string | null;
+    genre_contains?: string | string[] | null;
     similar_to?: string | null;
     similar_to_resolved_title?: string | null;
     pool_filters_active?: boolean;
@@ -273,6 +274,7 @@ function catalogPoolFiltersQueryActive(
     f.decade ||
     f.similarTo.trim() ||
     f.country.trim() ||
+    f.genres.length > 0 ||
     (f.titleType && f.titleType !== defaultTitleType)
   );
 }
@@ -293,10 +295,19 @@ export function ProviderCatalogRecommendations({
     () => ({
       decade: poolFilters.decade,
       country: cfg.poolShowCountry ? poolFilters.country : "",
+      genres: cfg.poolShowGenre ? poolFilters.genres : [],
       similarTo: debouncedSimilarTo,
       titleType: poolFilters.titleType,
     }),
-    [poolFilters.decade, poolFilters.country, poolFilters.titleType, cfg.poolShowCountry, debouncedSimilarTo]
+    [
+      poolFilters.decade,
+      poolFilters.country,
+      poolFilters.genres,
+      poolFilters.titleType,
+      cfg.poolShowCountry,
+      cfg.poolShowGenre,
+      debouncedSimilarTo,
+    ]
   );
 
   const [highFitData, setHighFitData] = useState<HighFitResponse | null>(null);
@@ -312,6 +323,7 @@ export function ProviderCatalogRecommendations({
     const ac = new AbortController();
     const filterQ = poolFiltersToQueryString(filtersForQuery, {
       includeCountry: cfg.poolShowCountry,
+      includeGenre: cfg.poolShowGenre,
     });
     const base = scoring === "ml" ? cfg.apiMl : cfg.apiHigh;
     const url = `${API_URL}/recommendations/${base}?limit=15${filterQ}`;
@@ -334,7 +346,15 @@ export function ProviderCatalogRecommendations({
       });
 
     return () => ac.abort();
-  }, [scoring, filtersForQuery, provider, cfg.apiHigh, cfg.apiMl, cfg.poolShowCountry]);
+  }, [
+    scoring,
+    filtersForQuery,
+    provider,
+    cfg.apiHigh,
+    cfg.apiMl,
+    cfg.poolShowCountry,
+    cfg.poolShowGenre,
+  ]);
 
   const activeData = scoring === "ml" ? mlData : highFitData;
   const filtersActiveForQuery = catalogPoolFiltersQueryActive(
@@ -383,6 +403,10 @@ export function ProviderCatalogRecommendations({
       <RecommendationPoolFiltersBar
         className="mb-5"
         showCountry={cfg.poolShowCountry}
+        showGenre={cfg.poolShowGenre}
+        catalogProviderSlug={
+          cfg.poolShowCountry || cfg.poolShowGenre ? cfg.slug : undefined
+        }
         showTitleType={cfg.poolShowTitleType}
         idPrefix={cfg.filterIdPrefix}
         value={poolFilters}
@@ -427,7 +451,7 @@ export function ProviderCatalogRecommendations({
           {highFitData.items.length === 0 ? (
             <p className={RECO_BODY_TEXT}>
               {filtersActiveForQuery
-                ? "No titles match these filters—try another decade or broader similar-to."
+                ? "No titles match these filters—try another decade, genre, or broader similar-to."
                 : "No scoreable titles yet. Enrich metadata to improve matching."}
             </p>
           ) : (

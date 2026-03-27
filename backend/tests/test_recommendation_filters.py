@@ -32,6 +32,13 @@ def test_any_recommendation_filter_active():
     assert any_recommendation_filter_active(
         decade_bounds=None, year_min=None, country_contains=None, ref_genres={"drama"}
     )
+    assert any_recommendation_filter_active(
+        decade_bounds=None,
+        year_min=None,
+        country_contains=None,
+        ref_genres=None,
+        genre_substrings=("noir",),
+    )
 
 
 def test_pool_row_decade_and_year_min():
@@ -109,6 +116,52 @@ def test_pool_row_country_and_genres():
         year_min=None,
         country_contains=None,
         ref_genres={"crime"},
+    )
+
+
+def test_pool_row_genre_substrings():
+    assert pool_row_matches_filters(
+        year=2000,
+        genres_csv="Crime, Drama, Thriller",
+        country="United States",
+        decade_bounds=None,
+        year_min=None,
+        country_contains=None,
+        ref_genres=None,
+        genre_substrings=("thriller",),
+    )
+    assert not pool_row_matches_filters(
+        year=2000,
+        genres_csv="Crime, Drama",
+        country="United States",
+        decade_bounds=None,
+        year_min=None,
+        country_contains=None,
+        ref_genres=None,
+        genre_substrings=("sci-fi",),
+    )
+
+
+def test_pool_row_genre_substrings_or():
+    assert pool_row_matches_filters(
+        year=2000,
+        genres_csv="Crime, Drama",
+        country="United States",
+        decade_bounds=None,
+        year_min=None,
+        country_contains=None,
+        ref_genres=None,
+        genre_substrings=("sci-fi", "drama"),
+    )
+    assert not pool_row_matches_filters(
+        year=2000,
+        genres_csv="Crime, Drama",
+        country="United States",
+        decade_bounds=None,
+        year_min=None,
+        country_contains=None,
+        ref_genres=None,
+        genre_substrings=("sci-fi", "horror"),
     )
 
 

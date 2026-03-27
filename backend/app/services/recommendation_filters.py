@@ -54,6 +54,21 @@ def genre_set_from_csv(genres_csv: str | None) -> set[str]:
     return {g.strip().lower() for g in genres_csv.split(",") if g.strip()}
 
 
+def normalize_catalog_genre_filter(genre: str | list[str] | None, *, max_terms: int = 15) -> tuple[str, ...] | None:
+    """Lowercased substrings for catalog pool genre filter (OR: any term contained in metadata genres CSV)."""
+    if genre is None:
+        return None
+    if isinstance(genre, str):
+        s = genre.strip()
+        return (s.lower(),) if s else None
+    out: list[str] = []
+    for g in genre[:max_terms]:
+        if not g or not str(g).strip():
+            continue
+        out.append(str(g).strip().lower())
+    return tuple(out) if out else None
+
+
 def pool_row_matches_filters(
     *,
     year: int | None,
@@ -63,6 +78,7 @@ def pool_row_matches_filters(
     year_min: int | None,
     country_contains: str | None,
     ref_genres: set[str] | None,
+    genre_substrings: tuple[str, ...] | None = None,
 ) -> bool:
     """Return True if this row stays in the pool. ``ref_genres`` None = do not filter on genres."""
     if decade_bounds is not None:
@@ -78,6 +94,10 @@ def pool_row_matches_filters(
     if ref_genres:
         if not (genre_set_from_csv(genres_csv) & ref_genres):
             return False
+    if genre_substrings:
+        hay = (genres_csv or "").lower()
+        if not any(sub in hay for sub in genre_substrings):
+            return False
     return True
 
 
@@ -87,12 +107,14 @@ def any_recommendation_filter_active(
     year_min: int | None,
     country_contains: str | None,
     ref_genres: set[str] | None,
+    genre_substrings: tuple[str, ...] | None = None,
 ) -> bool:
     return bool(
         decade_bounds is not None
         or year_min is not None
         or (country_contains and country_contains.strip())
         or ref_genres
+        or (genre_substrings and len(genre_substrings) > 0)
     )
 
 
@@ -122,6 +144,7 @@ def title_metadata_matches_pool_filters(
     year_min: int | None,
     country_contains: str | None,
     ref_genres: set[str] | None,
+    genre_substrings: tuple[str, ...] | None = None,
 ) -> bool:
     return pool_row_matches_filters(
         year=title_release_year(meta, cat.get("year")),
@@ -131,4 +154,5 @@ def title_metadata_matches_pool_filters(
         year_min=year_min,
         country_contains=country_contains,
         ref_genres=ref_genres,
+        genre_substrings=genre_substrings,
     )

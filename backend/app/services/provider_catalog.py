@@ -25,6 +25,7 @@ from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import _load_favorites_by_role, _parse_names, compute_favorite_boost
 from app.services.recommendation_filters import (
     any_recommendation_filter_active,
+    normalize_catalog_genre_filter,
     parse_decade_bounds,
     resolve_similar_to_genre_set,
     title_metadata_matches_pool_filters,
@@ -188,6 +189,63 @@ def get_catalog_imdb_ids(catalog: dict) -> set[str]:
         if nid:
             out.add(nid)
     return out
+
+
+def list_catalog_genres(db: Session, provider_slug: str) -> list[str]:
+    """Distinct genre labels from ``TitleMetadata.genres`` for IMDb ids present in the catalog snapshot."""
+    catalog = load_catalog(provider_slug)
+    if catalog is None:
+        return []
+    ids = get_catalog_imdb_ids(catalog)
+    if not ids:
+        return []
+    genres: set[str] = set()
+    id_list = list(ids)
+    chunk = 800
+    for i in range(0, len(id_list), chunk):
+        batch = id_list[i : i + chunk]
+        rows = (
+            db.query(TitleMetadata.genres)
+            .filter(
+                TitleMetadata.imdb_title_id.in_(batch),
+                TitleMetadata.genres.isnot(None),
+                TitleMetadata.genres != "",
+            )
+            .all()
+        )
+        for (g,) in rows:
+            for part in (g or "").split(","):
+                s = part.strip()
+                if s:
+                    genres.add(s)
+    return sorted(genres, key=str.lower)
+
+
+def list_catalog_countries(db: Session, provider_slug: str) -> list[str]:
+    """Distinct normalized countries from ``TitleMetadata.country`` for catalog snapshot ids."""
+    catalog = load_catalog(provider_slug)
+    if catalog is None:
+        return []
+    ids = get_catalog_imdb_ids(catalog)
+    if not ids:
+        return []
+    countries: set[str] = set()
+    id_list = list(ids)
+    chunk = 800
+    for i in range(0, len(id_list), chunk):
+        batch = id_list[i : i + chunk]
+        rows = (
+            db.query(TitleMetadata.country)
+            .filter(
+                TitleMetadata.imdb_title_id.in_(batch),
+                TitleMetadata.country.isnot(None),
+                TitleMetadata.country != "",
+            )
+            .all()
+        )
+        for (c,) in rows:
+            countries |= parse_and_normalize_countries(c)
+    return sorted(countries)
 
 
 def _catalog_lookup(catalog: dict) -> dict[str, dict]:
@@ -738,6 +796,7 @@ def get_provider_high_fit(
     year_min: int | None = None,
     country: str | None = None,
     similar_to: str | None = None,
+    genre: str | list[str] | None = None,
 ) -> dict:
     """Rank catalog titles by taste-signal overlap. Default ``title_type='show'`` (TV series in snapshot).
 
@@ -747,8 +806,9 @@ def get_provider_high_fit(
     BritBox UK catalog bonus (+3) applies only if ``United Kingdom`` is in the user's lift-based ``strong_countries``.
     Tie-break: higher total first, then newer ``year`` (missing year last among ties), then ascending ``imdb_title_id``.
 
-    Optional ``decade`` (e.g. ``2020`` / ``2020s``), ``year_min``, ``country`` (substring), and ``similar_to`` (title
-    hint resolved via your rated/watchlist titles) narrow the pool **before** scoring.
+    Optional ``decade`` (e.g. ``2020`` / ``2020s``), ``year_min``, ``country`` (substring), ``genre`` (substring(s) on
+    metadata genres CSV; multiple values are OR), and ``similar_to`` (title hint resolved via your rated/watchlist titles)
+    narrow the pool **before** scoring.
     """
     catalog = load_catalog(provider_slug)
     if catalog is None:
@@ -783,11 +843,13 @@ def get_provider_high_fit(
     matched_ids_all = set(meta_by_id.keys())
     decade_bounds = parse_decade_bounds(decade)
     ref_genres, similar_resolved_title = resolve_similar_to_genre_set(db, similar_to)
+    genre_subs = normalize_catalog_genre_filter(genre)
     filter_active = any_recommendation_filter_active(
         decade_bounds=decade_bounds,
         year_min=year_min,
         country_contains=country,
         ref_genres=ref_genres,
+        genre_substrings=genre_subs,
     )
     matched_ids = matched_ids_all
     if filter_active:
@@ -801,6 +863,7 @@ def get_provider_high_fit(
                 year_min=year_min,
                 country_contains=country,
                 ref_genres=ref_genres,
+                genre_substrings=genre_subs,
             )
         }
 
@@ -890,6 +953,7 @@ def get_provider_high_fit(
         "decade": decade,
         "year_min": year_min,
         "country_contains": country,
+        "genre_contains": list(genre_subs) if genre_subs else None,
         "similar_to": similar_to,
         "similar_to_resolved_title": similar_resolved_title,
         "pool_filters_active": filter_active,
@@ -997,6 +1061,7 @@ def get_provider_ml(
     year_min: int | None = None,
     country: str | None = None,
     similar_to: str | None = None,
+    genre: str | list[str] | None = None,
 ) -> dict:
     """ML-ranked catalog titles. Same candidate rules as high-fit (default series; watchlist IDs excluded).
 
@@ -1054,11 +1119,13 @@ def get_provider_ml(
     tm_rows = _query_title_metadata_for_ids(db, cand_final)
     decade_bounds_ml = parse_decade_bounds(decade)
     ref_genres_ml, similar_resolved_ml = resolve_similar_to_genre_set(db, similar_to)
+    genre_subs_ml = normalize_catalog_genre_filter(genre)
     filter_active_ml = any_recommendation_filter_active(
         decade_bounds=decade_bounds_ml,
         year_min=year_min,
         country_contains=country,
         ref_genres=ref_genres_ml,
+        genre_substrings=genre_subs_ml,
     )
     if filter_active_ml:
         filtered_ml: list[TitleMetadata] = []
@@ -1073,6 +1140,7 @@ def get_provider_ml(
                 year_min=year_min,
                 country_contains=country,
                 ref_genres=ref_genres_ml,
+                genre_substrings=genre_subs_ml,
             ):
                 filtered_ml.append(m)
         tm_rows = filtered_ml
@@ -1104,6 +1172,7 @@ def get_provider_ml(
         "decade": decade,
         "year_min": year_min,
         "country_contains": country,
+        "genre_contains": list(genre_subs_ml) if genre_subs_ml else None,
         "similar_to": similar_to,
         "similar_to_resolved_title": similar_resolved_ml,
         "pool_filters_active": filter_active_ml,

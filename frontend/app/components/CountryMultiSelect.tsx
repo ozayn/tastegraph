@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { API_URL } from "../lib/api";
+import { RECO_FILTER_TRIGGER_CLASS } from "./recoFilterPickers";
 
 type CountryMultiSelectProps = {
   selected: string[];
@@ -79,7 +80,7 @@ export function CountryMultiSelect({
         type="button"
         onClick={() => !noCountries && setOpen((o) => !o)}
         disabled={disabled || noCountries}
-        className="min-w-[6rem] rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 pr-8 text-left text-[14px] text-[var(--foreground)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[7rem]"
+        className={RECO_FILTER_TRIGGER_CLASS}
         aria-label={noCountries ? "Countries unavailable" : "Select countries"}
         aria-expanded={open}
         aria-haspopup="listbox"

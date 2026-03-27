@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { API_URL } from "../lib/api";
+import { RECO_FILTER_TRIGGER_CLASS } from "./recoFilterPickers";
 
 type GenreMultiSelectProps = {
   selected: string[];
@@ -15,6 +16,11 @@ type GenreMultiSelectProps = {
    * Remove once watchlist metadata enrichment is common.
    */
   fallbackGenresUrl?: string;
+  /**
+   * When true, options come only from ``genresUrl`` (no static fallback list).
+   * Use for catalog-backed lists (e.g. MUBI pool bar).
+   */
+  strictOptionsFromUrl?: boolean;
 };
 
 const FALLBACK_GENRES = [
@@ -33,6 +39,7 @@ export function GenreMultiSelect({
   disabled = false,
   genresUrl = `${API_URL}/recommendations/genres`,
   fallbackGenresUrl,
+  strictOptionsFromUrl = false,
 }: GenreMultiSelectProps) {
   const [genres, setGenres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +55,9 @@ export function GenreMultiSelect({
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
+        if (strictOptionsFromUrl) {
+          return list;
+        }
         if (list.length === 0 && fallbackGenresUrl) {
           return fetch(fallbackGenresUrl)
             .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -56,11 +66,13 @@ export function GenreMultiSelect({
         }
         return list;
       })
-      .then((list) => (list.length > 0 ? list : FALLBACK_GENRES))
+      .then((list) =>
+        strictOptionsFromUrl ? list : list.length > 0 ? list : FALLBACK_GENRES
+      )
       .then(setGenres)
-      .catch(() => setGenres(FALLBACK_GENRES))
+      .catch(() => setGenres(strictOptionsFromUrl ? [] : FALLBACK_GENRES))
       .finally(() => setLoading(false));
-  }, [genresUrl, fallbackGenresUrl]);
+  }, [genresUrl, fallbackGenresUrl, strictOptionsFromUrl]);
 
   useEffect(() => {
     if (open && buttonRef.current) {
@@ -105,7 +117,7 @@ export function GenreMultiSelect({
         type="button"
         onClick={() => !noGenres && setOpen((o) => !o)}
         disabled={disabled || noGenres}
-        className="min-w-[6rem] rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 pr-8 text-left text-[14px] text-[var(--foreground)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 disabled:cursor-default disabled:opacity-60 [color-scheme:inherit] sm:min-w-[7rem]"
+        className={RECO_FILTER_TRIGGER_CLASS}
         aria-label={noGenres ? "Genres unavailable" : "Select genres"}
         aria-expanded={open}
         aria-haspopup="listbox"

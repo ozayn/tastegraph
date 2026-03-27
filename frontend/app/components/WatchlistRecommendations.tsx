@@ -16,7 +16,11 @@ import {
   RECO_RESULTS_LIST,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
-import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
+import {
+  RecoSingleSelect,
+  RECO_DECADE_OPTIONS,
+  RECO_WATCHLIST_TITLE_TYPE_OPTIONS,
+} from "./recoFilterPickers";
 
 const DEBOUNCE_MS = 350;
 const FETCH_LIMIT = 25;
@@ -111,9 +115,6 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
     setListExpanded(false);
   }, [items, selectedGenres, selectedCountries, titleType, decade, includeRated]);
 
-  const filterInput =
-    "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
-
   const header = embedded ? (
     <p className={RECO_MODE_INTRO}>
       Titles you saved, filtered by your taste
@@ -160,23 +161,21 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           disabled={loading}
           countriesUrl={`${API_URL}/recommendations/watchlist-countries`}
         />
-        <select
+        <RecoSingleSelect
+          id="watchlist-simple-title-type"
           value={titleType}
-          onChange={(e) => setTitleType(e.target.value)}
-          className={`${filterInput} min-w-[7rem]`}
-          aria-label="Title type"
-        >
-          <option value="">All types</option>
-          <option value="Movie">Movie</option>
-          <option value="TV Series">TV Series</option>
-          <option value="TV Mini Series">TV Mini Series</option>
-        </select>
-        <RecommendationDecadeSelect
-          idPrefix="watchlist-simple"
-          variant="simple"
+          onChange={setTitleType}
+          options={RECO_WATCHLIST_TITLE_TYPE_OPTIONS}
+          disabled={loading}
+          ariaLabel="Title type"
+        />
+        <RecoSingleSelect
+          id="watchlist-simple-decade"
           value={decade}
           onChange={setDecade}
+          options={RECO_DECADE_OPTIONS}
           disabled={loading}
+          ariaLabel="Decade"
         />
         <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
           <input

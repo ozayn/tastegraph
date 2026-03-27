@@ -23,6 +23,10 @@ router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 _DECADE_Q = "Restrict pool to release decade, e.g. 2020 or 2020s (applied before ranking)"
 _YEAR_Q = "Minimum release year (applied before ranking)"
 _COUNTRY_Q = "Substring match on country (case-insensitive, applied before ranking)"
+_GENRE_Q = (
+    "Substring match on title genres CSV (case-insensitive, before ranking). "
+    "Repeat the parameter to OR multiple genres (e.g. genre=Drama&genre=Thriller)."
+)
 _SIMILAR_Q = (
     "Title hint: keep titles that share a genre with this resolved reference (rated/watchlist)"
 )
@@ -37,6 +41,7 @@ def _high_fit_endpoint(spec: CatalogProviderSpec):
         decade: str | None = Query(default=None, description=_DECADE_Q),
         year_min: int | None = Query(default=None, ge=1870, le=2035, description=_YEAR_Q),
         country: str | None = Query(default=None, max_length=80, description=_COUNTRY_Q),
+        genre: list[str] | None = Query(default=None, description=_GENRE_Q),
         similar_to: str | None = Query(default=None, max_length=150, description=_SIMILAR_Q),
     ) -> dict:
         db = SessionLocal()
@@ -51,6 +56,7 @@ def _high_fit_endpoint(spec: CatalogProviderSpec):
                 year_min=year_min,
                 country=country,
                 similar_to=similar_to,
+                genre=genre,
             )
         finally:
             db.close()
@@ -68,6 +74,7 @@ def _ml_endpoint(spec: CatalogProviderSpec):
         decade: str | None = Query(default=None, description=_DECADE_Q),
         year_min: int | None = Query(default=None, ge=1870, le=2035, description=_YEAR_Q),
         country: str | None = Query(default=None, max_length=80, description=_COUNTRY_Q),
+        genre: list[str] | None = Query(default=None, description=_GENRE_Q),
         similar_to: str | None = Query(default=None, max_length=150, description=_SIMILAR_Q),
     ) -> dict:
         db = SessionLocal()
@@ -82,6 +89,7 @@ def _ml_endpoint(spec: CatalogProviderSpec):
                 year_min=year_min,
                 country=country,
                 similar_to=similar_to,
+                genre=genre,
             )
         finally:
             db.close()

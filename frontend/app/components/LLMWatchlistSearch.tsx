@@ -7,7 +7,7 @@ import { API_URL } from "../lib/api";
 import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import { HighFitCard } from "./HighFitCard";
 import { SectionHelp } from "./SectionHelp";
-import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
+import { RecoSingleSelect, RECO_DECADE_OPTIONS } from "./recoFilterPickers";
 import {
   RECO_CONTROLS_WELL,
   RECO_EMPTY_PANEL_FLAT,
@@ -173,13 +173,14 @@ export function LLMWatchlistSearch() {
       <div
         className={`${RECO_CONTROLS_WELL} flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3`}
       >
-        <RecommendationDecadeSelect
-          idPrefix="llm-watchlist-search"
-          variant="simple"
+        <RecoSingleSelect
+          id="llm-watchlist-search-decade"
           value={decade}
           onChange={setDecade}
+          options={RECO_DECADE_OPTIONS}
           disabled={loading}
-          selectClassName="shrink-0 self-stretch py-3 text-[13px] sm:min-w-[6.5rem]"
+          ariaLabel="Decade"
+          buttonClassName="shrink-0 self-stretch py-3 text-[13px] sm:min-w-[6.5rem]"
         />
         <input
           type="text"

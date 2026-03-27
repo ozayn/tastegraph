@@ -17,7 +17,11 @@ import {
   RECO_SECONDARY_LINE,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
-import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
+import {
+  RecoSingleSelect,
+  RECO_DECADE_OPTIONS,
+  RECO_EXPLORE_TITLE_TYPE_OPTIONS,
+} from "./recoFilterPickers";
 
 const DEBOUNCE_MS = 350;
 /** Top N titles to show; passed as API limit (backend still scores a wider pool first). */
@@ -110,9 +114,6 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
     setListExpanded(false);
   }, [items, selectedGenres, selectedCountries, titleType, decade]);
 
-  const filterInput =
-    "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
-
   const helpContent = (
     <>
       <p>Browse and filter titles you&apos;ve already rated 8+ by genre, country, and release decade. Exploration of your favorites—not recommendations for unseen titles.</p>
@@ -156,23 +157,21 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
           onChange={setSelectedCountries}
           disabled={loading}
         />
-        <select
+        <RecoSingleSelect
+          id="explore-favorites-title-type"
           value={titleType}
-          onChange={(e) => setTitleType(e.target.value)}
-          className={`${filterInput} min-w-[7rem]`}
-          aria-label="Title type"
-        >
-          <option value="">All types</option>
-          <option value="movie">Movie</option>
-          <option value="series">Series</option>
-          <option value="episode">Episode</option>
-        </select>
-        <RecommendationDecadeSelect
-          idPrefix="explore-favorites"
-          variant="simple"
+          onChange={setTitleType}
+          options={RECO_EXPLORE_TITLE_TYPE_OPTIONS}
+          disabled={loading}
+          ariaLabel="Title type"
+        />
+        <RecoSingleSelect
+          id="explore-favorites-decade"
           value={decade}
           onChange={setDecade}
+          options={RECO_DECADE_OPTIONS}
           disabled={loading}
+          ariaLabel="Decade"
         />
       </div>
 
