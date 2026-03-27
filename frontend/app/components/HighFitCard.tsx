@@ -24,6 +24,8 @@ type HighFitCardProps = {
   user_rating?: number | null;
   date_rated?: string | null;
   provider?: string | null;
+  /** Calmer layout: no provider pill, no extra signal chips—title + meta + one reason line. */
+  variant?: "default" | "britbox";
 };
 
 const chipBase =
@@ -51,16 +53,22 @@ export function HighFitCard({
   explanation,
   user_rating,
   provider,
+  variant = "default",
 }: HighFitCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const displayTitle = title ?? imdb_title_id;
   const hasUsablePoster = poster && poster.trim() && poster !== "N/A";
   const showPoster = hasUsablePoster && !imageFailed;
+  const isBritbox = variant === "britbox";
   const reasonsText =
-    explanation.top_reasons?.length > 0
+    !isBritbox && explanation.top_reasons?.length > 0
       ? explanation.top_reasons.slice(0, 2).join(" · ")
       : null;
-  const signalsLine = condensedSignals(explanation);
+  const reasonOne =
+    isBritbox && explanation.top_reasons?.length
+      ? explanation.top_reasons[0]
+      : null;
+  const signalsLine = !isBritbox ? condensedSignals(explanation) : null;
 
   useEffect(() => {
     setImageFailed(false);
@@ -71,16 +79,32 @@ export function HighFitCard({
   if (title_type?.trim()) metaParts.push(title_type.trim());
   const meta = metaParts.length ? metaParts.join(" · ") : null;
 
+  const cardShell = isBritbox
+    ? "group block overflow-hidden rounded-lg border border-[var(--section-border)]/80 bg-[var(--card-bg)] transition-colors duration-200 hover:border-[var(--muted-subtle)]"
+    : "group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md";
+
   return (
     <a
       href={`https://www.imdb.com/title/${imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--background)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-subtle)] hover:shadow-md"
+      className={cardShell}
     >
-      <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
+      <div
+        className={
+          isBritbox
+            ? "flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5"
+            : "flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5"
+        }
+      >
         {showPoster && (
-          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
+          <div
+            className={
+              isBritbox
+                ? "h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--section-bg)] sm:h-[5.5rem] sm:w-[3.75rem]"
+                : "h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--section-bg)] ring-1 ring-[var(--section-border)] sm:h-[6.75rem] sm:w-[4.5rem]"
+            }
+          >
             <img
               src={poster!}
               alt=""
@@ -91,11 +115,17 @@ export function HighFitCard({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-            <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
+            <h3
+              className={
+                isBritbox
+                  ? "break-words text-[15px] font-semibold leading-snug text-[var(--foreground)] sm:text-[16px]"
+                  : "break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]"
+              }
+            >
               {displayTitle}
             </h3>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {provider && (
+              {provider && !isBritbox && (
                 <span
                   className={`${chipBase} bg-[var(--mondrian-red)]/12 text-[var(--mondrian-red)]`}
                 >
@@ -112,11 +142,24 @@ export function HighFitCard({
             </div>
           </div>
           {meta && (
-            <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{meta}</p>
+            <p
+              className={
+                isBritbox
+                  ? "mt-1 text-[12px] leading-snug text-[var(--muted-soft)]"
+                  : "mt-1.5 text-[13px] leading-snug text-[var(--muted)]"
+              }
+            >
+              {meta}
+            </p>
           )}
           {reasonsText && (
             <p className="mt-2 text-[13px] font-medium leading-relaxed text-[var(--foreground)]">
               {reasonsText}
+            </p>
+          )}
+          {reasonOne && (
+            <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--muted)]">
+              {reasonOne}
             </p>
           )}
           {signalsLine && (

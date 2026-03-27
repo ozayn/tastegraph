@@ -82,12 +82,11 @@ function MLModeContent() {
 function BritBoxModeContent() {
   return (
     <div>
-      <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        BritBox catalog snapshot ranked for your taste. <strong>Series</strong> is the default; use <strong>Movies</strong> or <strong>All</strong> to include films. Optional <strong>pool filters</strong> (decade, minimum year, country, similar-to) narrow candidates before ranking. Your IMDb watchlist is taste-only&mdash;those titles are not shown here.
+      <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--muted-soft)]">
+        Full BritBox snapshot (series and films), ranked for you. Watchlist feeds taste only—those titles stay out of the list.
         <SectionHelp title="How this works">
-          <p>Candidate pool is <strong>only</strong> titles in the Watchmode BritBox US snapshot (default: Amazon Prime channel)&mdash;not your watchlist. Watchlist genres/decades are blended into taste scoring so recommendations align with what you save.</p>
-          <p>The banner shows how many series vs films are in the snapshot and how many have metadata in your database. Refresh the snapshot when the provider catalog changes.</p>
-          <p>Refresh: <code>cd backend && python -m app.scripts.fetch_britbox_catalog</code></p>
+          <p>Pool = the BritBox US snapshot, not your watchlist. Decade and similar-to narrow the pool before ranking.</p>
+          <p>Refresh snapshot: <code>cd backend && python -m app.scripts.fetch_britbox_catalog</code></p>
         </SectionHelp>
       </p>
       <BritBoxRecommendations />

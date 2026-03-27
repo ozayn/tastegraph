@@ -8,6 +8,7 @@ and clamped before use. Malformed or suspicious output falls back to empty inten
 """
 
 import json
+import math
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -642,11 +643,36 @@ def _lookup_similar_title(db: Session, title_hint: str) -> dict | None:
     }
 
 
+def _year_int_for_llm_search_ranking(y: object) -> int | None:
+    if y is None:
+        return None
+    if isinstance(y, float) and math.isnan(y):
+        return None
+    try:
+        iy = int(y)
+    except (ValueError, TypeError):
+        return None
+    if 1870 <= iy <= 2035:
+        return iy
+    return None
+
+
+def _llm_search_rank_year_tiebreak_key(year: object) -> int:
+    """When search scores tie: prefer newer release years; undated sorts after dated (stable with imdb id)."""
+    iy = _year_int_for_llm_search_ranking(year)
+    if iy is None:
+        return 0
+    return -iy
+
+
 def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
     """Grounded search: parse query, retrieve from watchlist only, rank, explain.
 
     Returns { items, intent_summary, fallback }.
     fallback=True means LLM was unavailable or failed; we returned heuristic results.
+
+    Ranking tie-break: higher total score first; equal totals prefer newer ``year``, then ascending
+    ``imdb_title_id``. Titles without a usable year sort after dated titles at the same score.
     """
     intent, parse_debug = _parse_query_with_llm(query)
     fallback = not intent.summary and not intent.genres and not intent.countries
@@ -812,7 +838,9 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
             }
         scored.append((total_score, r, poster, explanation, breakdown))
 
-    scored.sort(key=lambda x: -x[0])
+    scored.sort(
+        key=lambda x: (-x[0], _llm_search_rank_year_tiebreak_key(x[1].year), x[1].imdb_title_id)
+    )
     top = scored[:limit]
 
     # Build summary explanation
@@ -896,6 +924,10 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
 
     Returns { items, intent_summary, fallback }.
     items include user_rating and date_rated.
+
+    Ranking tie-break: higher total score first; equal totals prefer newer ``year``, then ascending
+    ``imdb_title_id`` (same as watchlist search). Titles without a usable year sort after dated titles
+    at the same score.
     """
     intent, parse_debug = _parse_query_with_llm(query, scope="watched")
     fallback = not intent.summary and not intent.genres and not intent.countries and intent.min_rating is None
@@ -1066,7 +1098,9 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
             }
         scored.append((total_score, r, poster, explanation, breakdown))
 
-    scored.sort(key=lambda x: (-x[0], -(x[1].user_rating or 0)))
+    scored.sort(
+        key=lambda x: (-x[0], _llm_search_rank_year_tiebreak_key(x[1].year), x[1].imdb_title_id)
+    )
     top = scored[:limit]
 
     parts = []

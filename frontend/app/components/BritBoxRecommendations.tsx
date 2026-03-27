@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../lib/api";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { HighFitCard } from "./HighFitCard";
 import {
   getInitialPoolFilters,
@@ -11,7 +12,6 @@ import {
 } from "./RecommendationPoolFiltersBar";
 
 type ScoringMode = "high-fit" | "ml";
-type TypeFilter = "show" | "movie" | "all";
 
 type CatalogStats = {
   total_in_catalog: number;
@@ -117,11 +117,9 @@ function formatFeature(name: string): string {
 function StatsBanner({
   stats,
   fetchedAt,
-  typeLabel,
 }: {
   stats: CatalogStats;
   fetchedAt?: string;
-  typeLabel: string;
 }) {
   const date = fetchedAt ? new Date(fetchedAt).toLocaleDateString() : null;
   const rf = stats.recommendation_filters;
@@ -130,72 +128,64 @@ function StatsBanner({
     typeof rf.pool_size_after_filters === "number" &&
     typeof stats.matched_metadata === "number" &&
     rf.pool_size_after_filters !== stats.matched_metadata;
+
+  const metaBits: string[] = [];
+  if (stats.matched_pool_shows != null && stats.matched_pool_movies != null) {
+    metaBits.push(`${stats.matched_pool_shows} series · ${stats.matched_pool_movies} films in pool`);
+  }
+  if (stats.excluded_watchlist != null && stats.excluded_watchlist > 0) {
+    metaBits.push(`${stats.excluded_watchlist} watchlist skipped`);
+  }
+  const metaLine = metaBits.length ? metaBits.join(" · ") : null;
+
+  const noMeta =
+    stats.matching_diagnostic &&
+    stats.matching_diagnostic.title_metadata_rows_hitting_catalog === 0 &&
+    stats.with_imdb_id > 0;
+
   return (
-    <div className="mb-4 rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--muted-soft)]">
-        <span>
-          {filtered ? (
-            <>
-              <strong className="text-[var(--foreground)]">
-                {rf!.pool_size_after_filters}
-              </strong>{" "}
-              {typeLabel} in filtered pool
-              <span className="opacity-70">
-                {" "}
-                ({stats.matched_metadata} with metadata before filters)
-              </span>
-            </>
-          ) : (
-            <>
-              <strong className="text-[var(--foreground)]">
-                {stats.matched_metadata}
-              </strong>{" "}
-              {typeLabel} scored from BritBox catalog (approx.)
-            </>
-          )}
+    <div className="mb-5 space-y-1.5 border-b border-[var(--section-border)]/50 pb-3">
+      <p className="text-[12px] leading-relaxed text-[var(--muted-soft)]">
+        <span className="text-[var(--foreground)]">
+          {filtered ? rf!.pool_size_after_filters : stats.matched_metadata}
         </span>
-        <span className="opacity-70">
-          {stats.total_in_catalog} total in catalog
-        </span>
-        {stats.already_rated != null && stats.already_rated > 0 && (
-          <span className="opacity-70">{stats.already_rated} already rated</span>
-        )}
-        {stats.excluded_watchlist != null && stats.excluded_watchlist > 0 && (
-          <span className="opacity-70" title="On your IMDb watchlist—used for taste, not shown here">
-            {stats.excluded_watchlist} on watchlist (skipped)
-          </span>
-        )}
-        {stats.catalog_jw_shows != null && stats.catalog_jw_movies != null && (
-          <span className="opacity-70" title="From catalog.json (approx. BritBox US listing)">
-            Snapshot: {stats.catalog_jw_shows} series · {stats.catalog_jw_movies} films (IMDb id)
-          </span>
-        )}
-        {stats.matched_pool_shows != null && stats.matched_pool_movies != null && (
-          <span
-            className="opacity-70"
-            title="Titles with metadata in your DB after excluding rated & watchlist"
-          >
-            Matched: {stats.matched_pool_shows} series · {stats.matched_pool_movies} films
-          </span>
-        )}
-        {stats.matching_diagnostic &&
-          stats.matching_diagnostic.title_metadata_rows_hitting_catalog === 0 &&
-          stats.with_imdb_id > 0 && (
-            <span className="text-[var(--mondrian-red)]/90" title={stats.matching_diagnostic.catalog_imdb_id_sample.join(", ")}>
-              No DB metadata for catalog IMDb ids (enrich or check id format). Sample ids:{" "}
-              {stats.matching_diagnostic.catalog_imdb_id_sample.slice(0, 3).join(", ")}
+        {filtered ? (
+          <>
+            {" "}
+            titles after filters
+            <span className="text-[var(--muted-soft)]/80">
+              {" "}
+              ({stats.matched_metadata} before)
             </span>
-          )}
-        {date && (
-          <span className="ml-auto opacity-50">Watchmode snapshot {date}</span>
+          </>
+        ) : (
+          <>
+            {" "}
+            titles with scores · {stats.total_in_catalog} in catalog
+          </>
         )}
-      </div>
+        {date && (
+          <span className="text-[var(--muted-soft)]/70"> · snapshot {date}</span>
+        )}
+      </p>
+      {metaLine && (
+        <p className="text-[11px] text-[var(--muted-soft)]/90">{metaLine}</p>
+      )}
       {rf?.similar_to?.trim() && rf.similar_to_resolved_title && (
-        <p className="mt-1.5 text-[11px] text-[var(--muted-soft)]">
-          Similar to resolved as:{" "}
+        <p className="text-[11px] text-[var(--muted-soft)]">
+          Like{" "}
           <span className="text-[var(--foreground)]">{rf.similar_to_resolved_title}</span>
           {" — "}
-          showing titles that share at least one of its genres.
+          shared genre filter.
+        </p>
+      )}
+      {noMeta && (
+        <p
+          className="text-[11px] text-[var(--mondrian-red)]/90"
+          title={stats.matching_diagnostic!.catalog_imdb_id_sample.join(", ")}
+        >
+          No DB metadata for catalog ids (enrich metadata). Sample:{" "}
+          {stats.matching_diagnostic!.catalog_imdb_id_sample.slice(0, 2).join(", ")}
         </p>
       )}
     </div>
@@ -208,17 +198,25 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
   const hasUsablePoster =
     item.poster && item.poster.trim() && item.poster !== "N/A";
   const showPoster = hasUsablePoster && !imageFailed;
+  const metaParts: string[] = [];
+  if (item.year != null) metaParts.push(String(item.year));
+  if (item.title_type?.trim()) metaParts.push(item.title_type.trim());
+  const meta = metaParts.length ? metaParts.join(" · ") : null;
+  const topFeat =
+    item.top_features && item.top_features.length > 0
+      ? formatFeature(item.top_features[0])
+      : null;
 
   return (
     <a
       href={`https://www.imdb.com/title/${item.imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] overflow-hidden transition-all duration-150 hover:border-[var(--muted-subtle)] hover:bg-[var(--card-hover)] hover:shadow-sm"
+      className="group block overflow-hidden rounded-lg border border-[var(--section-border)]/80 bg-[var(--card-bg)] transition-colors duration-150 hover:border-[var(--muted-subtle)]"
     >
-      <div className="flex gap-4 px-5 py-4 sm:px-6 sm:py-5">
+      <div className="flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5">
         {showPoster && (
-          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden bg-[var(--section-bg)] border border-[var(--section-border)]">
+          <div className="h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--section-bg)] sm:h-[5.5rem] sm:w-[3.75rem]">
             <img
               src={item.poster!}
               alt=""
@@ -228,38 +226,18 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-[16px] font-semibold leading-[1.35] text-[var(--foreground)] sm:text-[17px]">
+          <h3 className="text-[15px] font-semibold leading-snug text-[var(--foreground)] sm:text-[16px]">
             {displayTitle}
           </h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {item.year != null && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] font-medium text-[var(--muted-soft)]">
-                {item.year}
-              </span>
-            )}
-            {item.title_type && (
-              <span className="rounded-md bg-[var(--muted-subtle)]/20 px-2 py-0.5 text-[12px] text-[var(--muted-soft)]">
-                {item.title_type}
-              </span>
-            )}
-            <span className="rounded-md bg-[var(--mondrian-red)]/15 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[var(--mondrian-red)]">
-              BritBox
-            </span>
-            <span className="rounded-md bg-[var(--accent-muted)]/40 px-2 py-0.5 text-[12px] font-medium text-[var(--accent)]">
+          <p className="mt-1 text-[12px] text-[var(--muted-soft)]">
+            {meta && <span>{meta}</span>}
+            {meta && <span className="text-[var(--muted-soft)]/50"> · </span>}
+            <span className="text-[var(--foreground)]/90">
               {(item.prob_8plus * 100).toFixed(0)}% 8+
             </span>
-          </div>
-          {item.top_features && item.top_features.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {item.top_features.map((f) => (
-                <span
-                  key={f}
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium bg-[var(--muted-subtle)]/20 text-[var(--muted-soft)]"
-                >
-                  {formatFeature(f)}
-                </span>
-              ))}
-            </div>
+          </p>
+          {topFeat && (
+            <p className="mt-1 text-[11px] text-[var(--muted-soft)]">{topFeat}</p>
           )}
         </div>
       </div>
@@ -267,108 +245,102 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
   );
 }
 
-const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
-  { id: "show", label: "Series" },
-  { id: "movie", label: "Movies" },
-  { id: "all", label: "All" },
-];
+const segActive =
+  "text-[var(--foreground)]";
+const segInactive =
+  "text-[var(--muted-soft)] hover:text-[var(--foreground)]/90";
 
-const activeBtn =
-  "bg-[var(--card-bg)] text-[var(--foreground)] shadow-sm border border-[var(--section-border)]";
-const inactiveBtn =
-  "text-[var(--muted-soft)] hover:text-[var(--foreground)]";
+function britboxFiltersQueryActive(f: RecommendationPoolFilterValues): boolean {
+  return !!(f.decade || f.similarTo.trim());
+}
 
 export function BritBoxRecommendations() {
   const [scoring, setScoring] = useState<ScoringMode>("high-fit");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("show");
   const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
     getInitialPoolFilters
   );
+  const debouncedSimilarTo = useDebouncedValue(poolFilters.similarTo, 500);
+
+  const filtersForQuery = useMemo<RecommendationPoolFilterValues>(
+    () => ({
+      decade: poolFilters.decade,
+      yearMin: "",
+      country: "",
+      similarTo: debouncedSimilarTo,
+    }),
+    [poolFilters.decade, debouncedSimilarTo]
+  );
+
   const [highFitData, setHighFitData] = useState<HighFitResponse | null>(null);
   const [mlData, setMlData] = useState<MLResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const typeParam = `&title_type=${typeFilter === "all" ? "all" : typeFilter}`;
-    const filterQ = poolFiltersToQueryString(poolFilters);
-    if (scoring === "ml") {
-      fetch(`${API_URL}/recommendations/britbox-ml?limit=15${typeParam}${filterQ}`)
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then(setMlData)
-        .catch(() => setMlData(null))
-        .finally(() => setLoading(false));
-    } else {
-      fetch(`${API_URL}/recommendations/britbox?limit=15${typeParam}${filterQ}`)
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then(setHighFitData)
-        .catch(() => setHighFitData(null))
-        .finally(() => setLoading(false));
-    }
-  }, [scoring, typeFilter, poolFilters]);
+    const ac = new AbortController();
+    const typeParam = "&title_type=all";
+    const filterQ = poolFiltersToQueryString(filtersForQuery, {
+      includeCountry: false,
+      includeYearMin: false,
+    });
+    const url =
+      scoring === "ml"
+        ? `${API_URL}/recommendations/britbox-ml?limit=15${typeParam}${filterQ}`
+        : `${API_URL}/recommendations/britbox?limit=15${typeParam}${filterQ}`;
+
+    setIsFetching(true);
+    fetch(url, { signal: ac.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        if (ac.signal.aborted) return;
+        if (scoring === "ml") setMlData(data);
+        else setHighFitData(data);
+      })
+      .catch(() => {
+        if (ac.signal.aborted) return;
+        if (scoring === "ml") setMlData(null);
+        else setHighFitData(null);
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setIsFetching(false);
+      });
+
+    return () => ac.abort();
+  }, [scoring, filtersForQuery]);
 
   const activeData = scoring === "ml" ? mlData : highFitData;
-  const typeLabel =
-    typeFilter === "show"
-      ? "series"
-      : typeFilter === "movie"
-        ? "films"
-        : "titles";
-  const poolFiltersActive =
-    poolFilters.decade ||
-    poolFilters.yearMin ||
-    poolFilters.country.trim() ||
-    poolFilters.similarTo.trim();
+  const filtersActiveForQuery = britboxFiltersQueryActive(filtersForQuery);
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
-        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
-        Loading BritBox recommendations…
-      </div>
-    );
-  }
-
-  if (activeData && "error" in activeData && activeData.error) {
-    return (
-      <div className="rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-8 text-center">
-        <p className="text-[14px] font-medium text-[var(--foreground)]">
-          BritBox catalog snapshot is not available
-        </p>
-        <p className="mt-2 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
-          {activeData.message || "The BritBox catalog data could not be loaded in this environment."}
-        </p>
-      </div>
-    );
-  }
+  const showBlockingLoading = isFetching && activeData === null;
+  const catalogError =
+    activeData && "error" in activeData && activeData.error ? activeData : null;
 
   return (
-    <div>
-      {/* Default is series; Movies/All sends title_type to API. Pool counts always show series+film depth. */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1">
-          {TYPE_FILTERS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTypeFilter(id)}
-              className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                typeFilter === id ? activeBtn : inactiveBtn
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+    <div className="relative">
+      {isFetching && activeData !== null && !catalogError && (
+        <div
+          className="pointer-events-none absolute right-0 top-0 z-10 text-[11px] text-[var(--muted-soft)]"
+          aria-live="polite"
+        >
+          Updating…
         </div>
-        <span className="hidden sm:block text-[var(--section-border)]">|</span>
-        <div className="flex items-center gap-1">
+      )}
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div
+          className="inline-flex rounded-md bg-[var(--section-bg)] p-0.5"
+          role="tablist"
+          aria-label="Ranking"
+        >
           {(["high-fit", "ml"] as const).map((m) => (
             <button
               key={m}
+              type="button"
+              role="tab"
+              aria-selected={scoring === m}
               onClick={() => setScoring(m)}
-              className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                scoring === m ? activeBtn : inactiveBtn
-              }`}
+              className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                scoring === m ? segActive : segInactive
+              } ${scoring === m ? "bg-[var(--card-bg)] shadow-sm" : ""}`}
             >
               {m === "high-fit" ? "High-Fit" : "ML 8+"}
             </button>
@@ -377,12 +349,34 @@ export function BritBoxRecommendations() {
       </div>
 
       <RecommendationPoolFiltersBar
+        variant="compact"
+        showCountry={false}
+        showYearMin={false}
         idPrefix="britbox"
         value={poolFilters}
         onChange={setPoolFilters}
       />
 
-      {activeData?.catalog_stats && (
+      {showBlockingLoading && (
+        <div className="mb-4 flex items-center gap-2 text-[13px] text-[var(--muted-soft)]">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+          Loading catalog…
+        </div>
+      )}
+
+      {catalogError && (
+        <div className="mb-4 rounded-md border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-4">
+          <p className="text-[13px] font-medium text-[var(--foreground)]">
+            Catalog snapshot unavailable
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+            {catalogError.message ||
+              "BritBox catalog data could not be loaded in this environment."}
+          </p>
+        </div>
+      )}
+
+      {!showBlockingLoading && !catalogError && activeData?.catalog_stats && (
         <StatsBanner
           stats={activeData.catalog_stats}
           fetchedAt={
@@ -390,30 +384,32 @@ export function BritBoxRecommendations() {
               ? (activeData.fetched_at as string)
               : undefined
           }
-          typeLabel={typeLabel}
         />
       )}
 
-      {scoring === "high-fit" && highFitData && (
+      {!showBlockingLoading &&
+        !catalogError &&
+        scoring === "high-fit" &&
+        highFitData && (
         <>
           {highFitData.items.length === 0 ? (
-            <p className="text-[14px] text-[var(--muted-soft)]">
-              {poolFiltersActive
-                ? `No scoreable BritBox ${typeLabel} match these pool filters. Try clearing decade, year, country, or similar-to.`
-                : `No scoreable BritBox ${typeLabel} yet. Enrich more metadata to improve matching.`}
+            <p className="text-[13px] text-[var(--muted-soft)]">
+              {filtersActiveForQuery
+                ? "No titles match these filters—try another decade or broader similar-to."
+                : "No scoreable titles yet. Enrich metadata to improve matching."}
             </p>
           ) : (
-            <ul className="space-y-4 sm:space-y-5">
+            <ul className="space-y-2.5 sm:space-y-3">
               {highFitData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <HighFitCard
+                    variant="britbox"
                     imdb_title_id={item.imdb_title_id}
                     title={item.title}
                     title_type={item.title_type}
                     year={item.year}
                     poster={item.poster}
                     explanation={item.explanation}
-                    provider="BritBox"
                   />
                 </li>
               ))}
@@ -422,28 +418,28 @@ export function BritBoxRecommendations() {
         </>
       )}
 
-      {scoring === "ml" && mlData && (
+      {!showBlockingLoading && !catalogError && scoring === "ml" && mlData && (
         <>
           {!mlData.model_available ? (
-            <div className="rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-5 py-8 text-center">
-              <p className="text-[14px] font-medium text-[var(--foreground)]">
-                Model not trained yet
+            <div className="rounded-md border border-[var(--section-border)]/80 bg-[var(--section-bg)] px-4 py-4">
+              <p className="text-[13px] font-medium text-[var(--foreground)]">
+                ML model not trained
               </p>
-              <p className="mt-2 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
-                Train the 8+ model, then restart the backend:
+              <p className="mt-1 text-[12px] text-[var(--muted-soft)]">
+                Then restart the backend:
               </p>
-              <code className="mt-3 block rounded-md bg-[var(--card-bg)] px-3 py-2 text-[12px] text-[var(--muted-soft)]">
+              <code className="mt-2 block text-[11px] text-[var(--muted-soft)]">
                 cd backend && python -m app.ml.train_8plus_baseline
               </code>
             </div>
           ) : mlData.items.length === 0 ? (
-            <p className="text-[14px] text-[var(--muted-soft)]">
-              {poolFiltersActive
-                ? `No BritBox ${typeLabel} in the filtered pool for ML ranking. Try loosening filters.`
-                : `No scoreable BritBox ${typeLabel} for ML ranking.`}
+            <p className="text-[13px] text-[var(--muted-soft)]">
+              {filtersActiveForQuery
+                ? "No titles in this filtered pool for ML. Try loosening filters."
+                : "No scoreable titles for ML ranking."}
             </p>
           ) : (
-            <ul className="space-y-4 sm:space-y-5">
+            <ul className="space-y-2.5 sm:space-y-3">
               {mlData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <BritBoxMLCard item={item} />
@@ -454,10 +450,9 @@ export function BritBoxRecommendations() {
         </>
       )}
 
-      {!activeData && (
-        <p className="text-[14px] text-[var(--muted-soft)]">
-          Unable to load BritBox recommendations. Check that the backend is
-          running.
+      {!showBlockingLoading && !catalogError && !activeData && (
+        <p className="text-[13px] text-[var(--muted-soft)]">
+          Unable to load recommendations. Is the backend running?
         </p>
       )}
     </div>
