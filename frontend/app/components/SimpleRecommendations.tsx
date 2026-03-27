@@ -6,6 +6,15 @@ import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 import { SectionHelp } from "./SectionHelp";
+import {
+  RECO_CONTROLS_WELL,
+  RECO_EMPTY_PANEL,
+  RECO_LOADING_DOT,
+  RECO_LOADING_ROW,
+  RECO_MODE_INTRO,
+  RECO_RESULTS_LIST,
+  RECO_SECONDARY_LINE,
+} from "./recommendationModeStyles";
 
 const DEBOUNCE_MS = 350;
 /** Top N titles to show; passed as API limit (backend still scores a wider pool first). */
@@ -112,7 +121,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   );
 
   const header = embedded ? (
-    <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+    <p className={RECO_MODE_INTRO}>
       Browse titles you&apos;ve already rated 8+
       <SectionHelp title="How this works">{helpContent}</SectionHelp>
     </p>
@@ -122,7 +131,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
         Explore your favorites
         <SectionHelp title="How this works">{helpContent}</SectionHelp>
       </h2>
-      <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+      <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted)]">
         Browse titles you&apos;ve already rated 8+
       </p>
     </>
@@ -131,7 +140,13 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   const content = (
     <>
       {header}
-      <div className={embedded ? "flex flex-wrap items-center gap-3 sm:gap-4" : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"}>
+      <div
+        className={
+          embedded
+            ? `${RECO_CONTROLS_WELL} flex flex-wrap items-center gap-3 sm:gap-4`
+            : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"
+        }
+      >
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -174,19 +189,27 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
       </div>
 
       {loading ? (
-        <div className={embedded ? "mt-5 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]" : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]"}>
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+        <div className={embedded ? RECO_LOADING_ROW : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted)]"}>
+          <span className={RECO_LOADING_DOT} />
           Loading recommendations…
         </div>
       ) : (
         <>
           {explanation && (
-            <p className={embedded ? "mt-5 text-[14px] leading-[1.6] text-[var(--muted-soft)]" : "mt-5 text-[14px] leading-[1.6] text-[var(--muted-soft)] sm:mt-6"}>
+            <p className={embedded ? RECO_SECONDARY_LINE : "mt-5 text-[14px] leading-[1.6] text-[var(--muted)] sm:mt-6"}>
               {explanation}
             </p>
           )}
           {items.length > 0 ? (
-            <ul className={embedded ? "mt-5 grid gap-5 sm:gap-6" : (explanation ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6" : "mt-6 grid gap-5 sm:mt-7 sm:gap-6")}>
+            <ul
+              className={
+                embedded
+                  ? RECO_RESULTS_LIST
+                  : explanation
+                    ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6"
+                    : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"
+              }
+            >
               {items.map((r) => (
                 <li key={r.imdb_title_id}>
                   <RecommendationCard
@@ -205,10 +228,10 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
             <p
               className={
                 embedded
-                  ? "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]"
-                  : (explanation
-                    ? "mt-4 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-5"
-                    : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6")
+                  ? RECO_EMPTY_PANEL
+                  : explanation
+                    ? "mt-4 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-5"
+                    : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
               }
             >
               No 8+ titles match these filters yet.

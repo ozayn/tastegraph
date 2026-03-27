@@ -13,6 +13,7 @@ import { RecommendationComparison } from "./RecommendationComparison";
 import { SimpleRecommendations } from "./SimpleRecommendations";
 import { WatchlistRecommendations } from "./WatchlistRecommendations";
 import { BritBoxRecommendations } from "./BritBoxRecommendations";
+import { RECO_MODE_INTRO } from "./recommendationModeStyles";
 
 export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
@@ -52,7 +53,7 @@ export function RecommendationsContainer() {
 function HighFitModeContent() {
   return (
     <div>
-      <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted)]">
+      <p className={RECO_MODE_INTRO}>
         Unrated watchlist items ranked by alignment with your 8+ taste signals. Each card explains why it fits. Use the pool filters to narrow by decade, country, or a title similar to one in your rated/watchlist data.
         <SectionHelp title="How this works">
           <p>Items you saved but haven&apos;t rated, ranked by overlap with your <strong>8+ taste signals</strong>: genres, countries, decades, and creators that appear in titles you loved.</p>
@@ -67,7 +68,7 @@ function HighFitModeContent() {
 function MLModeContent() {
   return (
     <div>
-      <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted)]">
+      <p className={RECO_MODE_INTRO}>
         Ranked by estimated probability you would rate these 8+. Logistic-regression baseline on metadata and taste-derived features.
         <SectionHelp title="How this works">
           <p>Watchlist items scored by a model trained on your rated titles. <strong>Probability</strong> = estimated P(rate 8+ | title). Interpret as likelihood, not a guarantee.</p>
@@ -82,7 +83,7 @@ function MLModeContent() {
 function BritBoxModeContent() {
   return (
     <div>
-      <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--muted)]">
+      <p className={RECO_MODE_INTRO}>
         Full BritBox snapshot (series and films), ranked for you. Watchlist feeds taste only—those titles stay out of the list.
         <SectionHelp title="How this works">
           <p>Pool = the BritBox US snapshot, not your watchlist. Decade and similar-to narrow the pool before ranking.</p>

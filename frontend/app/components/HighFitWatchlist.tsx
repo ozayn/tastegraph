@@ -9,6 +9,12 @@ import {
   RecommendationPoolFiltersBar,
   type RecommendationPoolFilterValues,
 } from "./RecommendationPoolFiltersBar";
+import {
+  RECO_EMPTY_MESSAGE,
+  RECO_LOADING_DOT,
+  RECO_LOADING_ROW,
+  RECO_RESULTS_LIST,
+} from "./recommendationModeStyles";
 
 type HighFitExplanation = {
   in_favorite_list?: boolean;
@@ -47,14 +53,14 @@ export function HighFitWatchlist() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div>
         <RecommendationPoolFiltersBar
           idPrefix="whf"
           value={poolFilters}
           onChange={setPoolFilters}
         />
-        <div className="flex items-center gap-2 text-[14px] text-[var(--muted)]">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-soft)]" />
+        <div className={RECO_LOADING_ROW}>
+          <span className={RECO_LOADING_DOT} />
           Loading…
         </div>
       </div>
@@ -68,13 +74,13 @@ export function HighFitWatchlist() {
 
   if (!items.length) {
     return (
-      <div className="space-y-3">
+      <div>
         <RecommendationPoolFiltersBar
           idPrefix="whf"
           value={poolFilters}
           onChange={setPoolFilters}
         />
-        <p className="text-[14px] text-[var(--muted-soft)]">
+        <p className={RECO_EMPTY_MESSAGE}>
           {filtersActive
             ? "No watchlist items match these filters with strong taste alignment. Try loosening decade, country, or similar-to."
             : "No unrated watchlist items with strong taste alignment yet. Add titles to your watchlist and rate more 8+ to build signals."}
@@ -84,13 +90,13 @@ export function HighFitWatchlist() {
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       <RecommendationPoolFiltersBar
         idPrefix="whf"
         value={poolFilters}
         onChange={setPoolFilters}
       />
-      <ul className="space-y-4 sm:space-y-5">
+      <ul className={RECO_RESULTS_LIST}>
       {items.map((item) => (
         <li key={item.imdb_title_id}>
           <HighFitCard

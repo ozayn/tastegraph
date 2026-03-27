@@ -10,6 +10,7 @@ import {
   RecommendationPoolFiltersBar,
   type RecommendationPoolFilterValues,
 } from "./RecommendationPoolFiltersBar";
+import { RECO_BODY_TEXT, RECO_LOADING_DOT, RECO_RESULTS_GRID } from "./recommendationModeStyles";
 
 type ScoringMode = "high-fit" | "ml";
 
@@ -216,7 +217,7 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
     >
       <div className="flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5">
         {showPoster && (
-          <div className="h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--section-bg)] sm:h-[5.5rem] sm:w-[3.75rem]">
+          <div className="h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[5.5rem] sm:w-[3.75rem]">
             <img
               src={item.poster!}
               alt=""
@@ -226,18 +227,18 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold leading-snug text-[var(--foreground)] sm:text-[16px]">
+          <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
             {displayTitle}
           </h3>
-          <p className="mt-1 text-[12px] text-[var(--muted-soft)]">
+          <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">
             {meta && <span>{meta}</span>}
-            {meta && <span className="text-[var(--muted-soft)]/50"> · </span>}
-            <span className="text-[var(--foreground)]/90">
+            {meta && <span className="text-[var(--muted-soft)]"> · </span>}
+            <span className="font-medium text-[var(--foreground)]">
               {(item.prob_8plus * 100).toFixed(0)}% 8+
             </span>
           </p>
           {topFeat && (
-            <p className="mt-1 text-[11px] text-[var(--muted-soft)]">{topFeat}</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-soft)]">{topFeat}</p>
           )}
         </div>
       </div>
@@ -347,7 +348,7 @@ export function BritBoxRecommendations() {
       </div>
 
       <RecommendationPoolFiltersBar
-        variant="compact"
+        className="mb-5"
         showCountry={false}
         idPrefix="britbox"
         value={poolFilters}
@@ -355,8 +356,8 @@ export function BritBoxRecommendations() {
       />
 
       {showBlockingLoading && (
-        <div className="mb-4 flex items-center gap-2 text-[13px] text-[var(--muted-soft)]">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+        <div className="mb-4 flex items-center gap-2.5 text-[14px] text-[var(--muted)]">
+          <span className={RECO_LOADING_DOT} />
           Loading catalog…
         </div>
       )}
@@ -390,13 +391,13 @@ export function BritBoxRecommendations() {
         highFitData && (
         <>
           {highFitData.items.length === 0 ? (
-            <p className="text-[13px] text-[var(--muted-soft)]">
+            <p className={RECO_BODY_TEXT}>
               {filtersActiveForQuery
                 ? "No titles match these filters—try another decade or broader similar-to."
                 : "No scoreable titles yet. Enrich metadata to improve matching."}
             </p>
           ) : (
-            <ul className="space-y-2.5 sm:space-y-3">
+            <ul className={RECO_RESULTS_GRID}>
               {highFitData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <HighFitCard
@@ -418,25 +419,25 @@ export function BritBoxRecommendations() {
       {!showBlockingLoading && !catalogError && scoring === "ml" && mlData && (
         <>
           {!mlData.model_available ? (
-            <div className="rounded-md border border-[var(--section-border)]/80 bg-[var(--section-bg)] px-4 py-4">
-              <p className="text-[13px] font-medium text-[var(--foreground)]">
+            <div className="rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-4 py-5">
+              <p className="text-[14px] font-medium text-[var(--foreground)]">
                 ML model not trained
               </p>
-              <p className="mt-1 text-[12px] text-[var(--muted-soft)]">
-                Then restart the backend:
+              <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
+                Train the model locally, then restart the backend:
               </p>
-              <code className="mt-2 block text-[11px] text-[var(--muted-soft)]">
+              <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
                 cd backend && python -m app.ml.train_8plus_baseline
               </code>
             </div>
           ) : mlData.items.length === 0 ? (
-            <p className="text-[13px] text-[var(--muted-soft)]">
+            <p className={RECO_BODY_TEXT}>
               {filtersActiveForQuery
                 ? "No titles in this filtered pool for ML. Try loosening filters."
                 : "No scoreable titles for ML ranking."}
             </p>
           ) : (
-            <ul className="space-y-2.5 sm:space-y-3">
+            <ul className={RECO_RESULTS_GRID}>
               {mlData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <BritBoxMLCard item={item} />

@@ -6,6 +6,14 @@ import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 import { SectionHelp } from "./SectionHelp";
+import {
+  RECO_CONTROLS_WELL,
+  RECO_EMPTY_PANEL,
+  RECO_LOADING_DOT,
+  RECO_LOADING_ROW,
+  RECO_MODE_INTRO,
+  RECO_RESULTS_LIST,
+} from "./recommendationModeStyles";
 
 const DEBOUNCE_MS = 350;
 const DISPLAY_LIMIT = 5;
@@ -65,12 +73,6 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           const fetched = data as Item[];
           const withPoster = fetched.filter((r) => hasUsablePoster(r.poster));
           const final = withPoster.slice(0, DISPLAY_LIMIT);
-          // DEBUG: remove after verifying poster-only filtering
-          console.debug("[WatchlistRecommendations]", {
-            totalFetched: fetched.length,
-            withUsablePoster: withPoster.length,
-            finalTitles: final.map((r) => r.title ?? r.imdb_title_id),
-          });
           setItems(final);
         })
         .catch(() => {
@@ -117,7 +119,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
     "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
   const header = embedded ? (
-    <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+    <p className={RECO_MODE_INTRO}>
       Titles you saved, filtered by your taste
       <SectionHelp title="How this works">
         <p>Titles you saved, filtered by genre/country/year. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
@@ -133,7 +135,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           <p>Unrated items only by default. &quot;Include rated&quot; shows what you&apos;ve already seen for comparison.</p>
         </SectionHelp>
       </h2>
-      <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
+      <p className="mt-1.5 text-[14px] leading-[1.5] text-[var(--muted)]">
         Titles you saved, filtered by your taste
       </p>
     </>
@@ -142,7 +144,13 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
   const content = (
     <>
       {header}
-      <div className={embedded ? "flex flex-wrap items-center gap-3 sm:gap-4" : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"}>
+      <div
+        className={
+          embedded
+            ? `${RECO_CONTROLS_WELL} flex flex-wrap items-center gap-3 sm:gap-4`
+            : "mt-6 flex flex-wrap items-center gap-3 sm:mt-7 sm:gap-4"
+        }
+      >
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
@@ -185,12 +193,12 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           className={`${filterInput} w-24`}
           aria-label="Year to"
         />
-        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted-soft)] transition-colors hover:text-[var(--foreground)]">
+        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
           <input
             type="checkbox"
             checked={includeRated}
             onChange={(e) => setIncludeRated(e.target.checked)}
-            className="h-4 w-4 rounded border-[var(--section-border)] accent-[var(--foreground)]"
+            className="h-4 w-4 rounded border-[var(--card-border)] accent-[var(--accent)]"
             aria-label="Include rated"
           />
           <span>Include rated</span>
@@ -198,12 +206,12 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
       </div>
 
       {loading ? (
-        <div className={embedded ? "mt-5 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]" : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted-soft)]"}>
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+        <div className={embedded ? RECO_LOADING_ROW : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted)]"}>
+          <span className={RECO_LOADING_DOT} />
           Loading…
         </div>
       ) : items.length > 0 ? (
-        <ul className={embedded ? "mt-5 grid gap-5 sm:gap-6" : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
+        <ul className={embedded ? RECO_RESULTS_LIST : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
           {items.map((r) => (
             <li key={r.imdb_title_id}>
               <RecommendationCard
@@ -219,7 +227,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           ))}
         </ul>
       ) : (
-        <p className={embedded ? "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)]" : "mt-5 rounded-lg border border-dashed border-[var(--section-border)] py-8 text-center text-[14px] text-[var(--muted-soft)] sm:mt-6"}>
+        <p className={embedded ? RECO_EMPTY_PANEL : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"}>
           No poster-backed results for these filters yet.
         </p>
       )}

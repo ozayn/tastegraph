@@ -34,64 +34,56 @@ export function poolFiltersToQueryString(
   return s ? `&${s}` : "";
 }
 
-const selectDefault =
-  "rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-2 py-1.5 text-[12px] text-[var(--foreground)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/22";
+/** Matches Simple/Watchlist filter row: filled surface, full border, 14px type, shared focus ring. */
+const fieldSelect =
+  "w-full min-h-[2.75rem] rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] shadow-sm transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
-const selectCompact =
-  "w-full rounded-none border-0 border-b border-[var(--card-border)] bg-transparent py-1.5 pl-0 pr-6 text-[12px] text-[var(--foreground)] focus:border-[var(--accent)]/55 focus:outline-none focus:ring-0";
+const fieldInput =
+  "min-h-[2.75rem] min-w-0 flex-1 rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
-const inputDefault =
-  "min-w-0 flex-1 rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-2 py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/22";
+const labelCls =
+  "text-[10px] font-medium uppercase tracking-wide text-[var(--muted-soft)]";
 
-const inputCompact =
-  "min-w-0 flex-1 rounded-none border-0 border-b border-[var(--card-border)] bg-transparent py-1.5 text-[12px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] focus:border-[var(--accent)]/55 focus:outline-none focus:ring-0";
+const SIMILAR_PLACEHOLDER = "Title in your rated or watchlist data";
 
 export function RecommendationPoolFiltersBar({
   value,
   onChange,
   idPrefix,
-  variant = "default",
   showCountry = true,
   showDecade = true,
+  className = "",
 }: {
   value: RecommendationPoolFilterValues;
   onChange: (next: RecommendationPoolFilterValues) => void;
   idPrefix: string;
-  /** ``compact``: underline-style fields, no panel box (e.g. BritBox). */
-  variant?: "default" | "compact";
   /** BritBox omits country; watchlist high-fit keeps full bar. */
   showCountry?: boolean;
   /** Hide decade (e.g. rare layouts); BritBox keeps decade on. */
   showDecade?: boolean;
+  /** Extra classes on the shell (e.g. ``mb-5`` when the next block has no top margin). */
+  className?: string;
 }) {
   const set = (patch: Partial<RecommendationPoolFilterValues>) =>
     onChange({ ...value, ...patch });
 
-  const compact = variant === "compact";
-  const selectBase = compact ? selectCompact : selectDefault;
-  const inputBase = compact ? inputCompact : inputDefault;
-  const labelCls = compact
-    ? "text-[10px] font-normal text-[var(--muted-soft)]"
-    : "text-[10px] font-medium uppercase tracking-wide text-[var(--muted-soft)]";
-
-  const wrapCls = compact
-    ? "mb-5 flex flex-col gap-3 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
-    : "mb-4 flex flex-col gap-2 rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-end";
+  const wrapCls =
+    "mb-0 flex flex-col gap-3 rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3";
 
   return (
     <div
-      className={wrapCls}
+      className={className ? `${wrapCls} ${className}` : wrapCls}
       role="group"
       aria-label="Narrow recommendations"
     >
       {showDecade && (
-        <div className="flex min-w-[7.5rem] flex-col gap-0.5">
+        <div className="flex min-w-[7.5rem] flex-col gap-1">
           <label htmlFor={`${idPrefix}-decade`} className={labelCls}>
             Decade
           </label>
           <select
             id={`${idPrefix}-decade`}
-            className={selectBase}
+            className={fieldSelect}
             value={value.decade}
             onChange={(e) => set({ decade: e.target.value })}
           >
@@ -104,14 +96,14 @@ export function RecommendationPoolFiltersBar({
         </div>
       )}
       {showCountry && (
-        <div className="flex min-w-[8rem] max-w-[11rem] flex-1 flex-col gap-0.5">
+        <div className="flex min-w-[8rem] max-w-[11rem] flex-1 flex-col gap-1">
           <label htmlFor={`${idPrefix}-country`} className={labelCls}>
             Country
           </label>
           <input
             id={`${idPrefix}-country`}
             type="text"
-            className={inputBase}
+            className={fieldInput}
             placeholder="e.g. United Kingdom"
             value={value.country}
             onChange={(e) => set({ country: e.target.value })}
@@ -122,10 +114,10 @@ export function RecommendationPoolFiltersBar({
       <div
         className={
           showCountry
-            ? "flex min-w-[10rem] flex-[2] flex-col gap-0.5 sm:min-w-[12rem]"
+            ? "flex min-w-[10rem] flex-[2] flex-col gap-1 sm:min-w-[12rem]"
             : showDecade
-              ? "flex min-w-[12rem] flex-[1.5] flex-col gap-0.5 sm:min-w-[18rem]"
-              : "flex min-w-[12rem] flex-[1.5] flex-col gap-0.5 sm:min-w-[18rem]"
+              ? "flex min-w-[12rem] flex-[1.5] flex-col gap-1 sm:min-w-[18rem]"
+              : "flex min-w-[12rem] flex-[1.5] flex-col gap-1 sm:min-w-[18rem]"
         }
       >
         <label htmlFor={`${idPrefix}-similar`} className={labelCls}>
@@ -134,12 +126,8 @@ export function RecommendationPoolFiltersBar({
         <input
           id={`${idPrefix}-similar`}
           type="text"
-          className={inputBase}
-          placeholder={
-            compact
-              ? "Title from your ratings or watchlist"
-              : "Title in your rated / watchlist data"
-          }
+          className={fieldInput}
+          placeholder={SIMILAR_PLACEHOLDER}
           value={value.similarTo}
           onChange={(e) => set({ similarTo: e.target.value })}
           autoComplete="off"

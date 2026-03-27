@@ -115,13 +115,7 @@ export function HighFitCard({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-            <h3
-              className={
-                isBritbox
-                  ? "break-words text-[15px] font-semibold leading-snug text-[var(--foreground)] sm:text-[16px]"
-                  : "break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]"
-              }
-            >
+            <h3 className="break-words text-[17px] font-semibold leading-snug tracking-[-0.015em] text-[var(--foreground)] sm:text-[18px]">
               {displayTitle}
             </h3>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -142,13 +136,7 @@ export function HighFitCard({
             </div>
           </div>
           {meta && (
-            <p
-              className={
-                isBritbox
-                  ? "mt-1 text-[12px] leading-snug text-[var(--muted-soft)]"
-                  : "mt-1.5 text-[13px] leading-snug text-[var(--muted)]"
-              }
-            >
+            <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">
               {meta}
             </p>
           )}
@@ -158,12 +146,12 @@ export function HighFitCard({
             </p>
           )}
           {reasonOne && (
-            <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--muted)]">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--muted)]">
               {reasonOne}
             </p>
           )}
           {signalsLine && (
-            <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--muted-soft)]">
               {signalsLine}
             </p>
           )}

@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import {
+  RECO_EMPTY_MESSAGE,
+  RECO_EMPTY_PANEL,
+  RECO_LOADING_DOT,
+  RECO_LOADING_ROW,
+  RECO_RESULTS_LIST,
+} from "./recommendationModeStyles";
 
 type MLItem = {
   imdb_title_id: string;
@@ -89,8 +96,8 @@ export function MLRecommendations() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
-        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
+      <div className={RECO_LOADING_ROW}>
+        <span className={RECO_LOADING_DOT} />
         Loading…
       </div>
     );
@@ -98,7 +105,7 @@ export function MLRecommendations() {
 
   if (!data) {
     return (
-      <p className="text-[14px] text-[var(--muted-soft)]">
+      <p className={RECO_EMPTY_MESSAGE}>
         Unable to load ML recommendations. Check that the backend is running.
       </p>
     );
@@ -106,11 +113,11 @@ export function MLRecommendations() {
 
   if (!data.model_available) {
     return (
-      <div className="rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-5 py-8 text-center">
+      <div className={`${RECO_EMPTY_PANEL} px-5 text-left`}>
         <p className="text-[14px] font-medium text-[var(--foreground)]">
           Model not trained yet
         </p>
-        <p className="mt-2 text-[13px] leading-[1.5] text-[var(--muted-soft)]">
+        <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
           Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
         </p>
         <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
@@ -122,14 +129,14 @@ export function MLRecommendations() {
 
   if (!data.items.length) {
     return (
-      <p className="text-[14px] text-[var(--muted-soft)]">
+      <p className={RECO_EMPTY_MESSAGE}>
         No unrated watchlist items to score. Add titles to your watchlist and rate more titles to build the model.
       </p>
     );
   }
 
   return (
-    <ul className="space-y-4 sm:space-y-5">
+    <ul className={RECO_RESULTS_LIST}>
       {data.items.map((item) => (
         <li key={item.imdb_title_id}>
           <MLRecommendationCard item={item} />

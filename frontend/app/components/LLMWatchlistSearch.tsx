@@ -6,6 +6,12 @@ const IS_DEV = process.env.NODE_ENV !== "production";
 import { API_URL } from "../lib/api";
 import { HighFitCard } from "./HighFitCard";
 import { SectionHelp } from "./SectionHelp";
+import {
+  RECO_CONTROLS_WELL,
+  RECO_EMPTY_PANEL_FLAT,
+  RECO_MODE_INTRO_TEXT,
+  RECO_RESULTS_GRID,
+} from "./recommendationModeStyles";
 
 type SearchItem = {
   imdb_title_id: string;
@@ -119,9 +125,9 @@ export function LLMWatchlistSearch() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[14px] leading-[1.5] text-[var(--muted)]">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className={`min-w-0 flex-1 ${RECO_MODE_INTRO_TEXT}`}>
           Natural-language search. The LLM interprets your query; results stay grounded in your data. Optionally limit the pool to a single decade before ranking.
           <SectionHelp title="How this works">
             <p><strong>Grounded search</strong>: Results come only from your watchlist or watched history. The LLM maps your text to genres, countries, similar-to, ratings, etc.</p>
@@ -159,7 +165,9 @@ export function LLMWatchlistSearch() {
           </button>
         </div>
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+      <div
+        className={`${RECO_CONTROLS_WELL} flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3`}
+      >
         <label className="sr-only" htmlFor="llm-search-decade">
           Release decade (optional pool filter)
         </label>
@@ -205,16 +213,16 @@ export function LLMWatchlistSearch() {
         <p className="text-[13px] text-[var(--mondrian-red)]">{error}</p>
       )}
       {result && (
-        <div className="space-y-3">
+        <div className="space-y-5">
           {result.intent_summary && (
-            <p className="text-[13px] text-[var(--muted)]">
+            <p className="text-[14px] leading-[1.5] text-[var(--muted)]">
               Interpreted as: {result.intent_summary}
               {result.fallback &&
             ` (LLM unavailable; showing ${scope === "watched" ? "watched" : "watchlist"} by taste fit)`}
             </p>
           )}
           {result.items.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className={RECO_RESULTS_GRID}>
               {result.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <HighFitCard
@@ -231,7 +239,7 @@ export function LLMWatchlistSearch() {
               ))}
             </ul>
           ) : (
-            <p className="rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)]">
+            <p className={RECO_EMPTY_PANEL_FLAT}>
               No {scope === "watched" ? "watched" : "watchlist"} items match. Try a broader query or different filters.
             </p>
           )}
