@@ -40,33 +40,33 @@ export function RatingsSummary() {
 
   return (
     <section aria-labelledby="home-ratings-heading">
-      <h2 id="home-ratings-heading" className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-soft)]">
+      <h2 id="home-ratings-heading" className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--overview-muted)]">
         Your ratings
       </h2>
-      <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3 sm:mt-4 sm:gap-x-10">
+      <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2.5 sm:mt-2.5 sm:gap-x-8">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[28px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[32px]">
+          <span className="text-[26px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[30px]">
             {summary.total_ratings.toLocaleString()}
           </span>
-          <span className="text-[13px] text-[var(--muted)]">Titles rated</span>
+          <span className="text-[12px] text-[var(--muted)] sm:text-[13px]">Titles rated</span>
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-[24px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[28px]">
+          <span className="text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--foreground)] sm:text-[26px]">
             {summary.average_rating?.toFixed(1) ?? "—"}
           </span>
-          <span className="text-[13px] text-[var(--muted)]">Average</span>
+          <span className="text-[12px] text-[var(--muted)] sm:text-[13px]">Average</span>
         </div>
         {summary.min_rating != null && summary.max_rating != null && (
           <div className="flex flex-col gap-0.5 pb-px">
-            <span className="text-[15px] font-medium tabular-nums text-[var(--foreground)] sm:text-[16px]">
+            <span className="text-[14px] font-medium tabular-nums text-[var(--foreground)] sm:text-[15px]">
               {summary.min_rating}–{summary.max_rating}
             </span>
-            <span className="text-[13px] text-[var(--muted)]">Range</span>
+            <span className="text-[12px] text-[var(--muted)] sm:text-[13px]">Range</span>
           </div>
         )}
       </div>
       {distribution?.most_common_rating != null && (
-        <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-[var(--muted)] sm:mt-5">
+        <p className="mt-3 max-w-xl text-[12px] leading-relaxed text-[var(--muted-soft)] sm:mt-3.5 sm:text-[13px]">
           Most common score {distribution.most_common_rating}
           <span className="mx-1.5 text-[var(--muted-subtle)]" aria-hidden>
             ·
