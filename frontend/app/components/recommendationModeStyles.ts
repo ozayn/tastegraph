@@ -23,7 +23,7 @@ export const RECO_LOADING_DOT =
   "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-soft)]";
 
 /** Grid only (no top margin) — use inside stacks that already separate blocks. */
-export const RECO_RESULTS_GRID = "grid gap-5 sm:gap-6";
+export const RECO_RESULTS_GRID = "grid gap-4 sm:gap-5";
 
 /** Results list: spacing from controls / secondary content. */
 export const RECO_RESULTS_LIST = `mt-5 ${RECO_RESULTS_GRID}`;
@@ -45,3 +45,13 @@ export const RECO_EMPTY_MESSAGE = "mt-5 text-[14px] leading-[1.5] text-[var(--mu
 
 /** Body / empty copy without preset top margin (e.g. below stats banner). */
 export const RECO_BODY_TEXT = "text-[14px] leading-[1.5] text-[var(--muted)]";
+
+/** Rows shown before inline “Show more” (full list still loaded; no inner scroll). */
+export const RECO_VISIBLE_INITIAL = {
+  explore: 6,
+  watchlist: 5,
+  highFit: 6,
+  ml: 6,
+  search: 5,
+  providerCatalog: 6,
+} as const;

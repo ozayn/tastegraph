@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
 import { API_URL } from "../lib/api";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import { HighFitCard } from "./HighFitCard";
 import { SectionHelp } from "./SectionHelp";
 import {
@@ -11,6 +12,7 @@ import {
   RECO_EMPTY_PANEL_FLAT,
   RECO_MODE_INTRO_TEXT,
   RECO_RESULTS_GRID,
+  RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
 type SearchItem = {
@@ -97,8 +99,13 @@ export function LLMWatchlistSearch() {
   const [scope, setScope] = useState<SearchScope>("watchlist");
   const [decade, setDecade] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
+  const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [result]);
 
   const doSearch = useCallback(() => {
     if (!query.trim()) return;
@@ -109,7 +116,7 @@ export function LLMWatchlistSearch() {
       decade.trim() !== ""
         ? `&decade=${encodeURIComponent(decade.trim())}`
         : "";
-    fetch(`${API_URL}/recommendations/watchlist-search?limit=8${decadeQ}`, {
+    fetch(`${API_URL}/recommendations/watchlist-search?limit=12${decadeQ}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ q: query.trim(), scope }),
@@ -222,22 +229,33 @@ export function LLMWatchlistSearch() {
             </p>
           )}
           {result.items.length > 0 ? (
-            <ul className={RECO_RESULTS_GRID}>
-              {result.items.map((item) => (
-                <li key={item.imdb_title_id}>
-                  <HighFitCard
-                    imdb_title_id={item.imdb_title_id}
-                    title={item.title}
-                    title_type={item.title_type}
-                    year={item.year}
-                    poster={item.poster}
-                    explanation={normalizeExplanation(item.explanation ?? {})}
-                    user_rating={item.user_rating}
-                    date_rated={item.date_rated}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className={RECO_RESULTS_GRID}>
+                {(listExpanded
+                  ? result.items
+                  : result.items.slice(0, RECO_VISIBLE_INITIAL.search)
+                ).map((item) => (
+                  <li key={item.imdb_title_id}>
+                    <HighFitCard
+                      imdb_title_id={item.imdb_title_id}
+                      title={item.title}
+                      title_type={item.title_type}
+                      year={item.year}
+                      poster={item.poster}
+                      explanation={normalizeExplanation(item.explanation ?? {})}
+                      user_rating={item.user_rating}
+                      date_rated={item.date_rated}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <ExpandableRecoListFooter
+                expanded={listExpanded}
+                onToggle={() => setListExpanded((e) => !e)}
+                initialVisible={RECO_VISIBLE_INITIAL.search}
+                total={result.items.length}
+              />
+            </>
           ) : (
             <p className={RECO_EMPTY_PANEL_FLAT}>
               No {scope === "watched" ? "watched" : "watchlist"} items match. Try a broader query or different filters.

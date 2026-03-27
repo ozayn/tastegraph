@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import { HighFitCard } from "./HighFitCard";
 import {
   getInitialPoolFilters,
@@ -14,6 +15,7 @@ import {
   RECO_LOADING_DOT,
   RECO_LOADING_ROW,
   RECO_RESULTS_LIST,
+  RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
 type HighFitExplanation = {
@@ -37,10 +39,15 @@ type HighFitItem = {
 
 export function HighFitWatchlist() {
   const [items, setItems] = useState<HighFitItem[]>([]);
+  const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
     getInitialPoolFilters
   );
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [poolFilters]);
 
   useEffect(() => {
     const q = poolFiltersToQueryString(poolFilters);
@@ -97,19 +104,28 @@ export function HighFitWatchlist() {
         onChange={setPoolFilters}
       />
       <ul className={RECO_RESULTS_LIST}>
-      {items.map((item) => (
-        <li key={item.imdb_title_id}>
-          <HighFitCard
-            imdb_title_id={item.imdb_title_id}
-            title={item.title}
-            title_type={item.title_type}
-            year={item.year}
-            poster={item.poster}
-            explanation={item.explanation}
-          />
-        </li>
-      ))}
-    </ul>
+        {(listExpanded
+          ? items
+          : items.slice(0, RECO_VISIBLE_INITIAL.highFit)
+        ).map((item) => (
+          <li key={item.imdb_title_id}>
+            <HighFitCard
+              imdb_title_id={item.imdb_title_id}
+              title={item.title}
+              title_type={item.title_type}
+              year={item.year}
+              poster={item.poster}
+              explanation={item.explanation}
+            />
+          </li>
+        ))}
+      </ul>
+      <ExpandableRecoListFooter
+        expanded={listExpanded}
+        onToggle={() => setListExpanded((e) => !e)}
+        initialVisible={RECO_VISIBLE_INITIAL.highFit}
+        total={items.length}
+      />
     </div>
   );
 }

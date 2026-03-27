@@ -7,6 +7,7 @@ import {
 } from "../config/catalogProviders";
 import { API_URL } from "../lib/api";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import { HighFitCard } from "./HighFitCard";
 import {
   getInitialPoolFilters,
@@ -14,7 +15,12 @@ import {
   RecommendationPoolFiltersBar,
   type RecommendationPoolFilterValues,
 } from "./RecommendationPoolFiltersBar";
-import { RECO_BODY_TEXT, RECO_LOADING_DOT, RECO_RESULTS_GRID } from "./recommendationModeStyles";
+import {
+  RECO_BODY_TEXT,
+  RECO_LOADING_DOT,
+  RECO_RESULTS_GRID,
+  RECO_VISIBLE_INITIAL,
+} from "./recommendationModeStyles";
 
 export type { CatalogProviderModeId };
 
@@ -295,7 +301,12 @@ export function ProviderCatalogRecommendations({
 
   const [highFitData, setHighFitData] = useState<HighFitResponse | null>(null);
   const [mlData, setMlData] = useState<MLResponse | null>(null);
+  const [listExpanded, setListExpanded] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [scoring, provider, filtersForQuery]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -420,21 +431,32 @@ export function ProviderCatalogRecommendations({
                 : "No scoreable titles yet. Enrich metadata to improve matching."}
             </p>
           ) : (
-            <ul className={RECO_RESULTS_GRID}>
-              {highFitData.items.map((item) => (
-                <li key={item.imdb_title_id}>
-                  <HighFitCard
-                    variant={cfg.highFitCardVariant}
-                    imdb_title_id={item.imdb_title_id}
-                    title={item.title}
-                    title_type={item.title_type}
-                    year={item.year}
-                    poster={item.poster}
-                    explanation={item.explanation}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className={RECO_RESULTS_GRID}>
+                {(listExpanded
+                  ? highFitData.items
+                  : highFitData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
+                ).map((item) => (
+                  <li key={item.imdb_title_id}>
+                    <HighFitCard
+                      variant={cfg.highFitCardVariant}
+                      imdb_title_id={item.imdb_title_id}
+                      title={item.title}
+                      title_type={item.title_type}
+                      year={item.year}
+                      poster={item.poster}
+                      explanation={item.explanation}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <ExpandableRecoListFooter
+                expanded={listExpanded}
+                onToggle={() => setListExpanded((e) => !e)}
+                initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
+                total={highFitData.items.length}
+              />
+            </>
           )}
         </>
       )}
@@ -460,13 +482,24 @@ export function ProviderCatalogRecommendations({
                 : "No scoreable titles for ML ranking."}
             </p>
           ) : (
-            <ul className={RECO_RESULTS_GRID}>
-              {mlData.items.map((item) => (
-                <li key={item.imdb_title_id}>
-                  <CatalogProviderMLCard item={item} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className={RECO_RESULTS_GRID}>
+                {(listExpanded
+                  ? mlData.items
+                  : mlData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
+                ).map((item) => (
+                  <li key={item.imdb_title_id}>
+                    <CatalogProviderMLCard item={item} />
+                  </li>
+                ))}
+              </ul>
+              <ExpandableRecoListFooter
+                expanded={listExpanded}
+                onToggle={() => setListExpanded((e) => !e)}
+                initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
+                total={mlData.items.length}
+              />
+            </>
           )}
         </>
       )}

@@ -507,6 +507,12 @@ def _build_provider_surface_taste_lines(
     genre_line = _genre_overlap_line(matched_genres, year)
     if genre_line:
         lines.append(genre_line)
+    elif not matched_genres:
+        msoft = explanation.get("matched_soft_genres") or []
+        if isinstance(msoft, list) and msoft:
+            lines.append(
+                f"Softer taste overlap (often 7): {', '.join(msoft[:3])}"
+            )
 
     matched_strong_directors = explanation.get("matched_strong_directors") or []
     for d in matched_strong_directors:

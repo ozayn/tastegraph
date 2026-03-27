@@ -6,6 +6,7 @@ import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 import { SectionHelp } from "./SectionHelp";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import {
   RECO_CONTROLS_WELL,
   RECO_EMPTY_PANEL,
@@ -13,10 +14,10 @@ import {
   RECO_LOADING_ROW,
   RECO_MODE_INTRO,
   RECO_RESULTS_LIST,
+  RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
 const DEBOUNCE_MS = 350;
-const DISPLAY_LIMIT = 5;
 const FETCH_LIMIT = 25;
 
 function hasUsablePoster(poster: string | null | undefined): boolean {
@@ -36,6 +37,7 @@ type Item = {
 
 export function WatchlistRecommendations({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
+  const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -72,8 +74,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           if (id !== requestIdRef.current) return;
           const fetched = data as Item[];
           const withPoster = fetched.filter((r) => hasUsablePoster(r.poster));
-          const final = withPoster.slice(0, DISPLAY_LIMIT);
-          setItems(final);
+          setItems(withPoster.slice(0, FETCH_LIMIT));
         })
         .catch(() => {
           if (id !== requestIdRef.current) return;
@@ -114,6 +115,10 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
     yearTo,
     includeRated,
   ]);
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [items, selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated]);
 
   const filterInput =
     "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
@@ -211,21 +216,32 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           Loading…
         </div>
       ) : items.length > 0 ? (
-        <ul className={embedded ? RECO_RESULTS_LIST : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
-          {items.map((r) => (
-            <li key={r.imdb_title_id}>
-              <RecommendationCard
-                imdb_title_id={r.imdb_title_id}
-                title={r.title}
-                year={r.year}
-                title_type={r.title_type}
-                your_rating={r.your_rating}
-                poster={r.poster}
-                reasons={r.reasons}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={embedded ? RECO_RESULTS_LIST : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
+            {(listExpanded
+              ? items
+              : items.slice(0, RECO_VISIBLE_INITIAL.watchlist)
+            ).map((r) => (
+              <li key={r.imdb_title_id}>
+                <RecommendationCard
+                  imdb_title_id={r.imdb_title_id}
+                  title={r.title}
+                  year={r.year}
+                  title_type={r.title_type}
+                  your_rating={r.your_rating}
+                  poster={r.poster}
+                  reasons={r.reasons}
+                />
+              </li>
+            ))}
+          </ul>
+          <ExpandableRecoListFooter
+            expanded={listExpanded}
+            onToggle={() => setListExpanded((e) => !e)}
+            initialVisible={RECO_VISIBLE_INITIAL.watchlist}
+            total={items.length}
+          />
+        </>
       ) : (
         <p className={embedded ? RECO_EMPTY_PANEL : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"}>
           No poster-backed results for these filters yet.

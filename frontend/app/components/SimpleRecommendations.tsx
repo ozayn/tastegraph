@@ -6,6 +6,7 @@ import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import { RecommendationCard } from "./RecommendationCard";
 import { SectionHelp } from "./SectionHelp";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import {
   RECO_CONTROLS_WELL,
   RECO_EMPTY_PANEL,
@@ -14,6 +15,7 @@ import {
   RECO_MODE_INTRO,
   RECO_RESULTS_LIST,
   RECO_SECONDARY_LINE,
+  RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
 const DEBOUNCE_MS = 350;
@@ -32,6 +34,7 @@ type Item = {
 
 export function SimpleRecommendations({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
+  const [listExpanded, setListExpanded] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -110,6 +113,10 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
     yearFrom,
     yearTo,
   ]);
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [items, selectedGenres, selectedCountries, titleType, yearFrom, yearTo]);
 
   const filterInput =
     "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
@@ -201,29 +208,40 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
             </p>
           )}
           {items.length > 0 ? (
-            <ul
-              className={
-                embedded
-                  ? RECO_RESULTS_LIST
-                  : explanation
-                    ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6"
-                    : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"
-              }
-            >
-              {items.map((r) => (
-                <li key={r.imdb_title_id}>
-                  <RecommendationCard
-                    imdb_title_id={r.imdb_title_id}
-                    title={r.title}
-                    year={r.year}
-                    genres={r.genres}
-                    user_rating={r.user_rating}
-                    poster={r.poster}
-                    reasons={r.reasons}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul
+                className={
+                  embedded
+                    ? RECO_RESULTS_LIST
+                    : explanation
+                      ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6"
+                      : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"
+                }
+              >
+                {(listExpanded
+                  ? items
+                  : items.slice(0, RECO_VISIBLE_INITIAL.explore)
+                ).map((r) => (
+                  <li key={r.imdb_title_id}>
+                    <RecommendationCard
+                      imdb_title_id={r.imdb_title_id}
+                      title={r.title}
+                      year={r.year}
+                      genres={r.genres}
+                      user_rating={r.user_rating}
+                      poster={r.poster}
+                      reasons={r.reasons}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <ExpandableRecoListFooter
+                expanded={listExpanded}
+                onToggle={() => setListExpanded((e) => !e)}
+                initialVisible={RECO_VISIBLE_INITIAL.explore}
+                total={items.length}
+              />
+            </>
           ) : (
             <p
               className={

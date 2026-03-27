@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
+import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import {
   RECO_EMPTY_MESSAGE,
   RECO_EMPTY_PANEL,
   RECO_LOADING_DOT,
   RECO_LOADING_ROW,
   RECO_RESULTS_LIST,
+  RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
 type MLItem = {
@@ -84,7 +86,12 @@ function MLRecommendationCard({ item }: { item: MLItem }) {
 
 export function MLRecommendations() {
   const [data, setData] = useState<MLResponse | null>(null);
+  const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setListExpanded(false);
+  }, [data?.items]);
 
   useEffect(() => {
     fetch(`${API_URL}/recommendations/watchlist-ml?limit=15`)
@@ -135,13 +142,25 @@ export function MLRecommendations() {
     );
   }
 
+  const items = data.items;
   return (
-    <ul className={RECO_RESULTS_LIST}>
-      {data.items.map((item) => (
-        <li key={item.imdb_title_id}>
-          <MLRecommendationCard item={item} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={RECO_RESULTS_LIST}>
+        {(listExpanded
+          ? items
+          : items.slice(0, RECO_VISIBLE_INITIAL.ml)
+        ).map((item) => (
+          <li key={item.imdb_title_id}>
+            <MLRecommendationCard item={item} />
+          </li>
+        ))}
+      </ul>
+      <ExpandableRecoListFooter
+        expanded={listExpanded}
+        onToggle={() => setListExpanded((e) => !e)}
+        initialVisible={RECO_VISIBLE_INITIAL.ml}
+        total={items.length}
+      />
+    </>
   );
 }

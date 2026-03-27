@@ -1,4 +1,9 @@
-"""Taste signals from 8+ ratings for recommendation reasons and high-fit scoring."""
+"""Taste signals from 8+ ratings for recommendation reasons and high-fit scoring.
+
+8+ defines the primary (strong) taste surface. Ratings of exactly 7 add a separate,
+weaker layer—genres/decades/directors/countries you have found acceptable—without
+diluting how strong signals are built.
+"""
 
 from collections import Counter
 from sqlalchemy.orm import Session
@@ -11,6 +16,13 @@ from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import ROLE_SCORE_WEIGHT
 
 STRONG_THRESHOLD = 8
+# Soft layer: only titles rated exactly 7 (not 8+). Counts about half the strong fit points.
+SOFT_RATING = 7
+SOFT_GENRE_CAP = 12
+SOFT_DECADE_CAP = 8
+SOFT_DIRECTOR_MIN_SUPPORT = 2
+SOFT_COUNTRY_MIN_7_COUNT = 3  # normalized country must appear on ≥ this many 7-rated titles
+
 DIRECTOR_MIN_SUPPORT = 2  # min 8+ rated titles for director to be a strong signal
 COUNTRY_MIN_SUPPORT = 5  # min rated titles for country to qualify
 COUNTRY_LIFT_MIN = 1.01  # country 8+ rate must meaningfully exceed baseline (avoids common-at-baseline like US)
@@ -130,12 +142,70 @@ def load_taste_signals(db: Session) -> dict:
         if count >= DIRECTOR_MIN_SUPPORT and not _is_low_quality(d)
     }
 
+    # --- Soft layer (rated 7 only): same shape as strong, smaller caps / simpler country rule.
+    soft_rows = (
+        db.query(IMDbRating.genres, TitleMetadata.country, IMDbRating.year)
+        .outerjoin(TitleMetadata, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(IMDbRating.user_rating == SOFT_RATING)
+        .all()
+    )
+    soft_genre_counts: Counter = Counter()
+    soft_decade_counts: Counter = Counter()
+    for genres, country, year in soft_rows:
+        for g in _parse_genres(genres):
+            soft_genre_counts[g] += 1
+        d = _decade(year)
+        if d:
+            soft_decade_counts[d] += 1
+    soft_genres = {
+        g for g, _ in soft_genre_counts.most_common(SOFT_GENRE_CAP) if not _is_low_quality(g)
+    }
+    soft_decades = {
+        d for d, _ in soft_decade_counts.most_common(SOFT_DECADE_CAP) if d and not _is_low_quality(d)
+    }
+
+    soft_country_counts: Counter = Counter()
+    for _genres, c_str, _year in soft_rows:
+        if not c_str:
+            continue
+        for c in parse_and_normalize_countries(c_str):
+            soft_country_counts[c] += 1
+    soft_countries = {
+        c
+        for c, n in soft_country_counts.items()
+        if not _is_low_quality(c) and n >= SOFT_COUNTRY_MIN_7_COUNT
+    }
+
+    soft_director_counts: Counter = Counter()
+    soft_dir_rows = (
+        db.query(TitleMetadata.directors)
+        .join(IMDbRating, IMDbRating.imdb_title_id == TitleMetadata.imdb_title_id)
+        .filter(
+            TitleMetadata.directors.isnot(None),
+            TitleMetadata.directors != "",
+            IMDbRating.user_rating == SOFT_RATING,
+        )
+        .all()
+    )
+    for (directors_str,) in soft_dir_rows:
+        for d in _parse_directors(directors_str):
+            soft_director_counts[d] += 1
+    soft_directors = {
+        d
+        for d, count in soft_director_counts.items()
+        if count >= SOFT_DIRECTOR_MIN_SUPPORT and not _is_low_quality(d)
+    }
+
     return {
         "strong_genres": strong_genres,
         "strong_countries": strong_countries,
         "strong_decades": strong_decades,
         "strong_directors": strong_directors,
         "favorite_list_ids": favorite_list_ids,
+        "soft_genres": soft_genres,
+        "soft_countries": soft_countries,
+        "soft_decades": soft_decades,
+        "soft_directors": soft_directors,
     }
 
 
@@ -295,7 +365,9 @@ def score_title_by_taste_signals(
 ) -> tuple[int, dict]:
     """Heuristic fit score for any candidate title (watchlist row, provider catalog title, search hit).
 
-    Compares metadata to strong genres/countries/decades, favorite people, and curated favorite-list IDs.
+    Compares metadata to **strong** (8+) genres/countries/decades/directors, then adds smaller
+    integer bonuses for overlaps with the **soft** (7-only) layer where strong did not already
+    credit the same signal. Favorite-list and favorite-people boosts unchanged.
     Returns (score, explanation dict for UI).
     """
     score = 0
@@ -306,16 +378,31 @@ def score_title_by_taste_signals(
 
     in_favorite_list = imdb_title_id in signals.get("favorite_list_ids", set())
 
-    matched_genres = sorted(item_genres & signals["strong_genres"])[:3]
+    strong_genres = signals["strong_genres"]
+    soft_genres = signals.get("soft_genres", set())
+
+    matched_genres = sorted(item_genres & strong_genres)[:3]
     for _ in matched_genres:
         score += 2
+
+    # Soft genres: overlap with 7-rated-derived genres not already credited as strong.
+    matched_soft_genres = sorted((item_genres & soft_genres) - (item_genres & strong_genres))[:3]
+    for _ in matched_soft_genres:
+        score += 1
 
     matched_countries = sorted(item_countries & signals["strong_countries"])[:2]
     for _ in matched_countries:
         score += 2
 
+    soft_countries = signals.get("soft_countries", set())
+    matched_soft_countries = sorted((item_countries & soft_countries) - set(matched_countries))[:2]
+    for _ in matched_soft_countries:
+        score += 1
+
     matched_decade = item_decade if (item_decade and item_decade in signals["strong_decades"]) else None
     if matched_decade:
+        score += 1
+    elif item_decade and item_decade in signals.get("soft_decades", set()):
         score += 1
 
     if in_favorite_list:
@@ -339,6 +426,17 @@ def score_title_by_taste_signals(
     for _ in matched_strong_directors:
         score += 2
 
+    soft_directors = signals.get("soft_directors", set())
+    matched_soft_directors = [
+        d
+        for d in item_directors_display
+        if d.lower() in soft_directors
+        and d.lower() not in strong_directors
+        and d.lower() not in favorite_director_lower
+    ][:2]
+    for _ in matched_soft_directors:
+        score += 1
+
     top_reasons: list[str] = []
     if in_favorite_list:
         top_reasons.append("On your curated favorites list")
@@ -357,10 +455,13 @@ def score_title_by_taste_signals(
     explanation = {
         "in_favorite_list": in_favorite_list,
         "matched_genres": matched_genres,
+        "matched_soft_genres": matched_soft_genres,
         "matched_countries": matched_countries,
+        "matched_soft_countries": matched_soft_countries,
         "matched_decade": matched_decade,
         "matched_people": matched_people,
         "matched_strong_directors": matched_strong_directors,
+        "matched_soft_directors": matched_soft_directors,
         "top_reasons": top_reasons[:5],
     }
     return score, explanation
