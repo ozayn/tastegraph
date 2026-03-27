@@ -13,7 +13,7 @@ from app.services.country_normalize import filter_variants_for_country, parse_an
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 from app.services.llm_search import search_rated, search_watchlist
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
-from app.services.taste_signals import load_taste_signals, build_reasons, score_watchlist_item
+from app.services.taste_signals import load_taste_signals, build_reasons, score_title_by_taste_signals
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -208,7 +208,7 @@ def recommendations_watchlist_high_fit(
                 actors, directors, writer, favorites_by_role
             )
             genres_str = meta_genres or r.genres
-            fit_score, explanation = score_watchlist_item(
+            fit_score, explanation = score_title_by_taste_signals(
                 r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
             )
             total_score = fit_score + boost * 2  # Favorites add to fit

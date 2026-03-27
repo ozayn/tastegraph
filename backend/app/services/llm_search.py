@@ -22,7 +22,7 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
-from app.services.taste_signals import load_taste_signals, score_watchlist_item
+from app.services.taste_signals import load_taste_signals, score_title_by_taste_signals
 from app.services.title_embeddings import cosine_similarity, embedding_similarity_score, get_embedding
 
 # Validation limits: LLM output is untrusted; clamp before use
@@ -763,7 +763,7 @@ def search_watchlist(db: Session, query: str, limit: int = 8) -> dict:
             continue
         boost, matches = compute_favorite_boost(actors, directors, writer, favorites_by_role)
         genres_str = meta_genres or r.genres
-        fit_score, explanation = score_watchlist_item(
+        fit_score, explanation = score_title_by_taste_signals(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
         taste_weight = 0.2 if similar_to_signals else 1.0
@@ -1018,7 +1018,7 @@ def search_rated(db: Session, query: str, limit: int = 8) -> dict:
     for r, poster, actors, directors, writer, country, meta_genres, plot, imdb_rating, metascore in rows:
         boost, matches = compute_favorite_boost(actors, directors, writer, favorites_by_role)
         genres_str = meta_genres or r.genres
-        fit_score, explanation = score_watchlist_item(
+        fit_score, explanation = score_title_by_taste_signals(
             r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
         )
         taste_weight = 0.2 if similar_to_signals else 1.0

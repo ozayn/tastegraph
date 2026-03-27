@@ -6,6 +6,9 @@ Output rows match what :mod:`app.services.provider_catalog` expects: ``imdb_id``
 
 The old JustWatch GraphQL path is **deprecated** (see ``fetch_britbox_catalog_justwatch_deprecated.py``).
 
+After fetching, backfill ``TitleMetadata`` for snapshot IDs with
+``python -m app.scripts.britbox_catalog_metadata --enrich`` (OMDb).
+
 Usage:
     cd backend && python -m app.scripts.fetch_britbox_catalog
 

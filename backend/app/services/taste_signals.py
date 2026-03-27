@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.favorite_list_item import FavoriteListItem
 from app.models.imdb_rating import IMDbRating
+from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import ROLE_SCORE_WEIGHT
@@ -138,6 +139,24 @@ def load_taste_signals(db: Session) -> dict:
     }
 
 
+def load_taste_signals_for_provider_catalog(db: Session) -> dict:
+    """Taste signals for provider-catalog recommendations (e.g. BritBox).
+
+    Same as load_taste_signals, plus genre/decade patterns from the IMDb watchlist export.
+    Watchlist rows still must not appear as recommendations: caller should drop their IMDb IDs
+    from the candidate set (see provider_catalog._exclude_watchlist).
+    """
+    signals = load_taste_signals(db)
+    wl_rows = db.query(IMDbWatchlistItem.genres, IMDbWatchlistItem.year).all()
+    for genres, year in wl_rows:
+        for g in _parse_genres(genres):
+            signals["strong_genres"].add(g)
+        d = _decade(year)
+        if d:
+            signals["strong_decades"].add(d)
+    return signals
+
+
 def build_reasons(
     genres: str | None,
     country: str | None,
@@ -177,7 +196,7 @@ def build_reasons(
     return reasons[:5]  # Cap at 5 reasons
 
 
-def score_watchlist_item(
+def score_title_by_taste_signals(
     imdb_title_id: str,
     genres: str | None,
     country: str | None,
@@ -186,7 +205,11 @@ def score_watchlist_item(
     favorite_matches: list[dict],
     signals: dict,
 ) -> tuple[int, dict]:
-    """Score a watchlist item by matching taste signals. Returns (score, explanation)."""
+    """Heuristic fit score for any candidate title (watchlist row, provider catalog title, search hit).
+
+    Compares metadata to strong genres/countries/decades, favorite people, and curated favorite-list IDs.
+    Returns (score, explanation dict for UI).
+    """
     score = 0
     item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
     item_countries = parse_and_normalize_countries(country) if country else set()

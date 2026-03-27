@@ -65,6 +65,61 @@ def _clear_failure(imdb_title_id: str) -> None:
         db.close()
 
 
+def enrich_imdb_ids_batch(
+    imdb_ids: list[str],
+    *,
+    title_lookup: dict[str, str | None] | None = None,
+) -> tuple[int, int, int, int]:
+    """OMDb fetch + TitleMetadata upsert for each id (same pipeline as this module's main loop).
+
+    Returns (attempted, inserted, updated, failed). Stops early if OMDb is globally unavailable.
+    """
+    title_lookup = title_lookup or {}
+    attempted = 0
+    inserted = 0
+    updated = 0
+    failed = 0
+    failed_cases: list[tuple[str, str | None, str]] = []
+
+    for idx, imdb_id in enumerate(imdb_ids):
+        result, error_msg = fetch_title_metadata_with_error(imdb_id)
+        attempted += 1
+
+        if result is None:
+            reason = error_msg or "unknown"
+            if is_global_omdb_unavailable(reason):
+                print(f"OMDb unavailable ({reason}). Stopping run.")
+                break
+            failed += 1
+            title = title_lookup.get(imdb_id)
+            failed_cases.append((imdb_id, title, reason))
+            title_part = f" {title}" if title else ""
+            print(f"  failed: {imdb_id}{title_part} — {reason}")
+            _record_failure(imdb_id, reason)
+        else:
+            _clear_failure(imdb_id)
+            db = SessionLocal()
+            try:
+                action = upsert_metadata_result(result, db)
+                if action == "inserted":
+                    inserted += 1
+                else:
+                    updated += 1
+            finally:
+                db.close()
+
+        if idx < len(imdb_ids) - 1:
+            time.sleep(_DELAY_SECONDS)
+
+    if failed_cases:
+        print("")
+        print("Failed cases:")
+        for fid, _, _ in failed_cases:
+            print(f"  {fid}")
+
+    return attempted, inserted, updated, failed
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if a != "--retry-failed"]
     retry_failed = "--retry-failed" in sys.argv
@@ -149,47 +204,9 @@ def main() -> None:
         print(f"attempted=0 inserted=0 updated=0 skipped=0 failed=0{sf} (no missing or incomplete from ratings or watchlist)")
         return
 
-    attempted = 0
-    inserted = 0
-    updated = 0
-    failed = 0
-    failed_cases: list[tuple[str, str | None, str]] = []
-
-    for imdb_id in all_candidates:
-        result, error_msg = fetch_title_metadata_with_error(imdb_id)
-        attempted += 1
-
-        if result is None:
-            reason = error_msg or "unknown"
-            if is_global_omdb_unavailable(reason):
-                print(f"OMDb unavailable ({reason}). Stopping run.")
-                break
-            failed += 1
-            title = title_lookup.get(imdb_id)
-            failed_cases.append((imdb_id, title, reason))
-            title_part = f" {title}" if title else ""
-            print(f"  failed: {imdb_id}{title_part} — {reason}")
-            _record_failure(imdb_id, reason)
-        else:
-            _clear_failure(imdb_id)
-            db = SessionLocal()
-            try:
-                action = upsert_metadata_result(result, db)
-                if action == "inserted":
-                    inserted += 1
-                else:
-                    updated += 1
-            finally:
-                db.close()
-
-        if attempted < len(all_candidates):
-            time.sleep(_DELAY_SECONDS)
-
-    if failed_cases:
-        print("")
-        print("Failed cases:")
-        for imdb_id, _, _ in failed_cases:
-            print(f"  {imdb_id}")
+    attempted, inserted, updated, failed = enrich_imdb_ids_batch(
+        all_candidates, title_lookup=title_lookup
+    )
 
     sf = f" skipped_recent_failures={skipped_recent_failures}" if skipped_recent_failures else ""
     suffix = f" (ratings: {from_ratings} watchlist: {from_watchlist} candidates)"

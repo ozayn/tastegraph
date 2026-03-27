@@ -38,6 +38,34 @@ make status   # Check whether ports 3000 and 8000 are in use
 
 For separate logs, use `make run-backend` and `make run-frontend` in two terminals.
 
+## Scripts quick reference
+
+Run **remote** scripts from the project root with `REMOTE_API_URL` and `ADMIN_IMPORT_TOKEN` in `.env.sync` or `.env` (see [Admin import](#4-admin-import-csv-sync-to-deployed-backend)).
+
+```bash
+# Sync local CSV exports → deployed backend (ratings, watchlist, metadata, favorites if present)
+./scripts/sync_remote.sh                 # safe default: insert-only ratings, fill-missing metadata
+./scripts/sync_remote.sh --parity        # upsert ratings + overwrite metadata (match local / recommendations)
+
+# Remote: one target at a time (same env vars as sync_remote)
+./scripts/import_remote.sh ratings
+./scripts/import_remote.sh watchlist
+./scripts/import_remote.sh metadata
+./scripts/import_remote.sh favorites
+./scripts/import_remote.sh favorite-list
+
+# Local DB: migrations + OMDb enrichment (needs backend/.venv, backend/.env)
+./scripts/enrich_metadata_local.sh
+./scripts/enrich_metadata_local.sh 25
+
+# Remote DB on Railway: metadata enrichment (needs railway link + OMDB on service)
+./scripts/enrich_metadata_remote.sh
+./scripts/enrich_metadata_remote.sh 50
+
+# Local: metadata coverage report
+./scripts/report_metadata_coverage_local.sh
+```
+
 **Migrations + metadata enrichment (local):**
 
 ```bash
@@ -153,7 +181,10 @@ Response: `{"inserted": N, "skipped": M, "errors": K}` (ratings), `{"inserted": 
 
 ```bash
 ./scripts/sync_remote.sh
+./scripts/sync_remote.sh --parity
 ```
+
+`--parity` runs ratings **upsert** and metadata **overwrite** so the deployed DB matches your local CSV export (recommended when remote recommendations or counts look stale). Default mode is insert-only ratings and fill-missing metadata only.
 
 Or import individually:
 
