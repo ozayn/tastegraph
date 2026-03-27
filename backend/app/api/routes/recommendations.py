@@ -1,5 +1,7 @@
 """Simple recommendation endpoints."""
 
+from collections import defaultdict
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import case, desc, exists, or_, select
@@ -23,6 +25,232 @@ from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import load_taste_signals, build_reasons, score_title_by_taste_signals
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
+
+# Greedy diversity for /simple ("Explore your favorites"): penalize repeating genre
+# labels, title_type, and primary country. Tail uses lighter weights; curated prefix
+# uses stronger weights + extra cost for a second documentary early on.
+_SIMPLE_CURATED_PREFIX = 5
+_SIMPLE_DIV_LIGHT_GENRE_W = 0.14
+_SIMPLE_DIV_LIGHT_TYPE_W = 0.22
+_SIMPLE_DIV_LIGHT_COUNTRY_W = 0.07
+_SIMPLE_DIV_CURATED_GENRE_W = 0.34
+_SIMPLE_DIV_CURATED_TYPE_W = 0.42
+_SIMPLE_DIV_CURATED_COUNTRY_W = 0.12
+_SIMPLE_DIV_CURATED_DOC_REPEAT_W = 0.78
+_SIMPLE_DIV_RELAX_DOC_REPEAT_W = 0.52
+
+
+def _simple_genre_tokens(genres_csv: str | None) -> list[str]:
+    return [p.strip() for p in (genres_csv or "").split(",") if p.strip()]
+
+
+def _simple_norm_title_type(title_type: str | None) -> str:
+    t = (title_type or "").strip().lower()
+    return t if t else "—"
+
+
+def _simple_primary_country(country: str | None) -> str:
+    if not country or not str(country).strip():
+        return ""
+    parts = parse_and_normalize_countries(country)
+    return sorted(parts)[0] if parts else ""
+
+
+def _simple_has_usable_poster(poster: object) -> bool:
+    if poster is None:
+        return False
+    s = str(poster).strip()
+    return bool(s) and s.upper() != "N/A"
+
+
+def _simple_is_short_film(r: IMDbRating) -> bool:
+    """Exclude obvious shorts from the curated prefix (keep typical TV episodes)."""
+    tt = (r.title_type or "").lower()
+    if "short" in tt:
+        return True
+    for g in _simple_genre_tokens(r.genres):
+        if g.lower() == "short":
+            return True
+    rm = r.runtime_mins
+    if rm is None or rm <= 0:
+        return False
+    if rm > 46:
+        return False
+    if "series" in tt or "episode" in tt:
+        return False
+    return True
+
+
+def _simple_is_documentary(r: IMDbRating) -> bool:
+    return any(g.lower() == "documentary" for g in _simple_genre_tokens(r.genres))
+
+
+def _greedy_diversify_simple_rows(
+    pool_in: list,
+    pick: int,
+    *,
+    genre_w: float,
+    type_w: float,
+    country_w: float,
+    documentary_repeat_w: float = 0.0,
+) -> list:
+    """Pick `pick` rows from pool_in (already quality-ordered) by maximizing
+    score minus diversity penalties. Deterministic."""
+    if pick <= 0 or not pool_in:
+        return []
+
+    pool_size = min(len(pool_in), max(pick * 5, 45))
+    pool = pool_in[:pool_size]
+    remaining = list(range(len(pool)))
+    chosen_idx: list[int] = []
+
+    genre_counts: defaultdict[str, int] = defaultdict(int)
+    type_counts: defaultdict[str, int] = defaultdict(int)
+    country_counts: defaultdict[str, int] = defaultdict(int)
+    doc_chosen = 0
+
+    def register_chosen(ix: int) -> None:
+        nonlocal doc_chosen
+        _score, _date_rated, r, _poster, _matches, c = pool[ix]
+        for g in _simple_genre_tokens(r.genres):
+            genre_counts[g] += 1
+        type_counts[_simple_norm_title_type(r.title_type)] += 1
+        pk = _simple_primary_country(c)
+        if pk:
+            country_counts[pk] += 1
+        if _simple_is_documentary(r):
+            doc_chosen += 1
+
+    def diversity_penalty(ix: int) -> float:
+        _score, _date_rated, r, _poster, _matches, c = pool[ix]
+        pen = 0.0
+        for g in _simple_genre_tokens(r.genres):
+            pen += genre_w * genre_counts[g]
+        pen += type_w * type_counts[_simple_norm_title_type(r.title_type)]
+        pk = _simple_primary_country(c)
+        if pk:
+            pen += country_w * country_counts[pk]
+        if documentary_repeat_w > 0 and doc_chosen >= 1 and _simple_is_documentary(r):
+            pen += documentary_repeat_w * doc_chosen
+        return pen
+
+    while len(chosen_idx) < pick and remaining:
+        best_ix: int | None = None
+        best_key: tuple[float, float, int, str] | None = None
+        for ix in remaining:
+            row = pool[ix]
+            score, date_rated, r = row[0], row[1], row[2]
+            date_ord = date_rated.toordinal() if date_rated else 0
+            adjusted = score - diversity_penalty(ix)
+            tie = (adjusted, score, date_ord, r.imdb_title_id or "")
+            if best_key is None or tie > best_key:
+                best_key = tie
+                best_ix = ix
+        assert best_ix is not None
+        chosen_idx.append(best_ix)
+        register_chosen(best_ix)
+        remaining.remove(best_ix)
+
+    return [pool[i] for i in chosen_idx]
+
+
+def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
+    """Curated first slice (posters, no shorts, strong diversity / doc spacing), then
+    remainder with light greedy diversity on score-sorted leftovers."""
+    if limit <= 0:
+        return []
+    if len(scored_sorted) <= 1:
+        return scored_sorted[:limit]
+
+    master = scored_sorted
+    picked: list = []
+    picked_ids: set[str] = set()
+
+    def extend_unique(rows: list, *, max_total: int | None = None) -> None:
+        for row in rows:
+            if max_total is not None and len(picked) >= max_total:
+                return
+            if len(picked) >= limit:
+                return
+            tid = row[2].imdb_title_id
+            if tid in picked_ids:
+                continue
+            picked.append(row)
+            picked_ids.add(tid)
+
+    k = min(_SIMPLE_CURATED_PREFIX, limit)
+
+    strict = [
+        row
+        for row in master
+        if _simple_has_usable_poster(row[3]) and not _simple_is_short_film(row[2])
+    ]
+    extend_unique(
+        _greedy_diversify_simple_rows(
+            strict,
+            k,
+            genre_w=_SIMPLE_DIV_CURATED_GENRE_W,
+            type_w=_SIMPLE_DIV_CURATED_TYPE_W,
+            country_w=_SIMPLE_DIV_CURATED_COUNTRY_W,
+            documentary_repeat_w=_SIMPLE_DIV_CURATED_DOC_REPEAT_W,
+        ),
+        max_total=k,
+    )
+
+    if len(picked) < k:
+        relax_poster = [
+            row
+            for row in master
+            if row[2].imdb_title_id not in picked_ids and not _simple_is_short_film(row[2])
+        ]
+        extend_unique(
+            _greedy_diversify_simple_rows(
+                relax_poster,
+                k - len(picked),
+                genre_w=_SIMPLE_DIV_CURATED_GENRE_W,
+                type_w=_SIMPLE_DIV_CURATED_TYPE_W,
+                country_w=_SIMPLE_DIV_CURATED_COUNTRY_W,
+                documentary_repeat_w=_SIMPLE_DIV_RELAX_DOC_REPEAT_W,
+            ),
+            max_total=k,
+        )
+
+    if len(picked) < k:
+        narrow = [row for row in master if row[2].imdb_title_id not in picked_ids]
+        extend_unique(
+            _greedy_diversify_simple_rows(
+                narrow,
+                k - len(picked),
+                genre_w=0.26,
+                type_w=0.34,
+                country_w=0.10,
+                documentary_repeat_w=_SIMPLE_DIV_RELAX_DOC_REPEAT_W,
+            ),
+            max_total=k,
+        )
+
+    if len(picked) < limit:
+        rest = [row for row in master if row[2].imdb_title_id not in picked_ids]
+        extend_unique(
+            _greedy_diversify_simple_rows(
+                rest,
+                limit - len(picked),
+                genre_w=_SIMPLE_DIV_LIGHT_GENRE_W,
+                type_w=_SIMPLE_DIV_LIGHT_TYPE_W,
+                country_w=_SIMPLE_DIV_LIGHT_COUNTRY_W,
+                documentary_repeat_w=0.0,
+            ),
+        )
+
+    if len(picked) < limit:
+        for row in master:
+            if row[2].imdb_title_id not in picked_ids:
+                picked.append(row)
+                picked_ids.add(row[2].imdb_title_id)
+                if len(picked) >= limit:
+                    break
+
+    return picked[:limit]
 
 
 def _title_type_matches(tt: str) -> list:
@@ -155,7 +383,7 @@ def recommendations_simple(
             return (-score, -date_ord)
 
         scored.sort(key=_sort_key)
-        top = scored[:limit]
+        top = _assemble_simple_explore_favorites(scored, limit)
 
         return [
             {

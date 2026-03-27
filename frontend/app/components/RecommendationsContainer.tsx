@@ -20,30 +20,30 @@ export function RecommendationsContainer() {
 
   return (
     <section aria-labelledby="home-recommendations-heading">
-      <div className="flex flex-col gap-8 sm:gap-10">
+      <div className="rounded-xl border border-[var(--card-border)] bg-[var(--panel-bg)] p-4 shadow-sm sm:p-5">
         <div className="max-w-2xl border-l-2 border-[var(--accent)] pl-4 sm:pl-5">
           <h2 id="home-recommendations-heading" className="font-display text-[26px] font-medium leading-[1.2] tracking-[-0.02em] text-[var(--foreground)] sm:text-[30px]">
             Recommendations
             <SectionHelp title="How this works">
-              <p>Compare different strategies. <strong>Explore your favorites</strong> lets you browse titles you&apos;ve already rated 8+. <strong>Watchlist</strong> filters your saved titles by taste. <strong>High-Fit</strong> ranks unrated watchlist items by overlap with your strongest signals. <strong>ML</strong> uses a logistic-regression model to predict 8+ likelihood. <strong>Search</strong> uses natural language over your watchlist—grounded, no invented titles.</p>
+              <p><strong>Favorites</strong> = 8+ you rated. <strong>Watchlist</strong> / <strong>High-Fit</strong> / <strong>ML</strong> rank or filter saved titles. <strong>Search</strong> is natural language over your list—grounded, no invented titles.</p>
             </SectionHelp>
           </h2>
-          <p className="mt-2 text-[15px] leading-relaxed text-[var(--muted)] sm:mt-2.5 sm:text-[16px]">
-            Pick a mode and browse titles matched to your taste—same data, different lenses.
+          <p className="mt-1.5 max-w-2xl text-[14px] leading-[1.5] text-[var(--muted)] sm:mt-2">
+            What to watch next, grounded in your library—pick a mode; same data, different lenses.
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--card-border)] bg-[var(--panel-bg)] p-4 shadow-sm sm:p-5">
+        <div className="mt-5 sm:mt-6">
           <RecommendationModeSwitcher mode={mode} onChange={setMode} />
-          <div className="mt-5 min-h-[12rem] sm:mt-6">
-            {mode === "for-you" && <SimpleRecommendations embedded />}
-            {mode === "watchlist" && <WatchlistRecommendations embedded />}
-            {mode === "high-fit" && <HighFitModeContent />}
-            {mode === "ml" && <MLModeContent />}
-            {mode === "ml" && <RecommendationComparison />}
-            {mode === "search" && <LLMWatchlistSearch />}
-            {mode === "britbox" && <BritBoxModeContent />}
-          </div>
+        </div>
+        <div className="mt-5 min-h-[12rem] sm:mt-6">
+          {mode === "for-you" && <SimpleRecommendations embedded />}
+          {mode === "watchlist" && <WatchlistRecommendations embedded />}
+          {mode === "high-fit" && <HighFitModeContent />}
+          {mode === "ml" && <MLModeContent />}
+          {mode === "ml" && <RecommendationComparison />}
+          {mode === "search" && <LLMWatchlistSearch />}
+          {mode === "britbox" && <BritBoxModeContent />}
         </div>
       </div>
     </section>
