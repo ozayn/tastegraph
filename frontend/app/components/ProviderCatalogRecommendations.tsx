@@ -259,8 +259,16 @@ const segActive = "font-semibold text-[var(--foreground)]";
 const segInactive =
   "text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]";
 
-function catalogPoolFiltersQueryActive(f: RecommendationPoolFilterValues): boolean {
-  return !!(f.decade || f.similarTo.trim());
+function catalogPoolFiltersQueryActive(
+  f: RecommendationPoolFilterValues,
+  defaultTitleType: string
+): boolean {
+  return !!(
+    f.decade ||
+    f.similarTo.trim() ||
+    f.country.trim() ||
+    (f.titleType && f.titleType !== defaultTitleType)
+  );
 }
 
 export function ProviderCatalogRecommendations({
@@ -270,18 +278,19 @@ export function ProviderCatalogRecommendations({
 }) {
   const cfg = catalogProviderByModeId(provider);
   const [scoring, setScoring] = useState<ScoringMode>("high-fit");
-  const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
-    getInitialPoolFilters
+  const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(() =>
+    getInitialPoolFilters({ titleType: cfg.catalogDefaultTitleType })
   );
   const debouncedSimilarTo = useDebouncedValue(poolFilters.similarTo, 500);
 
   const filtersForQuery = useMemo<RecommendationPoolFilterValues>(
     () => ({
       decade: poolFilters.decade,
-      country: "",
+      country: cfg.poolShowCountry ? poolFilters.country : "",
       similarTo: debouncedSimilarTo,
+      titleType: poolFilters.titleType,
     }),
-    [poolFilters.decade, debouncedSimilarTo]
+    [poolFilters.decade, poolFilters.country, poolFilters.titleType, cfg.poolShowCountry, debouncedSimilarTo]
   );
 
   const [highFitData, setHighFitData] = useState<HighFitResponse | null>(null);
@@ -290,12 +299,11 @@ export function ProviderCatalogRecommendations({
 
   useEffect(() => {
     const ac = new AbortController();
-    const typeParam = "&title_type=all";
     const filterQ = poolFiltersToQueryString(filtersForQuery, {
-      includeCountry: false,
+      includeCountry: cfg.poolShowCountry,
     });
     const base = scoring === "ml" ? cfg.apiMl : cfg.apiHigh;
-    const url = `${API_URL}/recommendations/${base}?limit=15${typeParam}${filterQ}`;
+    const url = `${API_URL}/recommendations/${base}?limit=15${filterQ}`;
 
     setIsFetching(true);
     fetch(url, { signal: ac.signal })
@@ -315,10 +323,13 @@ export function ProviderCatalogRecommendations({
       });
 
     return () => ac.abort();
-  }, [scoring, filtersForQuery, provider]);
+  }, [scoring, filtersForQuery, provider, cfg.apiHigh, cfg.apiMl, cfg.poolShowCountry]);
 
   const activeData = scoring === "ml" ? mlData : highFitData;
-  const filtersActiveForQuery = catalogPoolFiltersQueryActive(filtersForQuery);
+  const filtersActiveForQuery = catalogPoolFiltersQueryActive(
+    filtersForQuery,
+    cfg.catalogDefaultTitleType
+  );
 
   const showBlockingLoading = isFetching && activeData === null;
   const catalogError =
@@ -360,7 +371,8 @@ export function ProviderCatalogRecommendations({
 
       <RecommendationPoolFiltersBar
         className="mb-5"
-        showCountry={false}
+        showCountry={cfg.poolShowCountry}
+        showTitleType={cfg.poolShowTitleType}
         idPrefix={cfg.filterIdPrefix}
         value={poolFilters}
         onChange={setPoolFilters}

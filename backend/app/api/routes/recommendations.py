@@ -22,7 +22,12 @@ from app.services.recommendation_filters import (
     resolve_similar_to_genre_set,
 )
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
-from app.services.taste_signals import load_taste_signals, build_reasons, score_title_by_taste_signals
+from app.services.taste_signals import (
+    build_explore_favorites_reasons,
+    build_reasons,
+    load_taste_signals,
+    score_title_by_taste_signals,
+)
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -416,7 +421,7 @@ def recommendations_simple(
                 "user_rating": r.user_rating,
                 "poster": poster if poster and poster != "N/A" else None,
                 "favorite_matches": matches,
-                "reasons": build_reasons(
+                "reasons": build_explore_favorites_reasons(
                     r.genres, country, r.year, matches, signals
                 ),
             }
@@ -716,7 +721,7 @@ def _build_simple_explanation(
     year_to: int | None,
 ) -> str:
     """Build a deterministic plain-text explanation from filter params."""
-    base = "Your favorites: enriched titles you rated 8 or higher"
+    base = "Your 8+ library: titles you already rated highly—filtered here"
     parts = []
 
     if genres:

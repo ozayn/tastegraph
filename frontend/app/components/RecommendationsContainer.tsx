@@ -129,7 +129,7 @@ function ProviderCatalogModeShell({ modeId }: { modeId: CatalogProviderModeId })
           </p>
         </SectionHelp>
       </div>
-      <ProviderCatalogRecommendations provider={modeId} />
+      <ProviderCatalogRecommendations key={modeId} provider={modeId} />
     </div>
   );
 }

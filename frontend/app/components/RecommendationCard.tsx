@@ -83,9 +83,16 @@ export function RecommendationCard({
               <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{meta}</p>
             )}
             {reasons && reasons.length > 0 && (
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-soft)]">
-                {reasons.slice(0, 3).join(" · ")}
-              </p>
+              reasons.length === 2 ? (
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[13px] leading-snug text-[var(--foreground)]">{reasons[0]}</p>
+                  <p className="text-[12px] leading-relaxed text-[var(--muted-soft)]">{reasons[1]}</p>
+                </div>
+              ) : (
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-soft)]">
+                  {reasons.slice(0, 3).join(" · ")}
+                </p>
+              )
             )}
           </div>
           {rating != null && (

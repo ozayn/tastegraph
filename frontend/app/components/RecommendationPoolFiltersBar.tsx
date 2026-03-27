@@ -4,16 +4,21 @@ export type RecommendationPoolFilterValues = {
   decade: string;
   country: string;
   similarTo: string;
+  /** Catalog provider API ``title_type``: ``movie`` | ``show`` | ``all``; empty omits param (watchlist). */
+  titleType: string;
 };
 
 const INITIAL_FILTERS: RecommendationPoolFilterValues = {
   decade: "",
   country: "",
   similarTo: "",
+  titleType: "",
 };
 
-export function getInitialPoolFilters(): RecommendationPoolFilterValues {
-  return { ...INITIAL_FILTERS };
+export function getInitialPoolFilters(
+  overrides?: Partial<RecommendationPoolFilterValues>
+): RecommendationPoolFilterValues {
+  return { ...INITIAL_FILTERS, ...overrides };
 }
 
 /** Query fragment for GET /recommendations/* pool endpoints (leading & if non-empty). */
@@ -30,6 +35,10 @@ export function poolFiltersToQueryString(
   if (includeDecade && f.decade.trim()) p.set("decade", f.decade.trim());
   if (includeCountry && f.country.trim()) p.set("country", f.country.trim());
   if (f.similarTo.trim()) p.set("similar_to", f.similarTo.trim());
+  const tt = (f.titleType || "").trim().toLowerCase();
+  if (tt === "movie" || tt === "show" || tt === "all") {
+    p.set("title_type", tt);
+  }
   const s = p.toString();
   return s ? `&${s}` : "";
 }
@@ -52,6 +61,7 @@ export function RecommendationPoolFiltersBar({
   idPrefix,
   showCountry = true,
   showDecade = true,
+  showTitleType = false,
   className = "",
 }: {
   value: RecommendationPoolFilterValues;
@@ -61,6 +71,8 @@ export function RecommendationPoolFiltersBar({
   showCountry?: boolean;
   /** Hide decade (e.g. rare layouts); BritBox keeps decade on. */
   showDecade?: boolean;
+  /** MUBI: movie / series / all before ranking (maps to API ``title_type``). */
+  showTitleType?: boolean;
   /** Extra classes on the shell (e.g. ``mb-5`` when the next block has no top margin). */
   className?: string;
 }) {
@@ -111,9 +123,26 @@ export function RecommendationPoolFiltersBar({
           />
         </div>
       )}
+      {showTitleType && (
+        <div className="flex min-w-[7.5rem] flex-col gap-1">
+          <label htmlFor={`${idPrefix}-title-type`} className={labelCls}>
+            Type
+          </label>
+          <select
+            id={`${idPrefix}-title-type`}
+            className={fieldSelect}
+            value={value.titleType || "all"}
+            onChange={(e) => set({ titleType: e.target.value })}
+          >
+            <option value="all">All</option>
+            <option value="movie">Movies</option>
+            <option value="show">Series</option>
+          </select>
+        </div>
+      )}
       <div
         className={
-          showCountry
+          showCountry || showTitleType
             ? "flex min-w-[10rem] flex-[2] flex-col gap-1 sm:min-w-[12rem]"
             : showDecade
               ? "flex min-w-[12rem] flex-[1.5] flex-col gap-1 sm:min-w-[18rem]"

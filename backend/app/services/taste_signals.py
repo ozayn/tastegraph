@@ -157,6 +157,94 @@ def load_taste_signals_for_provider_catalog(db: Session) -> dict:
     return signals
 
 
+def _year_int_for_signals(year: object | None) -> int | None:
+    if year is None:
+        return None
+    try:
+        iy = int(year)
+    except (TypeError, ValueError):
+        return None
+    if 1870 <= iy <= 2035:
+        return iy
+    return None
+
+
+def _decade_distinctive_for_portrait(year: int | None) -> bool:
+    """Era worth naming on its own—vintage or very recent—vs. a default decade line."""
+    iy = _year_int_for_signals(year)
+    if iy is None:
+        return False
+    return iy < 1970 or iy >= 2020
+
+
+def build_explore_favorites_reasons(
+    genres: str | None,
+    country: str | None,
+    year: int | None,
+    favorite_matches: list[dict],
+    signals: dict,
+) -> list[str]:
+    """Retrospective taste lines for titles already rated 8+ (Explore your favorites).
+
+    Grounded in the same overlaps as ``build_reasons``, but phrased as a portrait of taste,
+    not recommendation copy. At most two lines; release decade only when it adds real signal.
+    """
+    lines: list[str] = []
+    item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
+    item_countries = parse_and_normalize_countries(country) if country else set()
+    item_decade = _decade(year)
+
+    genre_overlap = item_genres & signals["strong_genres"]
+    country_overlap = item_countries & signals["strong_countries"]
+
+    genre_line: str | None = None
+    if genre_overlap:
+        sg = sorted(genre_overlap)[:3]
+        if len(sg) == 1:
+            genre_line = f"A strong example of your taste for {sg[0]}"
+        else:
+            genre_line = f"You clearly favor {', '.join(sg)} among your 8+ picks"
+        lines.append(genre_line)
+
+    if len(lines) < 2:
+        for m in sorted(
+            favorite_matches[:3],
+            key=lambda x: ROLE_SCORE_WEIGHT.get(x.get("role", ""), 0),
+            reverse=True,
+        ):
+            if len(lines) >= 2:
+                break
+            role = m.get("role", "")
+            name = (m.get("name") or "").strip()
+            if not name:
+                continue
+            role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(
+                role, role
+            )
+            lines.append(f"{role_label} you keep coming back to: {name}")
+
+    if len(lines) < 2 and country_overlap:
+        c = next(iter(country_overlap))
+        lines.append(f"Reflects how you rate work from {c}")
+
+    # Decade: never alongside genre overlap; year already appears in card meta. Only when
+    # it is the main remaining taste anchor, or vintage/recent enough to be informative.
+    if (
+        len(lines) < 2
+        and genre_line is None
+        and item_decade
+        and item_decade in signals["strong_decades"]
+        and not any("Reflects how you rate" in x for x in lines)
+        and not any("coming back to:" in x for x in lines)
+    ):
+        if len(lines) == 0 or _decade_distinctive_for_portrait(year):
+            lines.append(
+                f"The {item_decade} are a clear lane in your favorites—this one belongs there"
+            )
+
+    return lines[:2]
+
+
 def build_reasons(
     genres: str | None,
     country: str | None,

@@ -28,6 +28,12 @@ export type CatalogProviderUiConfig = {
   fetchModule: string;
   /** Optional second command (metadata gaps), without cd prefix */
   enrichModule?: string;
+  /** API ``title_type`` when the bar has no type control (BritBox keeps ``all``). */
+  catalogDefaultTitleType: "all" | "movie" | "show";
+  /** Substring country filter on metadata before ranking */
+  poolShowCountry: boolean;
+  /** Movie / series / all control (MUBI) */
+  poolShowTitleType: boolean;
 };
 
 export const CATALOG_PROVIDERS: readonly CatalogProviderUiConfig[] = [
@@ -45,9 +51,12 @@ export const CATALOG_PROVIDERS: readonly CatalogProviderUiConfig[] = [
     introSub:
       "Pool is the snapshot, not your watchlist; ratings and list shape how titles score.",
     helpPool:
-      "Filters (decade, similar-to) narrow the snapshot before ranking.",
+      "Decade and similar-to narrow the snapshot before ranking.",
     fetchModule: "python -m app.scripts.fetch_britbox_catalog",
     enrichModule: "python -m app.scripts.britbox_catalog_metadata --enrich",
+    catalogDefaultTitleType: "all",
+    poolShowCountry: false,
+    poolShowTitleType: false,
   },
   {
     modeId: "mubi",
@@ -63,9 +72,12 @@ export const CATALOG_PROVIDERS: readonly CatalogProviderUiConfig[] = [
     introSub:
       "Same provider flow as BritBox: snapshot pool, taste-informed scores.",
     helpPool:
-      "Filters narrow the MUBI snapshot before ranking, like other provider tabs.",
+      "Decade, country, type, and similar-to narrow the MUBI snapshot before ranking.",
     fetchModule: "python -m app.scripts.fetch_mubi_catalog",
     enrichModule: "python -m app.scripts.mubi_catalog_metadata --enrich",
+    catalogDefaultTitleType: "movie",
+    poolShowCountry: true,
+    poolShowTitleType: true,
   },
 ] as const;
 
