@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  catalogProviderByModeId,
+  type CatalogProviderModeId,
+} from "../config/catalogProviders";
 import { API_URL } from "../lib/api";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { HighFitCard } from "./HighFitCard";
@@ -12,6 +16,8 @@ import {
 } from "./RecommendationPoolFiltersBar";
 import { RECO_BODY_TEXT, RECO_LOADING_DOT, RECO_RESULTS_GRID } from "./recommendationModeStyles";
 
+export type { CatalogProviderModeId };
+
 type ScoringMode = "high-fit" | "ml";
 
 type CatalogStats = {
@@ -21,10 +27,8 @@ type CatalogStats = {
   unmatched?: number;
   already_rated?: number;
   excluded_watchlist?: number;
-  /** Catalog snapshot rows with IMDb id (SHOW vs MOVIE) */
   catalog_jw_shows?: number;
   catalog_jw_movies?: number;
-  /** After rated + watchlist exclusions, with TitleMetadata */
   matched_pool_shows?: number;
   matched_pool_movies?: number;
   matched_pool_total?: number;
@@ -193,7 +197,7 @@ function StatsBanner({
   );
 }
 
-function BritBoxMLCard({ item }: { item: MLItem }) {
+function CatalogProviderMLCard({ item }: { item: MLItem }) {
   const [imageFailed, setImageFailed] = useState(false);
   const displayTitle = item.title ?? item.imdb_title_id;
   const hasUsablePoster =
@@ -238,7 +242,10 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
             </span>
           </p>
           {topFeat && (
-            <p className="mt-2 text-[13px] leading-relaxed text-[var(--muted-soft)]">{topFeat}</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+              <span className="text-[var(--foreground)]/85">Why it may fit:</span>{" "}
+              {formatFeature(topFeat)} from your taste profile
+            </p>
           )}
         </div>
       </div>
@@ -246,16 +253,20 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
   );
 }
 
-const segActive =
-  "font-semibold text-[var(--foreground)]";
+const segActive = "font-semibold text-[var(--foreground)]";
 const segInactive =
   "text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]";
 
-function britboxFiltersQueryActive(f: RecommendationPoolFilterValues): boolean {
+function catalogPoolFiltersQueryActive(f: RecommendationPoolFilterValues): boolean {
   return !!(f.decade || f.similarTo.trim());
 }
 
-export function BritBoxRecommendations() {
+export function ProviderCatalogRecommendations({
+  provider,
+}: {
+  provider: CatalogProviderModeId;
+}) {
+  const cfg = catalogProviderByModeId(provider);
   const [scoring, setScoring] = useState<ScoringMode>("high-fit");
   const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
     getInitialPoolFilters
@@ -281,10 +292,8 @@ export function BritBoxRecommendations() {
     const filterQ = poolFiltersToQueryString(filtersForQuery, {
       includeCountry: false,
     });
-    const url =
-      scoring === "ml"
-        ? `${API_URL}/recommendations/britbox-ml?limit=15${typeParam}${filterQ}`
-        : `${API_URL}/recommendations/britbox?limit=15${typeParam}${filterQ}`;
+    const base = scoring === "ml" ? cfg.apiMl : cfg.apiHigh;
+    const url = `${API_URL}/recommendations/${base}?limit=15${typeParam}${filterQ}`;
 
     setIsFetching(true);
     fetch(url, { signal: ac.signal })
@@ -304,10 +313,10 @@ export function BritBoxRecommendations() {
       });
 
     return () => ac.abort();
-  }, [scoring, filtersForQuery]);
+  }, [scoring, filtersForQuery, provider]);
 
   const activeData = scoring === "ml" ? mlData : highFitData;
-  const filtersActiveForQuery = britboxFiltersQueryActive(filtersForQuery);
+  const filtersActiveForQuery = catalogPoolFiltersQueryActive(filtersForQuery);
 
   const showBlockingLoading = isFetching && activeData === null;
   const catalogError =
@@ -350,7 +359,7 @@ export function BritBoxRecommendations() {
       <RecommendationPoolFiltersBar
         className="mb-5"
         showCountry={false}
-        idPrefix="britbox"
+        idPrefix={cfg.filterIdPrefix}
         value={poolFilters}
         onChange={setPoolFilters}
       />
@@ -369,7 +378,7 @@ export function BritBoxRecommendations() {
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-soft)]">
             {catalogError.message ||
-              "BritBox catalog data could not be loaded in this environment."}
+              `${cfg.poolLabel} catalog data could not be loaded in this environment.`}
           </p>
         </div>
       )}
@@ -401,7 +410,7 @@ export function BritBoxRecommendations() {
               {highFitData.items.map((item) => (
                 <li key={item.imdb_title_id}>
                   <HighFitCard
-                    variant="britbox"
+                    variant={cfg.highFitCardVariant}
                     imdb_title_id={item.imdb_title_id}
                     title={item.title}
                     title_type={item.title_type}
@@ -440,7 +449,7 @@ export function BritBoxRecommendations() {
             <ul className={RECO_RESULTS_GRID}>
               {mlData.items.map((item) => (
                 <li key={item.imdb_title_id}>
-                  <BritBoxMLCard item={item} />
+                  <CatalogProviderMLCard item={item} />
                 </li>
               ))}
             </ul>

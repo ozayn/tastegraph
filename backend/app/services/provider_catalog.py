@@ -1,4 +1,4 @@
-"""Provider catalog loading, matching, and scoring (e.g. BritBox Watchmode snapshot).
+"""Provider catalog loading, matching, and scoring (Watchmode snapshots: BritBox, MUBI, …).
 
 Candidate pool = IMDb IDs in the on-disk catalog JSON only, intersected with TitleMetadata.
 BritBox high-fit flow: default series (catalog ``object_type`` SHOW), exclude IMDb watchlist IDs
@@ -35,6 +35,18 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 # SQLite often limits bound variables (~999). Catalog IN queries must be chunked.
 _SQL_IN_CHUNK = 400
+
+
+def _provider_catalog_label(provider_slug: str) -> str:
+    s = (provider_slug or "").strip().lower().replace("-us", "").replace("-uk", "")
+    return s.replace("-", " ").title() or provider_slug
+
+
+def _catalog_fetch_hint(provider_slug: str) -> str:
+    low = (provider_slug or "").lower()
+    if "mubi" in low:
+        return " Run: cd backend && python -m app.scripts.fetch_mubi_catalog"
+    return " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
 
 
 def _normalize_catalog_imdb_id(raw: str | int | float | None) -> str | None:
@@ -420,6 +432,46 @@ def _britbox_uk_catalog_bonus(
     return 3
 
 
+def _overlap_genre_display_names(genres_csv: str | None, ref_genres: set[str]) -> list[str]:
+    """Human-readable genre labels from metadata that intersect similar-to ref genres."""
+    if not genres_csv or not ref_genres:
+        return []
+    ref_l = {g.lower() for g in ref_genres}
+    out: list[str] = []
+    for part in genres_csv.split(","):
+        s = part.strip()
+        if s and s.lower() in ref_l:
+            out.append(s)
+    return out[:4]
+
+
+def _enrich_explanation_for_provider_surface(
+    explanation: dict,
+    *,
+    uk_bonus: int,
+    is_britbox: bool,
+    ref_genres: set[str] | None,
+    similar_resolved_title: str | None,
+    meta_genres: str | None,
+) -> dict:
+    """Prepend pool-context reasons (similar-to, BritBox UK fit) ahead of taste-signal lines."""
+    out = dict(explanation)
+    prefix: list[str] = []
+    if ref_genres and similar_resolved_title:
+        overlap = _overlap_genre_display_names(meta_genres, ref_genres)
+        if overlap:
+            prefix.append(
+                f'Shares {", ".join(overlap)} with {similar_resolved_title} in your library'
+            )
+        else:
+            prefix.append(f'In the "similar to" lane you set ({similar_resolved_title})')
+    if uk_bonus > 0 and is_britbox:
+        prefix.append("UK title—fits how you rate British picks on BritBox")
+    tr = list(out.get("top_reasons") or [])
+    out["top_reasons"] = (prefix + tr)[:8]
+    return out
+
+
 def _provider_high_fit_total(fit_score: int, favorite_boost: float) -> float:
     """Taste fit plus one favorite-people boost pass (ROLE_WEIGHT sum, not doubled)."""
     return float(fit_score) + float(favorite_boost)
@@ -574,9 +626,10 @@ def get_provider_high_fit(
     """
     catalog = load_catalog(provider_slug)
     if catalog is None:
-        msg = f"BritBox catalog snapshot is not available."
+        label = _provider_catalog_label(provider_slug)
+        msg = f"{label} catalog snapshot is not available."
         if settings.DEBUG:
-            msg += f" Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
+            msg += _catalog_fetch_hint(provider_slug)
         return {"error": "no_catalog", "message": msg}
 
     is_britbox = "britbox" in provider_slug.lower()
@@ -646,13 +699,22 @@ def get_provider_high_fit(
         )
         total = _provider_high_fit_total(fit_score, boost) + uk_bonus
 
+        explanation_out = _enrich_explanation_for_provider_surface(
+            explanation,
+            uk_bonus=uk_bonus,
+            is_britbox=is_britbox,
+            ref_genres=ref_genres,
+            similar_resolved_title=similar_resolved_title,
+            meta_genres=meta.genres,
+        )
+
         scored.append({
             "imdb_title_id": imdb_id,
             "title": meta.title or cat.get("title") or imdb_id,
             "year": meta.year or cat.get("year"),
             "title_type": (cat.get("object_type") or "").capitalize() or meta.title_type,
             "poster": meta.poster if meta.poster and meta.poster != "N/A" else None,
-            "explanation": explanation,
+            "explanation": explanation_out,
             "_score": total,
             "_fit_score": fit_score,
             "_favorite_boost": boost,
@@ -821,9 +883,10 @@ def get_provider_ml(
 
     catalog = load_catalog(provider_slug)
     if catalog is None:
-        msg = "BritBox catalog snapshot is not available."
+        label = _provider_catalog_label(provider_slug)
+        msg = f"{label} catalog snapshot is not available."
         if settings.DEBUG:
-            msg += " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
+            msg += _catalog_fetch_hint(provider_slug)
         return {"error": "no_catalog", "message": msg}
 
     all_imdb_ids = get_catalog_imdb_ids(catalog)

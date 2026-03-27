@@ -27,6 +27,14 @@ class Settings(BaseSettings):
             "watchmode_britbox_source_id",
         ),
     )
+    # Optional: Watchmode /v1/sources `id` for MUBI US (default: resolve name "MUBI")
+    WATCHMODE_MUBI_SOURCE_ID: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "WATCHMODE_MUBI_SOURCE_ID",
+            "watchmode_mubi_source_id",
+        ),
+    )
     # TMDB (optional): poster fallback when OMDb URL is missing or unreachable
     TMDB_API_KEY: str = ""
     # CORS: comma-separated origins, e.g. "http://localhost:3000,http://127.0.0.1:3000"

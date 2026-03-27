@@ -253,18 +253,18 @@ def score_title_by_taste_signals(
 
     top_reasons: list[str] = []
     if in_favorite_list:
-        top_reasons.append("In your curated favorites list")
+        top_reasons.append("On your curated favorites list")
     if matched_genres:
-        top_reasons.append(f"Strong genre{'s' if len(matched_genres) > 1 else ''}: {', '.join(matched_genres)}")
+        top_reasons.append(f"Genres you love: {', '.join(matched_genres)}")
     if matched_countries:
-        top_reasons.append(f"From country you rate highly: {matched_countries[0]}")
+        top_reasons.append(f"From {matched_countries[0]}—a country you rate highly")
     if matched_decade:
-        top_reasons.append(f"Strong decade: {matched_decade}")
+        top_reasons.append(f"{matched_decade}—an era that matches your favorites")
     for p in matched_people:
         role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(p["role"], p["role"])
-        top_reasons.append(f"Favorite {role_label}: {p['name']}")
+        top_reasons.append(f"{role_label} you follow: {p['name']}")
     for d in matched_strong_directors:
-        top_reasons.append(f"Strong director: {d}")
+        top_reasons.append(f"Director you rate strongly elsewhere: {d}")
 
     explanation = {
         "in_favorite_list": in_favorite_list,

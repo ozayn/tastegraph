@@ -24,8 +24,8 @@ type HighFitCardProps = {
   user_rating?: number | null;
   date_rated?: string | null;
   provider?: string | null;
-  /** Calmer layout: no provider pill, no extra signal chips—title + meta + one reason line. */
-  variant?: "default" | "britbox";
+  /** Calmer layout: no provider pill, no extra signal chips—title + meta + reason lines. */
+  variant?: "default" | "britbox" | "mubi";
 };
 
 const chipBase =
@@ -59,16 +59,23 @@ export function HighFitCard({
   const displayTitle = title ?? imdb_title_id;
   const hasUsablePoster = poster && poster.trim() && poster !== "N/A";
   const showPoster = hasUsablePoster && !imageFailed;
-  const isBritbox = variant === "britbox";
+  const isProviderCatalog = variant === "britbox" || variant === "mubi";
+  const catalogPoolLabel = variant === "mubi" ? "MUBI" : "BritBox";
   const reasonsText =
-    !isBritbox && explanation.top_reasons?.length > 0
+    !isProviderCatalog && explanation.top_reasons?.length > 0
       ? explanation.top_reasons.slice(0, 2).join(" · ")
       : null;
-  const reasonOne =
-    isBritbox && explanation.top_reasons?.length
+  const britPrimary =
+    isProviderCatalog && explanation.top_reasons?.length
       ? explanation.top_reasons[0]
       : null;
-  const signalsLine = !isBritbox ? condensedSignals(explanation) : null;
+  const britSecondary =
+    isProviderCatalog && explanation.top_reasons && explanation.top_reasons.length > 1
+      ? explanation.top_reasons[1]
+      : null;
+  const britFallbackLine =
+    isProviderCatalog && !britPrimary ? condensedSignals(explanation) : null;
+  const signalsLine = !isProviderCatalog ? condensedSignals(explanation) : null;
 
   useEffect(() => {
     setImageFailed(false);
@@ -79,7 +86,7 @@ export function HighFitCard({
   if (title_type?.trim()) metaParts.push(title_type.trim());
   const meta = metaParts.length ? metaParts.join(" · ") : null;
 
-  const cardShell = isBritbox
+  const cardShell = isProviderCatalog
     ? "group block overflow-hidden rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] transition-colors duration-200 hover:border-[var(--muted-soft)]"
     : "group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-md";
 
@@ -92,7 +99,7 @@ export function HighFitCard({
     >
       <div
         className={
-          isBritbox
+          isProviderCatalog
             ? "flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5"
             : "flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5"
         }
@@ -100,7 +107,7 @@ export function HighFitCard({
         {showPoster && (
           <div
             className={
-              isBritbox
+              isProviderCatalog
                 ? "h-[4.75rem] w-[3.25rem] shrink-0 overflow-hidden rounded bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[5.5rem] sm:w-[3.75rem]"
                 : "h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[6.75rem] sm:w-[4.5rem]"
             }
@@ -119,7 +126,7 @@ export function HighFitCard({
               {displayTitle}
             </h3>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {provider && !isBritbox && (
+              {provider && !isProviderCatalog && (
                 <span
                   className={`${chipBase} bg-[var(--mondrian-red)]/12 text-[var(--mondrian-red)]`}
                 >
@@ -145,9 +152,19 @@ export function HighFitCard({
               {reasonsText}
             </p>
           )}
-          {reasonOne && (
-            <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--muted)]">
-              {reasonOne}
+          {britPrimary && (
+            <p className="mt-2 text-[13px] font-medium leading-snug text-[var(--foreground)]">
+              {britPrimary}
+            </p>
+          )}
+          {britSecondary && (
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+              {britSecondary}
+            </p>
+          )}
+          {britFallbackLine && (
+            <p className="mt-2 text-[13px] leading-snug text-[var(--muted-soft)]">
+              In this {catalogPoolLabel} pool—{britFallbackLine}
             </p>
           )}
           {signalsLine && (

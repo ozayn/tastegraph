@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import {
+  CATALOG_PROVIDERS,
+  catalogProviderByModeId,
+  isCatalogProviderMode,
+  type CatalogProviderModeId,
+} from "../config/catalogProviders";
+import {
   RecommendationMode,
   RecommendationModeSwitcher,
 } from "./RecommendationModeSwitcher";
@@ -9,11 +15,13 @@ import { SectionHelp } from "./SectionHelp";
 import { HighFitWatchlist } from "./HighFitWatchlist";
 import { LLMWatchlistSearch } from "./LLMWatchlistSearch";
 import { MLRecommendations } from "./MLRecommendations";
+import { ProviderCatalogRecommendations } from "./ProviderCatalogRecommendations";
 import { RecommendationComparison } from "./RecommendationComparison";
 import { SimpleRecommendations } from "./SimpleRecommendations";
 import { WatchlistRecommendations } from "./WatchlistRecommendations";
-import { BritBoxRecommendations } from "./BritBoxRecommendations";
 import { RECO_MODE_INTRO } from "./recommendationModeStyles";
+
+const CATALOG_PROVIDER_NAMES = CATALOG_PROVIDERS.map((p) => p.label).join(" and ");
 
 export function RecommendationsContainer() {
   const [mode, setMode] = useState<RecommendationMode>("for-you");
@@ -25,7 +33,12 @@ export function RecommendationsContainer() {
           <h2 id="home-recommendations-heading" className="font-display text-[26px] font-medium leading-[1.2] tracking-[-0.02em] text-[var(--foreground)] sm:text-[30px]">
             Recommendations
             <SectionHelp title="How this works">
-              <p><strong>Favorites</strong> = 8+ you rated. <strong>Watchlist</strong> / <strong>High-Fit</strong> / <strong>ML</strong> rank or filter saved titles. <strong>Search</strong> is natural language over your list—grounded, no invented titles.</p>
+              <p>
+                <strong>Favorites</strong> = 8+ you rated. <strong>Watchlist</strong> /{" "}
+                <strong>High-Fit</strong> / <strong>ML</strong> rank or filter saved titles.{" "}
+                <strong>Search</strong> is natural language over your list—grounded, no invented titles.{" "}
+                <strong>{CATALOG_PROVIDER_NAMES}</strong> use streaming snapshots (not your watchlist as the pool).
+              </p>
             </SectionHelp>
           </h2>
           <p className="mt-1.5 max-w-2xl text-[14px] leading-[1.5] text-[var(--muted)] sm:mt-2">
@@ -43,7 +56,9 @@ export function RecommendationsContainer() {
           {mode === "ml" && <MLModeContent />}
           {mode === "ml" && <RecommendationComparison />}
           {mode === "search" && <LLMWatchlistSearch />}
-          {mode === "britbox" && <BritBoxModeContent />}
+          {isCatalogProviderMode(mode) && (
+            <ProviderCatalogModeShell modeId={mode} />
+          )}
         </div>
       </div>
     </section>
@@ -80,17 +95,32 @@ function MLModeContent() {
   );
 }
 
-function BritBoxModeContent() {
+function ProviderCatalogModeShell({ modeId }: { modeId: CatalogProviderModeId }) {
+  const cfg = catalogProviderByModeId(modeId);
   return (
     <div>
       <p className={RECO_MODE_INTRO}>
-        Full BritBox snapshot (series and films), ranked for you. Watchlist feeds taste only—those titles stay out of the list.
+        {cfg.intro}
         <SectionHelp title="How this works">
-          <p>Pool = the BritBox US snapshot, not your watchlist. Decade and similar-to narrow the pool before ranking.</p>
-          <p>Refresh snapshot: <code>cd backend && python -m app.scripts.fetch_britbox_catalog</code></p>
+          <p>{cfg.helpPool}</p>
+          <p className="text-[13px] leading-relaxed">
+            Refresh:{" "}
+            <code className="rounded border border-[var(--card-border)] bg-[var(--control-surface)] px-1.5 py-0.5 text-[12px] text-[var(--muted-soft)]">
+              cd backend && {cfg.fetchModule}
+            </code>
+            {cfg.enrichModule ? (
+              <>
+                {" "}
+                · Enrich gaps:{" "}
+                <code className="rounded border border-[var(--card-border)] bg-[var(--control-surface)] px-1.5 py-0.5 text-[12px] text-[var(--muted-soft)]">
+                  {cfg.enrichModule}
+                </code>
+              </>
+            ) : null}
+          </p>
         </SectionHelp>
       </p>
-      <BritBoxRecommendations />
+      <ProviderCatalogRecommendations provider={modeId} />
     </div>
   );
 }

@@ -1,13 +1,12 @@
-"""Compare ``data/britbox/catalog.json`` IMDb IDs to ``TitleMetadata``; enrich gaps via OMDb.
+"""Compare ``data/mubi/catalog.json`` IMDb IDs to ``TitleMetadata``; enrich gaps via OMDb.
 
-Uses the same enrichment path as ``enrich_missing_metadata`` (``enrich_imdb_ids_batch`` +
-``upsert_metadata_result``). Shared implementation: ``snapshot_catalog_metadata_core``.
+Same flow as ``britbox_catalog_metadata``; shared implementation in ``snapshot_catalog_metadata_core``.
 
 Examples:
-    cd backend && python -m app.scripts.britbox_catalog_metadata
-    cd backend && python -m app.scripts.britbox_catalog_metadata --write-missing /tmp/britbox_missing.txt
-    cd backend && python -m app.scripts.britbox_catalog_metadata --enrich --limit 40
-    cd backend && python -m app.scripts.britbox_catalog_metadata --enrich --retry-failed --limit 20
+    cd backend && python -m app.scripts.mubi_catalog_metadata
+    cd backend && python -m app.scripts.mubi_catalog_metadata --write-missing /tmp/mubi_missing.txt
+    cd backend && python -m app.scripts.mubi_catalog_metadata --enrich --limit 40
+    cd backend && python -m app.scripts.mubi_catalog_metadata --enrich --retry-failed --limit 20
 
 Requires ``OMDB_API_KEY`` in ``backend/.env`` for ``--enrich``.
 """
@@ -23,7 +22,7 @@ from app.scripts.snapshot_catalog_metadata_core import run_snapshot_catalog_meta
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="BritBox catalog vs TitleMetadata gap report and optional OMDb enrichment"
+        description="MUBI catalog vs TitleMetadata gap report and optional OMDb enrichment"
     )
     parser.add_argument(
         "--write-missing",
@@ -53,8 +52,8 @@ def main() -> None:
     args = parser.parse_args()
 
     run_snapshot_catalog_metadata_cli(
-        "britbox-us",
-        display_name="BritBox",
+        "mubi-us",
+        display_name="MUBI",
         write_missing=args.write_missing,
         enrich=args.enrich,
         limit=args.limit,

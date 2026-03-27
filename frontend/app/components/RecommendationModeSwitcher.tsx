@@ -1,28 +1,48 @@
 "use client";
 
+import {
+  CATALOG_PROVIDERS,
+  type CatalogProviderModeId,
+} from "../config/catalogProviders";
+
 /**
  * Segmented control for recommendation modes.
- * To add ML, Similarity, AI Search: extend RecommendationMode and MODES,
- * then add the corresponding content block in RecommendationsContainer.
+ * Catalog provider tabs are driven by CATALOG_PROVIDERS in ../config/catalogProviders.
  */
-export type RecommendationMode = "for-you" | "watchlist" | "high-fit" | "ml" | "search" | "britbox";
+export type RecommendationMode =
+  | "for-you"
+  | "watchlist"
+  | "high-fit"
+  | "ml"
+  | "search"
+  | CatalogProviderModeId;
 
-export const MODES: { id: RecommendationMode; label: string }[] = [
+const BASE_MODES: { id: RecommendationMode; label: string }[] = [
   { id: "for-you", label: "Explore your favorites" },
   { id: "watchlist", label: "Watchlist" },
   { id: "high-fit", label: "High-Fit" },
   { id: "ml", label: "ML" },
   { id: "search", label: "Search" },
-  { id: "britbox", label: "BritBox" },
 ];
 
-const MODE_ACCENT: Record<RecommendationMode, string> = {
+export const MODES: { id: RecommendationMode; label: string }[] = [
+  ...BASE_MODES,
+  ...CATALOG_PROVIDERS.map((p) => ({ id: p.modeId, label: p.label })),
+];
+
+const BASE_MODE_ACCENT: Partial<Record<RecommendationMode, string>> = {
   "for-you": "var(--mondrian-yellow)",
   watchlist: "var(--mondrian-yellow)",
   "high-fit": "var(--mondrian-red)",
   ml: "var(--mondrian-blue)",
   search: "var(--mondrian-yellow)",
-  britbox: "var(--mondrian-red)",
+};
+
+export const MODE_ACCENT: Record<RecommendationMode, string> = {
+  ...(BASE_MODE_ACCENT as Record<RecommendationMode, string>),
+  ...Object.fromEntries(
+    CATALOG_PROVIDERS.map((p) => [p.modeId, p.switcherAccentVar])
+  ) as Record<CatalogProviderModeId, string>,
 };
 
 export function RecommendationModeSwitcher({

@@ -1,25 +1,23 @@
-"""Fetch BritBox US catalog from Watchmode into ``data/britbox/catalog.json``.
+"""Fetch MUBI US catalog from Watchmode into ``data/mubi/catalog.json``.
 
-Uses Watchmode ``/v1/sources`` + ``/v1/list-titles`` with ``source_ids`` and ``regions=US``.
-Output rows match what :mod:`app.services.provider_catalog` expects: ``imdb_id``, ``title``,
-``year``, ``object_type`` (``SHOW`` / ``MOVIE``), optional ``genres`` / ``poster_url``.
-
-The old JustWatch GraphQL path is **deprecated** (see ``fetch_britbox_catalog_justwatch_deprecated.py``).
+Same snapshot shape as BritBox (``provider_catalog.load_catalog``). Watchmode US lists a
+standalone subscription source **MUBI** (typically ``source_id=181``, ``type=sub``).
 
 After fetching, backfill ``TitleMetadata`` for snapshot IDs with
-``python -m app.scripts.britbox_catalog_metadata --enrich`` (OMDb).
+``python -m app.scripts.mubi_catalog_metadata --enrich`` (OMDb).
 
 Usage:
-    cd backend && python -m app.scripts.fetch_britbox_catalog
+    cd backend && python -m app.scripts.fetch_mubi_catalog
+    cd backend && python -m app.scripts.fetch_mubi_catalog --list-sources
 
 Options:
-    --list-sources     Print BritBox-related Watchmode US sources and exit
-    --source-id ID     Override Watchmode source id for this run (e.g. 376 or 377)
+    --list-sources     Print MUBI-related Watchmode US sources and exit
+    --source-id ID     Override Watchmode source id for this run
     --limit N          Page size for list-titles (max 250, default 250)
 
 Environment (``backend/.env``):
-    WATCHMODE_API_KEY           Required
-    WATCHMODE_BRITBOX_SOURCE_ID Optional; default picks **Britbox (Via Amazon Prime)** in US
+    WATCHMODE_API_KEY          Required
+    WATCHMODE_MUBI_SOURCE_ID   Optional; default resolves **MUBI** subscription source
 """
 
 from __future__ import annotations
@@ -41,59 +39,47 @@ from app.services.watchmode_catalog_fetchlib import (
     load_us_sources,
 )
 
-# Prefer Amazon Prime channel for typical US access; standalone Britbox app is the fallback.
-SOURCE_NAME_AMAZON_HINTS = ("amazon", "prime")
-
-CATALOG_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "britbox"
+CATALOG_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "mubi"
 CATALOG_PATH = CATALOG_DIR / "catalog.json"
 
+# MUBI’s rotating catalog is small; refuse writes that look like a bad scrape.
+_MUBI_MIN_TITLES = 25
 
-def list_britbox_sources(sources: list[dict]) -> list[dict]:
+
+def list_mubi_sources(sources: list[dict]) -> list[dict]:
     out = []
     for s in sources:
         name = (s.get("name") or "").lower()
-        if "britbox" in name or "brit box" in name:
+        if "mubi" in name:
             out.append(s)
     return sorted(out, key=lambda x: (x.get("name") or ""))
 
 
-def resolve_britbox_source(
-    sources: list[dict],
-    *,
-    override_id: int | None,
-) -> dict:
+def resolve_mubi_source(sources: list[dict], *, override_id: int | None) -> dict:
     if override_id is not None:
         for s in sources:
             if int(s.get("id") or -1) == override_id:
                 return s
         raise RuntimeError(f"No Watchmode US source with id={override_id}")
 
-    env_id = (settings.WATCHMODE_BRITBOX_SOURCE_ID or "").strip()
+    env_id = (settings.WATCHMODE_MUBI_SOURCE_ID or "").strip()
     if env_id:
-        return resolve_britbox_source(sources, override_id=int(env_id))
+        return resolve_mubi_source(sources, override_id=int(env_id))
 
-    brit = list_britbox_sources(sources)
-    if not brit:
-        raise RuntimeError("No BritBox-related sources found in Watchmode /sources/ for US.")
+    candidates = list_mubi_sources(sources)
+    if not candidates:
+        raise RuntimeError("No MUBI-related sources found in Watchmode /sources/ for US.")
 
-    def _is_amazon_channel(s: dict) -> bool:
-        n = (s.get("name") or "").lower()
-        return all(h in n for h in SOURCE_NAME_AMAZON_HINTS)
-
-    for s in brit:
-        if _is_amazon_channel(s):
+    for s in candidates:
+        if (s.get("name") or "").strip().lower() == "mubi":
             return s
-    # Fallback: standalone "Britbox" subscription app
-    for s in brit:
-        if (s.get("name") or "").strip().lower() == "britbox":
-            return s
-    return brit[0]
+    return candidates[0]
 
 
-def validate_snapshot(source: dict, titles: list[dict], list_meta: dict) -> None:
+def validate_mubi_snapshot(source: dict, titles: list[dict], list_meta: dict) -> None:
     name = (source.get("name") or "").lower()
-    if "britbox" not in name:
-        raise RuntimeError(f"Refusing to save: source name {source.get('name')!r} does not look like BritBox.")
+    if "mubi" not in name:
+        raise RuntimeError(f"Refusing to save: source name {source.get('name')!r} does not look like MUBI.")
 
     total_results = int(list_meta.get("total_results") or 0)
     if total_results <= 0:
@@ -102,23 +88,38 @@ def validate_snapshot(source: dict, titles: list[dict], list_meta: dict) -> None
     if total_results > 50_000:
         raise RuntimeError(f"Suspicious total_results={total_results}; aborting.")
 
-    with_imdb = [t for t in titles if t.get("imdb_id")]
     if len(titles) == 0:
         raise RuntimeError("No titles parsed from Watchmode response; not writing catalog.")
+
+    if len(titles) < _MUBI_MIN_TITLES:
+        raise RuntimeError(
+            f"Only {len(titles)} titles parsed (minimum {_MUBI_MIN_TITLES}); "
+            "refusing to save an obviously incomplete snapshot."
+        )
+
+    with_imdb = [t for t in titles if t.get("imdb_id")]
     ratio = len(with_imdb) / len(titles)
     if ratio < 0.4:
         raise RuntimeError(
             f"Too few rows have imdb_id ({len(with_imdb)}/{len(titles)}={ratio:.0%}); "
-            f"refusing to write a weak snapshot."
+            "refusing to write a weak snapshot."
         )
+
+    print(
+        f"\nValidation: source id={source.get('id')} name={source.get('name')!r}\n"
+        f"  Watchmode total_results (reported): {total_results}\n"
+        f"  Parsed titles: {len(titles)} (movies: {sum(1 for t in titles if t.get('object_type') == 'MOVIE')}, "
+        f"shows: {sum(1 for t in titles if t.get('object_type') == 'SHOW')})\n"
+        f"  With IMDb id: {len(with_imdb)} ({ratio:.0%})"
+    )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fetch BritBox US catalog from Watchmode")
+    parser = argparse.ArgumentParser(description="Fetch MUBI US catalog from Watchmode")
     parser.add_argument(
         "--list-sources",
         action="store_true",
-        help="List BritBox-related US sources and exit",
+        help="List MUBI-related US sources and exit",
     )
     parser.add_argument("--source-id", type=int, default=None, help="Watchmode source id override")
     parser.add_argument(
@@ -134,14 +135,14 @@ def main() -> None:
         sys.exit(1)
 
     CATALOG_DIR.mkdir(parents=True, exist_ok=True)
-    headers = {"User-Agent": "TasteGraph/0.1 (britbox-catalog)"}
+    headers = {"User-Agent": "TasteGraph/0.1 (mubi-catalog)"}
 
     with httpx.Client(headers=headers) as client:
         sources = load_us_sources(client)
 
         if args.list_sources:
             print(f"Watchmode {WATCHMODE_V1}  regions={DEFAULT_REGIONS}\n")
-            for s in list_britbox_sources(sources):
+            for s in list_mubi_sources(sources):
                 print(f"  id={s.get('id')}  name={s.get('name')!r}  type={s.get('type')}")
             return
 
@@ -150,7 +151,7 @@ def main() -> None:
             f"  regions={DEFAULT_REGIONS}\n"
             f"  endpoints: GET /sources/  GET /list-titles/\n"
         )
-        src = resolve_britbox_source(sources, override_id=args.source_id)
+        src = resolve_mubi_source(sources, override_id=args.source_id)
         print(
             f"Using source id={src.get('id')} name={src.get('name')!r} type={src.get('type')!r}\n"
             f"Fetching all pages (limit={min(args.limit, PAGE_LIMIT_MAX)} per page)..."
@@ -161,7 +162,7 @@ def main() -> None:
         )
 
         try:
-            validate_snapshot(src, titles, list_meta)
+            validate_mubi_snapshot(src, titles, list_meta)
         except RuntimeError as e:
             print(f"\nFETCH ABORTED: {e}\nCatalog file not updated.", file=sys.stderr)
             sys.exit(1)
@@ -171,7 +172,7 @@ def main() -> None:
     shows = [t for t in titles if t.get("object_type") == "SHOW"]
 
     catalog = {
-        "provider": "britbox-us",
+        "provider": "mubi-us",
         "provider_clear_name": (src.get("name") or "").strip(),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "source": "watchmode",
