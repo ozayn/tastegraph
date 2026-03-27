@@ -8,6 +8,13 @@ import numpy as np
 
 from app.ml.datasets import build_watchlist_candidates
 from app.ml.features import MODELS_DIR, build_feature_matrix
+from app.services.recommendation_filters import (
+    any_recommendation_filter_active,
+    normalize_year_value,
+    parse_decade_bounds,
+    pool_row_matches_filters,
+    resolve_similar_to_genre_set,
+)
 
 warnings.filterwarnings("ignore", message="unknown class")
 
@@ -23,10 +30,20 @@ def _top_contributing_features(
     return [n for n, c in ranked[:k] if c > 0.01]
 
 
-def get_ml_watchlist_recommendations(db, limit: int = 15) -> list[dict] | None:
+def get_ml_watchlist_recommendations(
+    db,
+    limit: int = 15,
+    *,
+    decade: str | None = None,
+    year_min: int | None = None,
+    country: str | None = None,
+    similar_to: str | None = None,
+) -> list[dict] | None:
     """Score watchlist items with 8+ likelihood model. Returns None if model missing.
 
-    Returns list of dicts: imdb_title_id, title, year, title_type, prob_8plus, top_features.
+    Optional pool filters match :func:`recommendations_watchlist_high_fit` (pre-ranking only;
+    model weights and scoring unchanged). Returns list of dicts: imdb_title_id, title, year,
+    title_type, prob_8plus, top_features.
     """
     model_path = MODELS_DIR / "8plus_baseline_model.joblib"
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"
@@ -38,9 +55,36 @@ def get_ml_watchlist_recommendations(db, limit: int = 15) -> list[dict] | None:
     loaded = joblib.load(artifact_path)
     artifacts = loaded["artifacts"]
 
+    decade_bounds = parse_decade_bounds(decade)
+    ref_genres, _ = resolve_similar_to_genre_set(db, similar_to)
+    filter_active = any_recommendation_filter_active(
+        decade_bounds=decade_bounds,
+        year_min=year_min,
+        country_contains=country,
+        ref_genres=ref_genres,
+    )
+
     df = build_watchlist_candidates(db)
     if len(df) == 0:
         return []
+
+    if filter_active:
+        keep_mask = []
+        for _, row in df.iterrows():
+            y = normalize_year_value(row.get("year"))
+            ok = pool_row_matches_filters(
+                year=y,
+                genres_csv=row.get("genres") if row.get("genres") else None,
+                country=row.get("country") if row.get("country") else None,
+                decade_bounds=decade_bounds,
+                year_min=year_min,
+                country_contains=country,
+                ref_genres=ref_genres,
+            )
+            keep_mask.append(ok)
+        df = df[keep_mask].reset_index(drop=True)
+        if len(df) == 0:
+            return []
 
     X, _ = build_feature_matrix(
         df,

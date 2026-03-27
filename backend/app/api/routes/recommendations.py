@@ -573,11 +573,38 @@ def recommendations_watchlist_high_fit(
 @router.get("/watchlist-ml")
 def recommendations_watchlist_ml(
     limit: int = Query(default=15, ge=1, le=50),
+    decade: str | None = Query(
+        default=None,
+        description="Restrict pool to release decade, e.g. 2020 or 2020s (before ranking)",
+    ),
+    year_min: int | None = Query(
+        default=None,
+        ge=1870,
+        le=2035,
+        description="Minimum release year (before ranking)",
+    ),
+    country: str | None = Query(
+        default=None,
+        max_length=80,
+        description="Substring match on country (before ranking)",
+    ),
+    similar_to: str | None = Query(
+        default=None,
+        max_length=150,
+        description="Title hint: keep items that share a genre with resolved reference (rated/watchlist)",
+    ),
 ):
     """ML-ranked watchlist: unrated items scored by predicted 8+ probability. Requires trained model."""
     db = SessionLocal()
     try:
-        items = get_ml_watchlist_recommendations(db, limit=limit)
+        items = get_ml_watchlist_recommendations(
+            db,
+            limit=limit,
+            decade=decade,
+            year_min=year_min,
+            country=country,
+            similar_to=similar_to,
+        )
         if items is None:
             return {"items": [], "model_available": False}
 

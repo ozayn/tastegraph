@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import {
+  getInitialPoolFilters,
+  poolFiltersToQueryString,
+  RecommendationPoolFiltersBar,
+  type RecommendationPoolFilterValues,
+} from "./RecommendationPoolFiltersBar";
+import {
   RECO_EMPTY_MESSAGE,
   RECO_EMPTY_PANEL,
   RECO_LOADING_DOT,
@@ -86,6 +92,9 @@ function MLRecommendationCard({ item }: { item: MLItem }) {
 
 export function MLRecommendations() {
   const [data, setData] = useState<MLResponse | null>(null);
+  const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
+    getInitialPoolFilters
+  );
   const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -94,57 +103,87 @@ export function MLRecommendations() {
   }, [data?.items]);
 
   useEffect(() => {
-    fetch(`${API_URL}/recommendations/watchlist-ml?limit=15`)
+    const q = poolFiltersToQueryString(poolFilters);
+    fetch(`${API_URL}/recommendations/watchlist-ml?limit=15${q}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [poolFilters]);
+
+  const filtersActive =
+    poolFilters.decade ||
+    poolFilters.country.trim() ||
+    poolFilters.similarTo.trim();
+
+  const filtersBar = (
+    <RecommendationPoolFiltersBar
+      idPrefix="ml-wl"
+      value={poolFilters}
+      onChange={setPoolFilters}
+      countryEntry="watchlist-picker"
+    />
+  );
 
   if (loading) {
     return (
-      <div className={RECO_LOADING_ROW}>
-        <span className={RECO_LOADING_DOT} />
-        Loading…
+      <div>
+        {filtersBar}
+        <div className={RECO_LOADING_ROW}>
+          <span className={RECO_LOADING_DOT} />
+          Loading…
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <p className={RECO_EMPTY_MESSAGE}>
-        Unable to load ML recommendations. Check that the backend is running.
-      </p>
+      <div>
+        {filtersBar}
+        <p className={RECO_EMPTY_MESSAGE}>
+          Unable to load ML recommendations. Check that the backend is running.
+        </p>
+      </div>
     );
   }
 
   if (!data.model_available) {
     return (
-      <div className={`${RECO_EMPTY_PANEL} px-5 text-left`}>
-        <p className="text-[14px] font-medium text-[var(--foreground)]">
-          Model not trained yet
-        </p>
-        <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
-          Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
-        </p>
-        <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
-          cd backend && python -m app.ml.train_8plus_baseline
-        </code>
+      <div>
+        {filtersBar}
+        <div className={`${RECO_EMPTY_PANEL} px-5 text-left`}>
+          <p className="text-[14px] font-medium text-[var(--foreground)]">
+            Model not trained yet
+          </p>
+          <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
+            Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
+          </p>
+          <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
+            cd backend && python -m app.ml.train_8plus_baseline
+          </code>
+        </div>
       </div>
     );
   }
 
   if (!data.items.length) {
     return (
-      <p className={RECO_EMPTY_MESSAGE}>
-        No unrated watchlist items to score. Add titles to your watchlist and rate more titles to build the model.
-      </p>
+      <div>
+        {filtersBar}
+        <p className={RECO_EMPTY_MESSAGE}>
+          {filtersActive
+            ? "No unrated watchlist items match these filters with strong model scores. Try loosening decade, country, or similar-to."
+            : "No unrated watchlist items to score. Add titles to your watchlist and rate more titles to build the model."}
+        </p>
+      </div>
     );
   }
 
   const items = data.items;
   return (
     <>
+      {filtersBar}
       <ul className={RECO_RESULTS_LIST}>
         {(listExpanded
           ? items
