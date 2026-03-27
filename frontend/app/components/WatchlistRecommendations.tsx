@@ -14,6 +14,9 @@ import {
   RECO_LOADING_ROW,
   RECO_MODE_INTRO,
   RECO_RESULTS_LIST,
+  RECO_RESULTS_SHELL,
+  RECO_STALE_DIM,
+  RECO_UPDATING_CORNER,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 import {
@@ -43,7 +46,8 @@ type Item = {
 export function WatchlistRecommendations({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<Item[]>([]);
   const [listExpanded, setListExpanded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
@@ -52,11 +56,21 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
   const requestIdRef = useRef(0);
+  const itemsLenRef = useRef(0);
+  itemsLenRef.current = items.length;
 
   const fetchWithFilters = useCallback(
-    (genres: string[], countries: string[], tt: string, dec: string, incRated: boolean) => {
+    (
+      genres: string[],
+      countries: string[],
+      tt: string,
+      dec: string,
+      incRated: boolean,
+      staleWhileRevalidate: boolean
+    ) => {
       const id = ++requestIdRef.current;
-      setLoading(true);
+      if (staleWhileRevalidate) setRefreshing(true);
+      else setLoading(true);
       const params = new URLSearchParams();
       params.set("limit", String(FETCH_LIMIT));
       genres.forEach((g) => params.append("genres", g));
@@ -80,6 +94,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
         .finally(() => {
           if (id !== requestIdRef.current) return;
           setLoading(false);
+          setRefreshing(false);
         });
     },
     []
@@ -96,7 +111,8 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
         selectedCountries,
         titleType,
         decade,
-        includeRated
+        includeRated,
+        itemsLenRef.current > 0
       );
     }, delay);
     return () => {
@@ -151,14 +167,14 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           genresUrl={`${API_URL}/recommendations/watchlist-genres`}
           fallbackGenresUrl={`${API_URL}/recommendations/genres`}
         />
         <CountryMultiSelect
           selected={selectedCountries}
           onChange={setSelectedCountries}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           countriesUrl={`${API_URL}/recommendations/watchlist-countries`}
         />
         <RecoSingleSelect
@@ -166,7 +182,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           value={titleType}
           onChange={setTitleType}
           options={RECO_WATCHLIST_TITLE_TYPE_OPTIONS}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           ariaLabel="Title type"
         />
         <RecoSingleSelect
@@ -174,7 +190,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           value={decade}
           onChange={setDecade}
           options={RECO_DECADE_OPTIONS}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           ariaLabel="Decade"
         />
         <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
@@ -189,43 +205,68 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
         </label>
       </div>
 
-      {loading ? (
-        <div className={embedded ? RECO_LOADING_ROW : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted)]"}>
-          <span className={RECO_LOADING_DOT} />
-          Loading…
-        </div>
-      ) : items.length > 0 ? (
-        <>
-          <ul className={embedded ? RECO_RESULTS_LIST : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"}>
-            {(listExpanded
-              ? items
-              : items.slice(0, RECO_VISIBLE_INITIAL.watchlist)
-            ).map((r) => (
-              <li key={r.imdb_title_id}>
-                <RecommendationCard
-                  imdb_title_id={r.imdb_title_id}
-                  title={r.title}
-                  year={r.year}
-                  title_type={r.title_type}
-                  your_rating={r.your_rating}
-                  poster={r.poster}
-                  reasons={r.reasons}
-                />
-              </li>
-            ))}
-          </ul>
-          <ExpandableRecoListFooter
-            expanded={listExpanded}
-            onToggle={() => setListExpanded((e) => !e)}
-            initialVisible={RECO_VISIBLE_INITIAL.watchlist}
-            total={items.length}
-          />
-        </>
-      ) : (
-        <p className={embedded ? RECO_EMPTY_PANEL : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"}>
-          No poster-backed results for these filters yet.
-        </p>
-      )}
+      <div
+        className={
+          embedded
+            ? `${RECO_RESULTS_SHELL} ${refreshing && items.length > 0 ? RECO_STALE_DIM : ""}`
+            : `mt-5 sm:mt-6 ${RECO_RESULTS_SHELL} ${refreshing && items.length > 0 ? RECO_STALE_DIM : ""}`
+        }
+      >
+        {refreshing && items.length > 0 && (
+          <div className={RECO_UPDATING_CORNER} aria-live="polite">
+            Updating…
+          </div>
+        )}
+        {loading && items.length === 0 ? (
+          <div
+            className={
+              embedded ? RECO_LOADING_ROW : "flex items-center gap-2.5 text-[14px] text-[var(--muted)]"
+            }
+          >
+            <span className={RECO_LOADING_DOT} />
+            Loading…
+          </div>
+        ) : items.length > 0 ? (
+          <>
+            <ul
+              className={embedded ? RECO_RESULTS_LIST : "grid gap-5 sm:gap-6"}
+            >
+              {(listExpanded
+                ? items
+                : items.slice(0, RECO_VISIBLE_INITIAL.watchlist)
+              ).map((r) => (
+                <li key={r.imdb_title_id}>
+                  <RecommendationCard
+                    imdb_title_id={r.imdb_title_id}
+                    title={r.title}
+                    year={r.year}
+                    title_type={r.title_type}
+                    your_rating={r.your_rating}
+                    poster={r.poster}
+                    reasons={r.reasons}
+                  />
+                </li>
+              ))}
+            </ul>
+            <ExpandableRecoListFooter
+              expanded={listExpanded}
+              onToggle={() => setListExpanded((e) => !e)}
+              initialVisible={RECO_VISIBLE_INITIAL.watchlist}
+              total={items.length}
+            />
+          </>
+        ) : (
+          <p
+            className={
+              embedded
+                ? RECO_EMPTY_PANEL
+                : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
+            }
+          >
+            No poster-backed results for these filters yet.
+          </p>
+        )}
+      </div>
     </>
   );
 

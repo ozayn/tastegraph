@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   catalogProviderByModeId,
   type CatalogProviderModeId,
@@ -19,6 +19,9 @@ import {
   RECO_BODY_TEXT,
   RECO_LOADING_DOT,
   RECO_RESULTS_GRID,
+  RECO_RESULTS_SHELL,
+  RECO_STALE_DIM,
+  RECO_UPDATING_CORNER,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
@@ -314,6 +317,22 @@ export function ProviderCatalogRecommendations({
   const [mlData, setMlData] = useState<MLResponse | null>(null);
   const [listExpanded, setListExpanded] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const prevProviderRef = useRef<CatalogProviderModeId | null>(null);
+
+  useEffect(() => {
+    if (prevProviderRef.current === null) {
+      prevProviderRef.current = provider;
+      return;
+    }
+    if (prevProviderRef.current === provider) return;
+    prevProviderRef.current = provider;
+    setScoring("high-fit");
+    setPoolFilters(getInitialPoolFilters({ titleType: cfg.catalogDefaultTitleType }));
+    setHighFitData(null);
+    setMlData(null);
+    setListExpanded(false);
+    setIsFetching(true);
+  }, [provider, cfg.catalogDefaultTitleType]);
 
   useEffect(() => {
     setListExpanded(false);
@@ -366,13 +385,13 @@ export function ProviderCatalogRecommendations({
   const catalogError =
     activeData && "error" in activeData && activeData.error ? activeData : null;
 
+  const dimResults =
+    isFetching && activeData !== null && !catalogError && !showBlockingLoading;
+
   return (
     <div className="relative">
       {isFetching && activeData !== null && !catalogError && (
-        <div
-          className="pointer-events-none absolute right-0 top-0 z-10 text-[11px] text-[var(--muted-soft)]"
-          aria-live="polite"
-        >
+        <div className={RECO_UPDATING_CORNER} aria-live="polite">
           Updating…
         </div>
       )}
@@ -413,125 +432,129 @@ export function ProviderCatalogRecommendations({
         onChange={setPoolFilters}
       />
 
-      {showBlockingLoading && (
-        <div className="mb-4 flex items-center gap-2.5 text-[14px] text-[var(--muted)]">
+      {showBlockingLoading ? (
+        <div className="mb-4 flex min-h-[14rem] items-center gap-2.5 text-[14px] text-[var(--muted)]">
           <span className={RECO_LOADING_DOT} />
           Loading catalog…
         </div>
-      )}
-
-      {catalogError && (
-        <div className="mb-4 rounded-md border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-4">
-          <p className="text-[13px] font-medium text-[var(--foreground)]">
-            Catalog snapshot unavailable
-          </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-soft)]">
-            {catalogError.message ||
-              `${cfg.poolLabel} catalog data could not be loaded in this environment.`}
-          </p>
-        </div>
-      )}
-
-      {!showBlockingLoading && !catalogError && activeData?.catalog_stats && (
-        <StatsBanner
-          stats={activeData.catalog_stats}
-          fetchedAt={
-            "fetched_at" in activeData
-              ? (activeData.fetched_at as string)
-              : undefined
-          }
-        />
-      )}
-
-      {!showBlockingLoading &&
-        !catalogError &&
-        scoring === "high-fit" &&
-        highFitData && (
-        <>
-          {highFitData.items.length === 0 ? (
-            <p className={RECO_BODY_TEXT}>
-              {filtersActiveForQuery
-                ? "No titles match these filters—try another decade, genre, or broader similar-to."
-                : "No scoreable titles yet. Enrich metadata to improve matching."}
+      ) : (
+      <div
+        className={`${RECO_RESULTS_SHELL} ${dimResults ? RECO_STALE_DIM : ""}`}
+      >
+        {catalogError && (
+          <div className="mb-4 rounded-md border border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-4">
+            <p className="text-[13px] font-medium text-[var(--foreground)]">
+              Catalog snapshot unavailable
             </p>
-          ) : (
-            <>
-              <ul className={RECO_RESULTS_GRID}>
-                {(listExpanded
-                  ? highFitData.items
-                  : highFitData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
-                ).map((item) => (
-                  <li key={item.imdb_title_id}>
-                    <HighFitCard
-                      variant={cfg.highFitCardVariant}
-                      imdb_title_id={item.imdb_title_id}
-                      title={item.title}
-                      title_type={item.title_type}
-                      year={item.year}
-                      poster={item.poster}
-                      explanation={item.explanation}
-                    />
-                  </li>
-                ))}
-              </ul>
-              <ExpandableRecoListFooter
-                expanded={listExpanded}
-                onToggle={() => setListExpanded((e) => !e)}
-                initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
-                total={highFitData.items.length}
-              />
-            </>
-          )}
-        </>
-      )}
-
-      {!showBlockingLoading && !catalogError && scoring === "ml" && mlData && (
-        <>
-          {!mlData.model_available ? (
-            <div className="rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-4 py-5">
-              <p className="text-[14px] font-medium text-[var(--foreground)]">
-                ML model not trained
-              </p>
-              <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
-                Train the model locally, then restart the backend:
-              </p>
-              <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
-                cd backend && python -m app.ml.train_8plus_baseline
-              </code>
-            </div>
-          ) : mlData.items.length === 0 ? (
-            <p className={RECO_BODY_TEXT}>
-              {filtersActiveForQuery
-                ? "No titles in this filtered pool for ML. Try loosening filters."
-                : "No scoreable titles for ML ranking."}
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted-soft)]">
+              {catalogError.message ||
+                `${cfg.poolLabel} catalog data could not be loaded in this environment.`}
             </p>
-          ) : (
-            <>
-              <ul className={RECO_RESULTS_GRID}>
-                {(listExpanded
-                  ? mlData.items
-                  : mlData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
-                ).map((item) => (
-                  <li key={item.imdb_title_id}>
-                    <CatalogProviderMLCard item={item} />
-                  </li>
-                ))}
-              </ul>
-              <ExpandableRecoListFooter
-                expanded={listExpanded}
-                onToggle={() => setListExpanded((e) => !e)}
-                initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
-                total={mlData.items.length}
-              />
-            </>
-          )}
-        </>
-      )}
+          </div>
+        )}
 
-      {!showBlockingLoading && !catalogError && !activeData && (
-        <p className="text-[13px] text-[var(--muted-soft)]">
-          Unable to load recommendations. Is the backend running?
-        </p>
+        {!showBlockingLoading && !catalogError && activeData?.catalog_stats && (
+          <StatsBanner
+            stats={activeData.catalog_stats}
+            fetchedAt={
+              "fetched_at" in activeData
+                ? (activeData.fetched_at as string)
+                : undefined
+            }
+          />
+        )}
+
+        {!showBlockingLoading &&
+          !catalogError &&
+          scoring === "high-fit" &&
+          highFitData && (
+          <>
+            {highFitData.items.length === 0 ? (
+              <p className={RECO_BODY_TEXT}>
+                {filtersActiveForQuery
+                  ? "No titles match these filters—try another decade, genre, or broader similar-to."
+                  : "No scoreable titles yet. Enrich metadata to improve matching."}
+              </p>
+            ) : (
+              <>
+                <ul className={RECO_RESULTS_GRID}>
+                  {(listExpanded
+                    ? highFitData.items
+                    : highFitData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
+                  ).map((item) => (
+                    <li key={item.imdb_title_id}>
+                      <HighFitCard
+                        variant={cfg.highFitCardVariant}
+                        imdb_title_id={item.imdb_title_id}
+                        title={item.title}
+                        title_type={item.title_type}
+                        year={item.year}
+                        poster={item.poster}
+                        explanation={item.explanation}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                <ExpandableRecoListFooter
+                  expanded={listExpanded}
+                  onToggle={() => setListExpanded((e) => !e)}
+                  initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
+                  total={highFitData.items.length}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {!showBlockingLoading && !catalogError && scoring === "ml" && mlData && (
+          <>
+            {!mlData.model_available ? (
+              <div className="rounded-lg border border-dashed border-[var(--card-border)] bg-[var(--control-track-bg)] px-4 py-5">
+                <p className="text-[14px] font-medium text-[var(--foreground)]">
+                  ML model not trained
+                </p>
+                <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
+                  Train the model locally, then restart the backend:
+                </p>
+                <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
+                  cd backend && python -m app.ml.train_8plus_baseline
+                </code>
+              </div>
+            ) : mlData.items.length === 0 ? (
+              <p className={RECO_BODY_TEXT}>
+                {filtersActiveForQuery
+                  ? "No titles in this filtered pool for ML. Try loosening filters."
+                  : "No scoreable titles for ML ranking."}
+              </p>
+            ) : (
+              <>
+                <ul className={RECO_RESULTS_GRID}>
+                  {(listExpanded
+                    ? mlData.items
+                    : mlData.items.slice(0, RECO_VISIBLE_INITIAL.providerCatalog)
+                  ).map((item) => (
+                    <li key={item.imdb_title_id}>
+                      <CatalogProviderMLCard item={item} />
+                    </li>
+                  ))}
+                </ul>
+                <ExpandableRecoListFooter
+                  expanded={listExpanded}
+                  onToggle={() => setListExpanded((e) => !e)}
+                  initialVisible={RECO_VISIBLE_INITIAL.providerCatalog}
+                  total={mlData.items.length}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {!showBlockingLoading && !catalogError && !activeData && (
+          <p className="text-[13px] text-[var(--muted-soft)]">
+            Unable to load recommendations. Is the backend running?
+          </p>
+        )}
+      </div>
       )}
     </div>
   );

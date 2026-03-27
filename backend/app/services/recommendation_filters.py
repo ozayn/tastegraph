@@ -156,3 +156,62 @@ def title_metadata_matches_pool_filters(
         ref_genres=ref_genres,
         genre_substrings=genre_substrings,
     )
+
+
+# --- Default watchlist recency nudge (High-Fit, ML, plain Watchlist tab; unfiltered only) ---
+#
+# When the user has not applied the relevant pool filters, we add a *small* release-year-based
+# term on top of the existing score (fit, model prob, or favorite-person boost). This is not
+# newest-first sorting: the main signal still dominates; recency nudges close rows toward more
+# recent releases. When any narrowing filter is active for that endpoint, the term is omitted.
+#
+# Anchor year is a fixed constant (bumped occasionally) so ordering stays stable for a given DB.
+
+WATCHLIST_RECENCY_FLOOR_YEAR = 1970
+WATCHLIST_RECENCY_ANCHOR_YEAR = 2026
+
+# Max additive bump on the High-Fit float sort key (~integer fit scores are typically ~0–25+).
+WATCHLIST_RECENCY_WEIGHT_HIGH_FIT = 0.42
+
+# Max additive bump on the ML sort key (probabilities in ~0–1).
+WATCHLIST_RECENCY_WEIGHT_ML_PROB = 0.022
+
+# Max additive bump on /watchlist-simple (favorite-boost scale; ROLE_WEIGHT sums ~0.5–1.5 per match).
+# Tuned higher than High-Fit: plain Watchlist mostly uses sparse float boosts (often 0), so a linear
+# year term must be stronger to matter; taste still wins when favorite overlap exists.
+WATCHLIST_RECENCY_WEIGHT_SIMPLE = 1.05
+
+
+def watchlist_simple_pool_filters_active(
+    *,
+    genres: list[str] | None,
+    countries: list[str] | None,
+    title_type: str | None,
+    decade_bounds: tuple[int, int] | None,
+) -> bool:
+    """True when ``/watchlist-simple`` query params narrow the pool (disables recency nudge)."""
+    if genres and any((g or "").strip() for g in genres):
+        return True
+    if countries and any((c or "").strip() for c in countries):
+        return True
+    if title_type and str(title_type).strip():
+        return True
+    if decade_bounds is not None:
+        return True
+    return False
+
+
+def default_watchlist_recency_fraction(year: object | None) -> float:
+    """Unit interval [0, 1]: older (near floor) → 0, titles near anchor year → 1.
+
+    Invalid / missing release years contribute 0 so they are not artificially boosted.
+    """
+    y = normalize_year_value(year)
+    if y is None:
+        return 0.0
+    lo = WATCHLIST_RECENCY_FLOOR_YEAR
+    hi = WATCHLIST_RECENCY_ANCHOR_YEAR
+    if hi <= lo:
+        return 0.0
+    t = (y - lo) / (hi - lo)
+    return max(0.0, min(1.0, t))

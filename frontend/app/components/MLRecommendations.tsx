@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API_URL } from "../lib/api";
 import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import {
@@ -15,6 +15,9 @@ import {
   RECO_LOADING_DOT,
   RECO_LOADING_ROW,
   RECO_RESULTS_LIST,
+  RECO_RESULTS_SHELL,
+  RECO_STALE_DIM,
+  RECO_UPDATING_CORNER,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 
@@ -97,18 +100,40 @@ export function MLRecommendations() {
   );
   const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const dataRef = useRef<MLResponse | null>(null);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   useEffect(() => {
     setListExpanded(false);
-  }, [data?.items]);
+  }, [poolFilters]);
 
   useEffect(() => {
+    const id = ++requestIdRef.current;
+    const hadData = dataRef.current !== null;
+    if (hadData) setRefreshing(true);
+    else setLoading(true);
+
     const q = poolFiltersToQueryString(poolFilters);
     fetch(`${API_URL}/recommendations/watchlist-ml?limit=15${q}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+      .then((json) => {
+        if (id !== requestIdRef.current) return;
+        setData(json as MLResponse);
+      })
+      .catch(() => {
+        if (id !== requestIdRef.current) return;
+        if (!hadData) setData(null);
+      })
+      .finally(() => {
+        if (id !== requestIdRef.current) return;
+        setLoading(false);
+        setRefreshing(false);
+      });
   }, [poolFilters]);
 
   const filtersActive =
@@ -125,81 +150,68 @@ export function MLRecommendations() {
     />
   );
 
-  if (loading) {
-    return (
-      <div>
-        {filtersBar}
-        <div className={RECO_LOADING_ROW}>
-          <span className={RECO_LOADING_DOT} />
-          Loading…
-        </div>
-      </div>
-    );
-  }
+  const items = data?.items ?? [];
+  const showStaleDim = refreshing && data !== null;
 
-  if (!data) {
-    return (
-      <div>
-        {filtersBar}
-        <p className={RECO_EMPTY_MESSAGE}>
-          Unable to load ML recommendations. Check that the backend is running.
-        </p>
-      </div>
-    );
-  }
-
-  if (!data.model_available) {
-    return (
-      <div>
-        {filtersBar}
-        <div className={`${RECO_EMPTY_PANEL} px-5 text-left`}>
-          <p className="text-[14px] font-medium text-[var(--foreground)]">
-            Model not trained yet
-          </p>
-          <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
-            Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
-          </p>
-          <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
-            cd backend && python -m app.ml.train_8plus_baseline
-          </code>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data.items.length) {
-    return (
-      <div>
-        {filtersBar}
-        <p className={RECO_EMPTY_MESSAGE}>
-          {filtersActive
-            ? "No unrated watchlist items match these filters with strong model scores. Try loosening decade, country, or similar-to."
-            : "No unrated watchlist items to score. Add titles to your watchlist and rate more titles to build the model."}
-        </p>
-      </div>
-    );
-  }
-
-  const items = data.items;
   return (
-    <>
+    <div>
       {filtersBar}
-      <ul className={RECO_RESULTS_LIST}>
-        {(listExpanded
-          ? items
-          : items.slice(0, RECO_VISIBLE_INITIAL.ml)
-        ).map((item) => (
-          <li key={item.imdb_title_id}>
-            <MLRecommendationCard item={item} />
-          </li>
-        ))}
-      </ul>
-      <ExpandableRecoListFooter
-        expanded={listExpanded}
-        onToggle={() => setListExpanded((e) => !e)}
-        initialVisible={RECO_VISIBLE_INITIAL.ml}
-        total={items.length}
-      />
-    </>
+      <div
+        className={`${RECO_RESULTS_SHELL} ${showStaleDim ? RECO_STALE_DIM : ""}`}
+      >
+        {showStaleDim && (
+          <div className={RECO_UPDATING_CORNER} aria-live="polite">
+            Updating…
+          </div>
+        )}
+        {loading && !data ? (
+          <div className={RECO_LOADING_ROW}>
+            <span className={RECO_LOADING_DOT} />
+            Loading…
+          </div>
+        ) : !data ? (
+          <p className={RECO_EMPTY_MESSAGE}>
+            Unable to load ML recommendations. Check that the backend is running.
+          </p>
+        ) : !data.model_available ? (
+          <div className={`${RECO_EMPTY_PANEL} px-5 text-left`}>
+            <p className="text-[14px] font-medium text-[var(--foreground)]">
+              Model not trained yet
+            </p>
+            <p className="mt-2 text-[14px] leading-[1.5] text-[var(--muted)]">
+              Train the 8+ (strong-favorite) likelihood model locally, then restart the backend:
+            </p>
+            <code className="mt-3 block rounded-md border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2 text-left text-[12px] text-[var(--muted-soft)]">
+              cd backend && python -m app.ml.train_8plus_baseline
+            </code>
+          </div>
+        ) : !items.length ? (
+          <p className={RECO_EMPTY_MESSAGE}>
+            {filtersActive
+              ? "No unrated watchlist items match these filters with strong model scores. Try loosening decade, country, or similar-to."
+              : "No unrated watchlist items to score. Add titles to your watchlist and rate more titles to build the model."}
+          </p>
+        ) : (
+          <>
+            <ul className={RECO_RESULTS_LIST}>
+              {(listExpanded
+                ? items
+                : items.slice(0, RECO_VISIBLE_INITIAL.ml)
+              ).map((item) => (
+                <li key={item.imdb_title_id}>
+                  <MLRecommendationCard item={item} />
+                </li>
+              ))}
+            </ul>
+            <ExpandableRecoListFooter
+              expanded={listExpanded}
+              onToggle={() => setListExpanded((e) => !e)}
+              initialVisible={RECO_VISIBLE_INITIAL.ml}
+              total={items.length}
+            />
+          </>
+        )}
+      </div>
+    </div>
   );
 }

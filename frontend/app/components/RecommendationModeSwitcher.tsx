@@ -62,7 +62,7 @@ function ModeTabButton({
       role="tab"
       aria-selected={mode === id}
       onClick={() => onChange(id)}
-      className={`shrink-0 rounded-md px-3 py-2 text-[13px] transition-colors sm:px-4 sm:py-2.5 sm:text-[14px] ${
+      className={`max-w-full shrink-0 rounded-md px-2.5 py-2 text-left text-[13px] leading-snug transition-colors sm:px-3.5 sm:py-2.5 sm:text-[14px] lg:px-4 ${
         mode === id
           ? "bg-[var(--control-surface)] font-semibold text-[var(--foreground)] shadow-sm ring-1 ring-[var(--card-border)]"
           : "font-medium text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]"
@@ -86,11 +86,11 @@ export function RecommendationModeSwitcher({
   onChange: (mode: RecommendationMode) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
+    <div className="flex w-full max-w-full flex-col gap-2.5 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-2 lg:gap-y-1.5">
       <div
         role="tablist"
         aria-label="Library recommendation modes"
-        className="flex flex-wrap gap-0.5"
+        className="flex min-w-0 w-full flex-wrap gap-x-0.5 gap-y-1"
       >
         {BASE_MODES.map(({ id, label }) => (
           <ModeTabButton
@@ -106,15 +106,15 @@ export function RecommendationModeSwitcher({
       <div
         role="group"
         aria-label="Catalog providers"
-        className="flex min-w-0 flex-col gap-2 border-t border-[var(--card-border)]/55 pt-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-2 sm:border-l sm:border-t-0 sm:pt-0 sm:pl-2.5"
+        className="flex min-w-0 w-full flex-col gap-2 border-t border-[var(--card-border)]/55 pt-2 lg:flex-1 lg:flex-row lg:items-center lg:gap-2 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-2.5"
       >
-        <span className="shrink-0 pl-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted-soft)] sm:pl-0">
+        <span className="shrink-0 pl-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted-soft)] lg:pl-0">
           Providers
         </span>
         <div
           role="tablist"
           aria-label="Catalog providers"
-          className="flex min-w-0 flex-wrap gap-0.5"
+          className="flex min-w-0 w-full flex-wrap gap-x-0.5 gap-y-1"
         >
           {CATALOG_PROVIDERS.map((p) => (
             <ModeTabButton

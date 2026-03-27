@@ -49,7 +49,7 @@ export function RecommendationsContainer() {
         <div className="mt-5 sm:mt-6">
           <RecommendationModeSwitcher mode={mode} onChange={setMode} />
         </div>
-        <div className="mt-5 min-h-[12rem] sm:mt-6">
+        <div className="mt-5 min-h-[22rem] sm:mt-6 sm:min-h-[26rem]">
           {mode === "for-you" && <SimpleRecommendations embedded />}
           {mode === "watchlist" && <WatchlistRecommendations embedded />}
           {mode === "high-fit" && <HighFitModeContent />}
@@ -129,7 +129,7 @@ function ProviderCatalogModeShell({ modeId }: { modeId: CatalogProviderModeId })
           </p>
         </SectionHelp>
       </div>
-      <ProviderCatalogRecommendations key={modeId} provider={modeId} />
+      <ProviderCatalogRecommendations provider={modeId} />
     </div>
   );
 }

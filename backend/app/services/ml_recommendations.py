@@ -9,7 +9,9 @@ import numpy as np
 from app.ml.datasets import build_watchlist_candidates
 from app.ml.features import MODELS_DIR, build_feature_matrix
 from app.services.recommendation_filters import (
+    WATCHLIST_RECENCY_WEIGHT_ML_PROB,
     any_recommendation_filter_active,
+    default_watchlist_recency_fraction,
     normalize_year_value,
     parse_decade_bounds,
     pool_row_matches_filters,
@@ -42,8 +44,9 @@ def get_ml_watchlist_recommendations(
     """Score watchlist items with 8+ likelihood model. Returns None if model missing.
 
     Optional pool filters match :func:`recommendations_watchlist_high_fit` (pre-ranking only;
-    model weights and scoring unchanged). Returns list of dicts: imdb_title_id, title, year,
-    title_type, prob_8plus, top_features.
+    model weights and scoring unchanged). When no pool filters are active, final ordering adds
+    a small release-year term on top of ``prob_8plus`` (see ``default_watchlist_recency_fraction``).
+    Returns list of dicts: imdb_title_id, title, year, title_type, prob_8plus, top_features.
     """
     model_path = MODELS_DIR / "8plus_baseline_model.joblib"
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"
@@ -105,7 +108,15 @@ def get_ml_watchlist_recommendations(
     proba = model.predict_proba(X_for_pred)[:, 1]
     df = df.copy()
     df["prob_8plus"] = proba
-    df = df.sort_values("prob_8plus", ascending=False).reset_index(drop=True)
+    # Default pool only: tiny release-year nudge on top of model prob (see recommendation_filters).
+    if not filter_active:
+        rf = df["year"].map(
+            lambda y: default_watchlist_recency_fraction(normalize_year_value(y))
+        )
+        df["_rank"] = df["prob_8plus"] + WATCHLIST_RECENCY_WEIGHT_ML_PROB * rf
+    else:
+        df["_rank"] = df["prob_8plus"]
+    df = df.sort_values("_rank", ascending=False, kind="mergesort").reset_index(drop=True)
 
     coef = lr.coef_[0]
     names = artifacts.get("feature_names", [])

@@ -14,7 +14,10 @@ import {
   RECO_LOADING_ROW,
   RECO_MODE_INTRO,
   RECO_RESULTS_LIST,
+  RECO_RESULTS_SHELL,
   RECO_SECONDARY_LINE,
+  RECO_STALE_DIM,
+  RECO_UPDATING_CORNER,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 import {
@@ -41,7 +44,8 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   const [items, setItems] = useState<Item[]>([]);
   const [listExpanded, setListExpanded] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
@@ -49,11 +53,20 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
   const requestIdRef = useRef(0);
+  const itemsLenRef = useRef(0);
+  itemsLenRef.current = items.length;
 
   const fetchWithFilters = useCallback(
-    (genres: string[], countries: string[], tt: string, dec: string) => {
+    (
+      genres: string[],
+      countries: string[],
+      tt: string,
+      dec: string,
+      staleWhileRevalidate: boolean
+    ) => {
       const id = ++requestIdRef.current;
-      setLoading(true);
+      if (staleWhileRevalidate) setRefreshing(true);
+      else setLoading(true);
       const baseParams = new URLSearchParams();
       genres.forEach((g) => baseParams.append("genres", g));
       countries.forEach((c) => baseParams.append("countries", c));
@@ -86,6 +99,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
         .finally(() => {
           if (id !== requestIdRef.current) return;
           setLoading(false);
+          setRefreshing(false);
         });
     },
     []
@@ -97,7 +111,13 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
     isFirstRun.current = false;
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
-      fetchWithFilters(selectedGenres, selectedCountries, titleType, decade);
+      fetchWithFilters(
+        selectedGenres,
+        selectedCountries,
+        titleType,
+        decade,
+        itemsLenRef.current > 0
+      );
     }, delay);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -150,19 +170,19 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
         <GenreMultiSelect
           selected={selectedGenres}
           onChange={setSelectedGenres}
-          disabled={loading}
+          disabled={loading && items.length === 0}
         />
         <CountryMultiSelect
           selected={selectedCountries}
           onChange={setSelectedCountries}
-          disabled={loading}
+          disabled={loading && items.length === 0}
         />
         <RecoSingleSelect
           id="explore-favorites-title-type"
           value={titleType}
           onChange={setTitleType}
           options={RECO_EXPLORE_TITLE_TYPE_OPTIONS}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           ariaLabel="Title type"
         />
         <RecoSingleSelect
@@ -170,73 +190,94 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
           value={decade}
           onChange={setDecade}
           options={RECO_DECADE_OPTIONS}
-          disabled={loading}
+          disabled={loading && items.length === 0}
           ariaLabel="Decade"
         />
       </div>
 
-      {loading ? (
-        <div className={embedded ? RECO_LOADING_ROW : "mt-7 flex items-center gap-2.5 text-[14px] text-[var(--muted)]"}>
-          <span className={RECO_LOADING_DOT} />
-          Loading recommendations…
-        </div>
-      ) : (
-        <>
-          {explanation && (
-            <p className={embedded ? RECO_SECONDARY_LINE : "mt-5 text-[14px] leading-[1.6] text-[var(--muted)] sm:mt-6"}>
-              {explanation}
-            </p>
-          )}
-          {items.length > 0 ? (
-            <>
-              <ul
+      <div
+        className={
+          embedded
+            ? `${RECO_RESULTS_SHELL} ${refreshing && items.length > 0 ? RECO_STALE_DIM : ""}`
+            : `mt-5 sm:mt-6 ${RECO_RESULTS_SHELL} ${refreshing && items.length > 0 ? RECO_STALE_DIM : ""}`
+        }
+      >
+        {refreshing && items.length > 0 && (
+          <div className={RECO_UPDATING_CORNER} aria-live="polite">
+            Updating…
+          </div>
+        )}
+        {loading && items.length === 0 ? (
+          <div
+            className={
+              embedded ? RECO_LOADING_ROW : "flex items-center gap-2.5 text-[14px] text-[var(--muted)]"
+            }
+          >
+            <span className={RECO_LOADING_DOT} />
+            Loading recommendations…
+          </div>
+        ) : (
+          <>
+            {explanation && (
+              <p
                 className={
-                  embedded
-                    ? RECO_RESULTS_LIST
-                    : explanation
-                      ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6"
-                      : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"
+                  embedded ? RECO_SECONDARY_LINE : "text-[14px] leading-[1.6] text-[var(--muted)]"
                 }
               >
-                {(listExpanded
-                  ? items
-                  : items.slice(0, RECO_VISIBLE_INITIAL.explore)
-                ).map((r) => (
-                  <li key={r.imdb_title_id}>
-                    <RecommendationCard
-                      imdb_title_id={r.imdb_title_id}
-                      title={r.title}
-                      year={r.year}
-                      genres={r.genres}
-                      user_rating={r.user_rating}
-                      poster={r.poster}
-                      reasons={r.reasons}
-                    />
-                  </li>
-                ))}
-              </ul>
-              <ExpandableRecoListFooter
-                expanded={listExpanded}
-                onToggle={() => setListExpanded((e) => !e)}
-                initialVisible={RECO_VISIBLE_INITIAL.explore}
-                total={items.length}
-              />
-            </>
-          ) : (
-            <p
-              className={
-                embedded
-                  ? RECO_EMPTY_PANEL
-                  : explanation
-                    ? "mt-4 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-5"
-                    : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
-              }
-            >
-              No 8+ titles match these filters yet.
-            </p>
-          )}
-        </>
-      )}
+                {explanation}
+              </p>
+            )}
+            {items.length > 0 ? (
+              <>
+                <ul
+                  className={
+                    embedded
+                      ? RECO_RESULTS_LIST
+                      : explanation
+                        ? "mt-5 grid gap-5 sm:mt-6 sm:gap-6"
+                        : "mt-6 grid gap-5 sm:mt-7 sm:gap-6"
+                  }
+                >
+                  {(listExpanded
+                    ? items
+                    : items.slice(0, RECO_VISIBLE_INITIAL.explore)
+                  ).map((r) => (
+                    <li key={r.imdb_title_id}>
+                      <RecommendationCard
+                        imdb_title_id={r.imdb_title_id}
+                        title={r.title}
+                        year={r.year}
+                        genres={r.genres}
+                        user_rating={r.user_rating}
+                        poster={r.poster}
+                        reasons={r.reasons}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                <ExpandableRecoListFooter
+                  expanded={listExpanded}
+                  onToggle={() => setListExpanded((e) => !e)}
+                  initialVisible={RECO_VISIBLE_INITIAL.explore}
+                  total={items.length}
+                />
+              </>
+            ) : (
+              <p
+                className={
+                  embedded
+                    ? RECO_EMPTY_PANEL
+                    : explanation
+                      ? "mt-4 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-5"
+                      : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
+                }
+              >
+                No 8+ titles match these filters yet.
+              </p>
+            )}
+          </>
+        )}
+      </div>
     </>
   );
 

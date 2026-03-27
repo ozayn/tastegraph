@@ -15,11 +15,15 @@ from app.services.country_normalize import filter_variants_for_country, parse_an
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 from app.services.llm_search import search_rated, search_watchlist
 from app.services.recommendation_filters import (
+    WATCHLIST_RECENCY_WEIGHT_HIGH_FIT,
+    WATCHLIST_RECENCY_WEIGHT_SIMPLE,
     any_recommendation_filter_active,
+    default_watchlist_recency_fraction,
     normalize_year_value,
     parse_decade_bounds,
     pool_row_matches_filters,
     resolve_similar_to_genre_set,
+    watchlist_simple_pool_filters_active,
 )
 from app.services.catalog_provider_specs import CATALOG_PROVIDERS
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
@@ -488,7 +492,11 @@ def recommendations_watchlist_high_fit(
         description="Title hint: keep items that share a genre with resolved reference (rated/watchlist)",
     ),
 ):
-    """Underwatched but high-fit: watchlist items ranked by taste alignment (excludes rated)."""
+    """Underwatched but high-fit: watchlist items ranked by taste alignment (excludes rated).
+
+    With no decade/year/country/similar_to pool filters, ordering adds a small release-year nudge
+    on top of the fit score (see ``default_watchlist_recency_fraction`` in recommendation_filters).
+    """
     db = SessionLocal()
     try:
         q = (
@@ -547,14 +555,19 @@ def recommendations_watchlist_high_fit(
                 r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
             )
             total_score = fit_score + boost * 2  # Favorites add to fit
+            rank_score = float(total_score)
+            if not filter_active:
+                rank_score += WATCHLIST_RECENCY_WEIGHT_HIGH_FIT * default_watchlist_recency_fraction(y)
+            tie_year = y if y is not None else 1870
             scored_items.append((
-                total_score,
+                rank_score,
+                tie_year,
                 r,
                 poster if poster and poster != "N/A" else None,
                 explanation,
             ))
 
-        scored_items.sort(key=lambda x: -x[0])
+        scored_items.sort(key=lambda x: (-x[0], -x[1]))
         top = scored_items[:limit]
 
         return [
@@ -566,7 +579,7 @@ def recommendations_watchlist_high_fit(
                 "poster": poster,
                 "explanation": explanation,
             }
-            for _, r, poster, explanation in top
+            for _, _, r, poster, explanation in top
         ]
     finally:
         db.close()
@@ -716,7 +729,13 @@ def recommendations_watchlist_simple(
     include_rated: bool = Query(default=False, description="Include already-rated items"),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    """Things to watch from watchlist. By default excludes already-rated titles."""
+    """Things to watch from watchlist. By default excludes already-rated titles.
+
+    With no genre/country/title_type/decade filters, ordering adds a release-year term on top of the
+    favorite-person boost (see ``default_watchlist_recency_fraction``), and uses release year before
+    IMDb list position as a tie-break so close scores prefer newer titles. ``include_rated`` does
+    not disable that nudge.
+    """
     db = SessionLocal()
     try:
         q = db.query(
@@ -756,6 +775,12 @@ def recommendations_watchlist_simple(
         if title_type:
             q = q.filter(IMDbWatchlistItem.title_type == title_type)
         wl_decade_bounds = parse_decade_bounds(decade)
+        wl_filter_active = watchlist_simple_pool_filters_active(
+            genres=genres,
+            countries=countries,
+            title_type=title_type,
+            decade_bounds=wl_decade_bounds,
+        )
         if wl_decade_bounds is not None:
             d0, d1 = wl_decade_bounds
             q = q.filter(
@@ -787,11 +812,30 @@ def recommendations_watchlist_simple(
             )
             has_meta = bool(r.title and r.title_type and r.year is not None)
             meta_first_val = 0 if has_meta else 1
-            scored.append((boost, meta_first_val, r.position or 0, r, poster, matches, country, meta_genres))
+            y = normalize_year_value(r.year)
+            rank_primary = float(boost)
+            if not wl_filter_active:
+                rank_primary += WATCHLIST_RECENCY_WEIGHT_SIMPLE * default_watchlist_recency_fraction(y)
+            # When unfiltered: break ties by newer year before IMDb position (position alone favored
+            # older adds). When filtered: year_sort_key 0 for all → same tie order as before.
+            year_sort_key = (y if y is not None else 1870) if not wl_filter_active else 0
+            scored.append(
+                (
+                    rank_primary,
+                    meta_first_val,
+                    year_sort_key,
+                    r.position or 0,
+                    r,
+                    poster,
+                    matches,
+                    country,
+                    meta_genres,
+                )
+            )
 
         def _wl_sort_key(x):
-            boost, mf, pos, *_ = x
-            return (-boost, mf, pos)
+            rank_primary, mf, year_sk, pos, *_ = x
+            return (-rank_primary, mf, -year_sk, pos)
 
         scored.sort(key=_wl_sort_key)
         top = scored[:limit]
@@ -810,7 +854,7 @@ def recommendations_watchlist_simple(
                     meta_genres or r.genres, country, r.year, matches, signals
                 ),
             }
-            for _, _, _, r, poster, matches, country, meta_genres in top
+            for _, _, _, _, r, poster, matches, country, meta_genres in top
         ]
     finally:
         db.close()

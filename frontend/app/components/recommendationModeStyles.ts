@@ -19,6 +19,20 @@ export const RECO_CONTROLS_WELL =
 export const RECO_LOADING_ROW =
   "mt-5 flex items-center gap-2.5 text-[14px] text-[var(--muted)]";
 
+/**
+ * Stable results column for embedded recommendation modes: limits collapse when swapping
+ * loading / empty / list, and pairs with opacity when showing stale data during refetch.
+ */
+export const RECO_RESULTS_SHELL =
+  "relative min-h-[14rem] transition-opacity duration-200 ease-out";
+
+/** Dim prior results while refetching (keep layout; pair with pointer-events-none on children if needed). */
+export const RECO_STALE_DIM = "opacity-[0.72]";
+
+/** Small corner hint during stale-while-revalidate (non-blocking refetch). */
+export const RECO_UPDATING_CORNER =
+  "pointer-events-none absolute right-0 top-0 z-10 text-[11px] text-[var(--muted-soft)]";
+
 export const RECO_LOADING_DOT =
   "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-soft)]";
 

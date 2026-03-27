@@ -1,10 +1,14 @@
 """Pre-ranking recommendation pool filters."""
 
 from app.services.recommendation_filters import (
+    WATCHLIST_RECENCY_ANCHOR_YEAR,
+    WATCHLIST_RECENCY_FLOOR_YEAR,
     any_recommendation_filter_active,
+    default_watchlist_recency_fraction,
     parse_decade_bounds,
     pool_row_matches_filters,
     title_metadata_matches_pool_filters,
+    watchlist_simple_pool_filters_active,
 )
 from app.models.title_metadata import TitleMetadata
 
@@ -163,6 +167,62 @@ def test_pool_row_genre_substrings_or():
         ref_genres=None,
         genre_substrings=("sci-fi", "horror"),
     )
+
+
+def test_watchlist_simple_pool_filters_active():
+    assert not watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=None,
+        title_type=None,
+        decade_bounds=None,
+    )
+    assert not watchlist_simple_pool_filters_active(
+        genres=[],
+        countries=[],
+        title_type=None,
+        decade_bounds=None,
+    )
+    assert watchlist_simple_pool_filters_active(
+        genres=["Drama"],
+        countries=None,
+        title_type=None,
+        decade_bounds=None,
+    )
+    assert watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=["UK"],
+        title_type=None,
+        decade_bounds=None,
+    )
+    assert watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=None,
+        title_type="movie",
+        decade_bounds=None,
+    )
+    assert not watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=None,
+        title_type="  ",
+        decade_bounds=None,
+    )
+    assert watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=None,
+        title_type=None,
+        decade_bounds=(2020, 2029),
+    )
+
+
+def test_default_watchlist_recency_fraction():
+    assert default_watchlist_recency_fraction(None) == 0.0
+    assert default_watchlist_recency_fraction("nope") == 0.0
+    assert default_watchlist_recency_fraction(WATCHLIST_RECENCY_FLOOR_YEAR) == 0.0
+    assert default_watchlist_recency_fraction(WATCHLIST_RECENCY_ANCHOR_YEAR) == 1.0
+    mid = default_watchlist_recency_fraction(2000)
+    assert 0.0 < mid < 1.0
+    # Above anchor: clamped to 1 (normalize_year_value caps at 2035 in this codebase)
+    assert default_watchlist_recency_fraction(2035) == 1.0
 
 
 def test_title_metadata_matches_pool_filters():
