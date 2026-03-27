@@ -65,6 +65,7 @@ export function HighFitWatchlist() {
           idPrefix="whf"
           value={poolFilters}
           onChange={setPoolFilters}
+          countryEntry="watchlist-picker"
         />
         <div className={RECO_LOADING_ROW}>
           <span className={RECO_LOADING_DOT} />
@@ -86,6 +87,7 @@ export function HighFitWatchlist() {
           idPrefix="whf"
           value={poolFilters}
           onChange={setPoolFilters}
+          countryEntry="watchlist-picker"
         />
         <p className={RECO_EMPTY_MESSAGE}>
           {filtersActive
@@ -102,6 +104,7 @@ export function HighFitWatchlist() {
         idPrefix="whf"
         value={poolFilters}
         onChange={setPoolFilters}
+        countryEntry="watchlist-picker"
       />
       <ul className={RECO_RESULTS_LIST}>
         {(listExpanded

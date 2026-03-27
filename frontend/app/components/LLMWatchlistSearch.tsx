@@ -7,6 +7,7 @@ import { API_URL } from "../lib/api";
 import { ExpandableRecoListFooter } from "./ExpandableRecoListFooter";
 import { HighFitCard } from "./HighFitCard";
 import { SectionHelp } from "./SectionHelp";
+import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
 import {
   RECO_CONTROLS_WELL,
   RECO_EMPTY_PANEL_FLAT,
@@ -88,9 +89,6 @@ type SearchResult = {
 
 const inputClass =
   "w-full rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-4 py-3 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
-
-const decadeSelectClass =
-  "shrink-0 rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-3 text-[13px] text-[var(--foreground)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
 type SearchScope = "watchlist" | "watched";
 
@@ -175,24 +173,14 @@ export function LLMWatchlistSearch() {
       <div
         className={`${RECO_CONTROLS_WELL} flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3`}
       >
-        <label className="sr-only" htmlFor="llm-search-decade">
-          Release decade (optional pool filter)
-        </label>
-        <select
-          id="llm-search-decade"
+        <RecommendationDecadeSelect
+          idPrefix="llm-watchlist-search"
+          variant="simple"
           value={decade}
-          onChange={(e) => setDecade(e.target.value)}
-          className={decadeSelectClass}
-          aria-label="Filter by decade"
+          onChange={setDecade}
           disabled={loading}
-        >
-          <option value="">Any decade</option>
-          <option value="1980s">1980s</option>
-          <option value="1990s">1990s</option>
-          <option value="2000s">2000s</option>
-          <option value="2010s">2010s</option>
-          <option value="2020s">2020s</option>
-        </select>
+          selectClassName="shrink-0 self-stretch py-3 text-[13px] sm:min-w-[6.5rem]"
+        />
         <input
           type="text"
           value={query}

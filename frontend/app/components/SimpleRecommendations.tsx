@@ -17,6 +17,7 @@ import {
   RECO_SECONDARY_LINE,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
+import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
 
 const DEBOUNCE_MS = 350;
 /** Top N titles to show; passed as API limit (backend still scores a wider pool first). */
@@ -40,28 +41,20 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
+  const [decade, setDecade] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
   const requestIdRef = useRef(0);
 
   const fetchWithFilters = useCallback(
-    (genres: string[], countries: string[], tt: string, yf: string, yt: string) => {
+    (genres: string[], countries: string[], tt: string, dec: string) => {
       const id = ++requestIdRef.current;
       setLoading(true);
       const baseParams = new URLSearchParams();
       genres.forEach((g) => baseParams.append("genres", g));
       countries.forEach((c) => baseParams.append("countries", c));
       if (tt) baseParams.set("title_type", tt);
-      const yfNum = Number(yf.trim());
-      if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
-        baseParams.set("year_from", String(Math.floor(yfNum)));
-      }
-      const ytNum = Number(yt.trim());
-      if (yt.trim() && !isNaN(ytNum) && ytNum >= 1900 && ytNum <= 2100) {
-        baseParams.set("year_to", String(Math.floor(ytNum)));
-      }
+      if (dec.trim()) baseParams.set("decade", dec.trim());
 
       const recParams = new URLSearchParams(baseParams);
       recParams.set("limit", String(DISPLAY_LIMIT));
@@ -100,7 +93,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
     isFirstRun.current = false;
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
-      fetchWithFilters(selectedGenres, selectedCountries, titleType, yearFrom, yearTo);
+      fetchWithFilters(selectedGenres, selectedCountries, titleType, decade);
     }, delay);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -110,20 +103,19 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
     selectedGenres,
     selectedCountries,
     titleType,
-    yearFrom,
-    yearTo,
+    decade,
   ]);
 
   useEffect(() => {
     setListExpanded(false);
-  }, [items, selectedGenres, selectedCountries, titleType, yearFrom, yearTo]);
+  }, [items, selectedGenres, selectedCountries, titleType, decade]);
 
   const filterInput =
     "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
 
   const helpContent = (
     <>
-      <p>Browse and filter titles you&apos;ve already rated 8+ by genre, country, and year. Exploration of your favorites—not recommendations for unseen titles.</p>
+      <p>Browse and filter titles you&apos;ve already rated 8+ by genre, country, and release decade. Exploration of your favorites—not recommendations for unseen titles.</p>
     </>
   );
 
@@ -175,23 +167,12 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
           <option value="series">Series</option>
           <option value="episode">Episode</option>
         </select>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Year from"
-          value={yearFrom}
-          onChange={(e) => setYearFrom(e.target.value)}
-          className={`${filterInput} w-24`}
-          aria-label="Year from"
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Year to"
-          value={yearTo}
-          onChange={(e) => setYearTo(e.target.value)}
-          className={`${filterInput} w-24`}
-          aria-label="Year to"
+        <RecommendationDecadeSelect
+          idPrefix="explore-favorites"
+          variant="simple"
+          value={decade}
+          onChange={setDecade}
+          disabled={loading}
         />
       </div>
 

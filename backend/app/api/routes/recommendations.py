@@ -24,7 +24,7 @@ from app.services.recommendation_filters import (
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import (
     build_explore_favorites_reasons,
-    build_reasons,
+    build_watchlist_reasons,
     load_taste_signals,
     score_title_by_taste_signals,
 )
@@ -363,13 +363,17 @@ def recommendations_genres():
         db.close()
 
 
+_SIMPLE_DECADE_Q = (
+    "Restrict pool to release decade, e.g. 2020 or 2020s (applied in SQL before ranking)"
+)
+
+
 @router.get("/simple")
 def recommendations_simple(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     countries: list[str] | None = Query(default=None, description="Filter by countries (OR), uses TitleMetadata"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
-    year_from: int | None = Query(default=None, ge=1900, le=2100),
-    year_to: int | None = Query(default=None, ge=1900, le=2100),
+    decade: str | None = Query(default=None, max_length=12, description=_SIMPLE_DECADE_Q),
     limit: int = Query(default=10, ge=1, le=50),
 ):
     """Your favorites: titles you rated 8+. Uses IMDbRating (CSV) data; country filter requires TitleMetadata."""
@@ -406,10 +410,10 @@ def recommendations_simple(
         tt_filters = _title_type_matches(title_type or "")
         if tt_filters:
             q = q.filter(or_(*tt_filters))
-        if year_from is not None:
-            q = q.filter(IMDbRating.year >= year_from)
-        if year_to is not None:
-            q = q.filter(IMDbRating.year <= year_to)
+        decade_bounds = parse_decade_bounds(decade)
+        if decade_bounds is not None:
+            y0, y1 = decade_bounds
+            q = q.filter(IMDbRating.year.isnot(None), IMDbRating.year >= y0, IMDbRating.year <= y1)
 
         fetch_limit = min(100, max(limit * 6, 60))
         rows = (
@@ -639,8 +643,7 @@ def recommendations_watchlist_simple(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     countries: list[str] | None = Query(default=None, description="Filter by countries (OR), uses TitleMetadata"),
     title_type: str | None = Query(default=None, description="movie, TV Series, etc."),
-    year_from: int | None = Query(default=None, ge=1900, le=2100),
-    year_to: int | None = Query(default=None, ge=1900, le=2100),
+    decade: str | None = Query(default=None, max_length=12, description=_SIMPLE_DECADE_Q),
     include_rated: bool = Query(default=False, description="Include already-rated items"),
     limit: int = Query(default=20, ge=1, le=100),
 ):
@@ -683,10 +686,14 @@ def recommendations_watchlist_simple(
 
         if title_type:
             q = q.filter(IMDbWatchlistItem.title_type == title_type)
-        if year_from is not None:
-            q = q.filter(IMDbWatchlistItem.year >= year_from)
-        if year_to is not None:
-            q = q.filter(IMDbWatchlistItem.year <= year_to)
+        wl_decade_bounds = parse_decade_bounds(decade)
+        if wl_decade_bounds is not None:
+            d0, d1 = wl_decade_bounds
+            q = q.filter(
+                IMDbWatchlistItem.year.isnot(None),
+                IMDbWatchlistItem.year >= d0,
+                IMDbWatchlistItem.year <= d1,
+            )
 
         has_meta = (
             IMDbWatchlistItem.title.isnot(None)
@@ -730,7 +737,7 @@ def recommendations_watchlist_simple(
                 "date_rated": r.date_rated.isoformat() if r.date_rated else None,
                 "poster": poster if poster and poster != "N/A" else None,
                 "favorite_matches": matches,
-                "reasons": build_reasons(
+                "reasons": build_watchlist_reasons(
                     meta_genres or r.genres, country, r.year, matches, signals
                 ),
             }
@@ -740,12 +747,18 @@ def recommendations_watchlist_simple(
         db.close()
 
 
+def _decade_phrase_for_simple_explanation(decade: str | None) -> str | None:
+    b = parse_decade_bounds(decade)
+    if b is None:
+        return None
+    return f"from the {b[0]}s"
+
+
 def _build_simple_explanation(
     genres: list[str] | None,
     countries: list[str] | None,
     title_type: str | None,
-    year_from: int | None,
-    year_to: int | None,
+    decade: str | None,
 ) -> str:
     """Build a deterministic plain-text explanation from filter params."""
     base = "Your 8+ library: titles you already rated highly—filtered here"
@@ -776,12 +789,9 @@ def _build_simple_explanation(
         type_label = type_labels.get(title_type, f"{title_type}s")
         parts.append(f"{type_label} only")
 
-    if year_from is not None and year_to is not None:
-        parts.append(f"from {year_from} through {year_to}")
-    elif year_from is not None:
-        parts.append(f"from {year_from} onward")
-    elif year_to is not None:
-        parts.append(f"through {year_to}")
+    dec_phrase = _decade_phrase_for_simple_explanation(decade)
+    if dec_phrase:
+        parts.append(dec_phrase)
 
     if parts:
         return f"{base}, {', '.join(parts)}."
@@ -793,11 +803,10 @@ def recommendations_simple_explanation(
     genres: list[str] | None = Query(default=None, description="Filter by genres (OR)"),
     countries: list[str] | None = Query(default=None, description="Filter by countries (OR)"),
     title_type: str | None = Query(default=None, description="movie, series, or episode"),
-    year_from: int | None = Query(default=None, ge=1900, le=2100),
-    year_to: int | None = Query(default=None, ge=1900, le=2100),
+    decade: str | None = Query(default=None, max_length=12, description=_SIMPLE_DECADE_Q),
 ):
     """Plain-text explanation of the current simple recommendation filters."""
-    explanation = _build_simple_explanation(genres, countries, title_type, year_from, year_to)
+    explanation = _build_simple_explanation(genres, countries, title_type, decade)
     return {"explanation": explanation}
 
 

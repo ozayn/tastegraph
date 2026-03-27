@@ -16,6 +16,7 @@ import {
   RECO_RESULTS_LIST,
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
+import { RecommendationDecadeSelect } from "./RecommendationPoolFiltersBar";
 
 const DEBOUNCE_MS = 350;
 const FETCH_LIMIT = 25;
@@ -42,15 +43,14 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
+  const [decade, setDecade] = useState("");
   const [includeRated, setIncludeRated] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
   const requestIdRef = useRef(0);
 
   const fetchWithFilters = useCallback(
-    (genres: string[], countries: string[], tt: string, yf: string, yt: string, incRated: boolean) => {
+    (genres: string[], countries: string[], tt: string, dec: string, incRated: boolean) => {
       const id = ++requestIdRef.current;
       setLoading(true);
       const params = new URLSearchParams();
@@ -58,14 +58,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
       genres.forEach((g) => params.append("genres", g));
       countries.forEach((c) => params.append("countries", c));
       if (tt) params.set("title_type", tt);
-      const yfNum = Number(yf.trim());
-      if (yf.trim() && !isNaN(yfNum) && yfNum >= 1900 && yfNum <= 2100) {
-        params.set("year_from", String(Math.floor(yfNum)));
-      }
-      const ytNum = Number(yt.trim());
-      if (yt.trim() && !isNaN(ytNum) && ytNum >= 1900 && ytNum <= 2100) {
-        params.set("year_to", String(Math.floor(ytNum)));
-      }
+      if (dec.trim()) params.set("decade", dec.trim());
       if (incRated) params.set("include_rated", "true");
 
       fetch(`${API_URL}/recommendations/watchlist-simple?${params}`)
@@ -98,8 +91,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
         selectedGenres,
         selectedCountries,
         titleType,
-        yearFrom,
-        yearTo,
+        decade,
         includeRated
       );
     }, delay);
@@ -111,14 +103,13 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
     selectedGenres,
     selectedCountries,
     titleType,
-    yearFrom,
-    yearTo,
+    decade,
     includeRated,
   ]);
 
   useEffect(() => {
     setListExpanded(false);
-  }, [items, selectedGenres, selectedCountries, titleType, yearFrom, yearTo, includeRated]);
+  }, [items, selectedGenres, selectedCountries, titleType, decade, includeRated]);
 
   const filterInput =
     "rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] px-3 py-2.5 text-[14px] text-[var(--foreground)] placeholder:text-[var(--muted-soft)] transition-colors focus:border-[var(--accent)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 [color-scheme:inherit]";
@@ -127,7 +118,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
     <p className={RECO_MODE_INTRO}>
       Titles you saved, filtered by your taste
       <SectionHelp title="How this works">
-        <p>Titles you saved, filtered by genre/country/year. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
+        <p>Titles you saved, filtered by genre, country, and release decade. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
         <p>Unrated items only by default. &quot;Include rated&quot; shows what you&apos;ve already seen for comparison.</p>
       </SectionHelp>
     </p>
@@ -136,7 +127,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
       <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)] sm:text-[19px]">
         From your watchlist
         <SectionHelp title="How this works">
-          <p>Titles you saved, filtered by genre/country/year. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
+          <p>Titles you saved, filtered by genre, country, and release decade. Uses your <strong>8+ taste signals</strong>—genres and countries you tend to rate highly.</p>
           <p>Unrated items only by default. &quot;Include rated&quot; shows what you&apos;ve already seen for comparison.</p>
         </SectionHelp>
       </h2>
@@ -180,23 +171,12 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
           <option value="TV Series">TV Series</option>
           <option value="TV Mini Series">TV Mini Series</option>
         </select>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Year from"
-          value={yearFrom}
-          onChange={(e) => setYearFrom(e.target.value)}
-          className={`${filterInput} w-24`}
-          aria-label="Year from"
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Year to"
-          value={yearTo}
-          onChange={(e) => setYearTo(e.target.value)}
-          className={`${filterInput} w-24`}
-          aria-label="Year to"
+        <RecommendationDecadeSelect
+          idPrefix="watchlist-simple"
+          variant="simple"
+          value={decade}
+          onChange={setDecade}
+          disabled={loading}
         />
         <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
           <input

@@ -315,6 +315,106 @@ def build_explore_favorites_reasons(
     return lines[:2]
 
 
+def _recency_bucket_for_watchlist_line(year: int | None) -> str | None:
+    """Fold release year into genre copy when the title is relatively new (same spirit as catalog)."""
+    iy = _year_int_for_signals(year)
+    if iy is None:
+        return None
+    if iy >= 2020:
+        return "recent"
+    if iy >= 2015:
+        return "newer"
+    return None
+
+
+def _watchlist_strong_genre_line(
+    item_genres: set[str],
+    strong_genres: set[str],
+    year: int | None,
+) -> str | None:
+    overlap = item_genres & strong_genres
+    if not overlap:
+        return None
+    sg = sorted(overlap)[:3]
+    g = ", ".join(sg)
+    bucket = _recency_bucket_for_watchlist_line(year)
+    if bucket == "recent":
+        return f"Recent {g}—very much in your lane"
+    if bucket == "newer":
+        return f"Newer {g}—fits what you rate highly"
+    if len(sg) == 1:
+        return f"{sg[0]} is central to your taste"
+    return f"{g}—all squarely in your wheelhouse"
+
+
+def build_watchlist_reasons(
+    genres: str | None,
+    country: str | None,
+    year: int | None,
+    favorite_matches: list[dict],
+    signals: dict,
+) -> list[str]:
+    """Two-line max copy for watchlist browse cards: taste-fit tone, not scoring jargon.
+
+    Priority: strong genres (with light recency flavor) → strong country → favorite people
+    → soft (7-rated) genre/country → decade only when distinctive or nothing else landed.
+    """
+    lines: list[str] = []
+    item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
+    item_countries = parse_and_normalize_countries(country) if country else set()
+    item_decade = _decade(year)
+    strong_genres = signals["strong_genres"]
+    soft_genres = signals.get("soft_genres", set())
+
+    genre_line = _watchlist_strong_genre_line(item_genres, strong_genres, year)
+    if genre_line:
+        lines.append(genre_line)
+
+    if len(lines) < 2:
+        country_overlap = item_countries & signals["strong_countries"]
+        if country_overlap:
+            c = next(iter(country_overlap))
+            lines.append(f"Lines up with how you rate work from {c}")
+
+    for m in sorted(
+        favorite_matches[:3],
+        key=lambda x: ROLE_SCORE_WEIGHT.get(x.get("role", ""), 0),
+        reverse=True,
+    ):
+        if len(lines) >= 2:
+            break
+        role = m.get("role", "")
+        name = (m.get("name") or "").strip()
+        if not name:
+            continue
+        role_label = {"director": "Director", "actor": "Actor", "writer": "Writer"}.get(role, role)
+        lines.append(f"{role_label} you rate highly: {name}")
+
+    if len(lines) < 2:
+        soft_only = sorted((item_genres & soft_genres) - (item_genres & strong_genres))[:3]
+        if soft_only:
+            lines.append(f"Softer signal (often 7): {', '.join(soft_only)}")
+
+    if len(lines) < 2:
+        soft_countries = signals.get("soft_countries", set())
+        matched_soft_c = sorted((item_countries & soft_countries) - (item_countries & signals["strong_countries"]))[:1]
+        if matched_soft_c:
+            lines.append(f"Country also common among your 7s: {matched_soft_c[0]}")
+
+    strong_decade_ok = item_decade and item_decade in signals["strong_decades"]
+    if (
+        len(lines) < 2
+        and strong_decade_ok
+        and not genre_line
+        and not any("Lines up with how you rate work from" in x for x in lines)
+        and not any("you rate highly:" in x for x in lines)
+    ):
+        if len(lines) == 0 or _decade_distinctive_for_portrait(year):
+            lines.append(f"{item_decade} is a steady thread in what you love")
+
+    return lines[:2]
+
+
 def build_reasons(
     genres: str | None,
     country: str | None,
@@ -322,7 +422,7 @@ def build_reasons(
     favorite_matches: list[dict],
     signals: dict,
 ) -> list[str]:
-    """Build a compact list of reason strings for a recommendation."""
+    """Legacy mechanical reason strings (prefer :func:`build_watchlist_reasons` for UI)."""
     reasons: list[str] = []
     item_genres = {g.strip() for g in (genres or "").split(",") if g.strip()}
     item_countries = parse_and_normalize_countries(country) if country else set()
