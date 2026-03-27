@@ -63,7 +63,6 @@ export function HighFitWatchlist() {
 
   const filtersActive =
     poolFilters.decade ||
-    poolFilters.yearMin ||
     poolFilters.country.trim() ||
     poolFilters.similarTo.trim();
 
@@ -77,7 +76,7 @@ export function HighFitWatchlist() {
         />
         <p className="text-[14px] text-[var(--muted-soft)]">
           {filtersActive
-            ? "No watchlist items match these filters with strong taste alignment. Try loosening decade, year, country, or similar-to."
+            ? "No watchlist items match these filters with strong taste alignment. Try loosening decade, country, or similar-to."
             : "No unrated watchlist items with strong taste alignment yet. Add titles to your watchlist and rate more 8+ to build signals."}
         </p>
       </div>

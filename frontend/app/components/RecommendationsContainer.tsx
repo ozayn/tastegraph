@@ -53,7 +53,7 @@ function HighFitModeContent() {
   return (
     <div>
       <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        Unrated watchlist items ranked by alignment with your 8+ taste signals. Each card explains why it fits. Use the pool filters to narrow by decade, minimum year, country, or a title similar to one in your rated/watchlist data.
+        Unrated watchlist items ranked by alignment with your 8+ taste signals. Each card explains why it fits. Use the pool filters to narrow by decade, country, or a title similar to one in your rated/watchlist data.
         <SectionHelp title="How this works">
           <p>Items you saved but haven&apos;t rated, ranked by overlap with your <strong>8+ taste signals</strong>: genres, countries, decades, and creators that appear in titles you loved.</p>
           <p>Each card explains <em>why</em> it fits. Higher overlap suggests stronger fit, but it&apos;s heuristic—your next favorite might surprise you.</p>

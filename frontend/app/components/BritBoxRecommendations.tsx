@@ -264,7 +264,6 @@ export function BritBoxRecommendations() {
   const filtersForQuery = useMemo<RecommendationPoolFilterValues>(
     () => ({
       decade: poolFilters.decade,
-      yearMin: "",
       country: "",
       similarTo: debouncedSimilarTo,
     }),
@@ -280,7 +279,6 @@ export function BritBoxRecommendations() {
     const typeParam = "&title_type=all";
     const filterQ = poolFiltersToQueryString(filtersForQuery, {
       includeCountry: false,
-      includeYearMin: false,
     });
     const url =
       scoring === "ml"
@@ -351,7 +349,6 @@ export function BritBoxRecommendations() {
       <RecommendationPoolFiltersBar
         variant="compact"
         showCountry={false}
-        showYearMin={false}
         idPrefix="britbox"
         value={poolFilters}
         onChange={setPoolFilters}

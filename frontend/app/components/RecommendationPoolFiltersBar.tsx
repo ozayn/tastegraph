@@ -2,14 +2,12 @@
 
 export type RecommendationPoolFilterValues = {
   decade: string;
-  yearMin: string;
   country: string;
   similarTo: string;
 };
 
 const INITIAL_FILTERS: RecommendationPoolFilterValues = {
   decade: "",
-  yearMin: "",
   country: "",
   similarTo: "",
 };
@@ -24,15 +22,12 @@ export function poolFiltersToQueryString(
   opts?: {
     includeCountry?: boolean;
     includeDecade?: boolean;
-    includeYearMin?: boolean;
   }
 ): string {
   const includeCountry = opts?.includeCountry !== false;
   const includeDecade = opts?.includeDecade !== false;
-  const includeYearMin = opts?.includeYearMin !== false;
   const p = new URLSearchParams();
   if (includeDecade && f.decade.trim()) p.set("decade", f.decade.trim());
-  if (includeYearMin && f.yearMin.trim()) p.set("year_min", f.yearMin.trim());
   if (includeCountry && f.country.trim()) p.set("country", f.country.trim());
   if (f.similarTo.trim()) p.set("similar_to", f.similarTo.trim());
   const s = p.toString();
@@ -58,7 +53,6 @@ export function RecommendationPoolFiltersBar({
   variant = "default",
   showCountry = true,
   showDecade = true,
-  showYearMin = true,
 }: {
   value: RecommendationPoolFilterValues;
   onChange: (next: RecommendationPoolFilterValues) => void;
@@ -67,10 +61,8 @@ export function RecommendationPoolFiltersBar({
   variant?: "default" | "compact";
   /** BritBox omits country; watchlist high-fit keeps full bar. */
   showCountry?: boolean;
-  /** BritBox can omit decade (year min only) or the reverse. */
+  /** Hide decade (e.g. rare layouts); BritBox keeps decade on. */
   showDecade?: boolean;
-  /** BritBox uses decade + similar only (no year min). */
-  showYearMin?: boolean;
 }) {
   const set = (patch: Partial<RecommendationPoolFilterValues>) =>
     onChange({ ...value, ...patch });
@@ -111,25 +103,6 @@ export function RecommendationPoolFiltersBar({
           </select>
         </div>
       )}
-      {showYearMin && (
-        <div className="flex min-w-[7.5rem] flex-col gap-0.5">
-          <label htmlFor={`${idPrefix}-ymin`} className={labelCls}>
-            Year min
-          </label>
-          <select
-            id={`${idPrefix}-ymin`}
-            className={selectBase}
-            value={value.yearMin}
-            onChange={(e) => set({ yearMin: e.target.value })}
-          >
-            <option value="">Any</option>
-            <option value="2000">2000+</option>
-            <option value="2010">2010+</option>
-            <option value="2015">2015+</option>
-            <option value="2020">2020+</option>
-          </select>
-        </div>
-      )}
       {showCountry && (
         <div className="flex min-w-[8rem] max-w-[11rem] flex-1 flex-col gap-0.5">
           <label htmlFor={`${idPrefix}-country`} className={labelCls}>
@@ -150,11 +123,9 @@ export function RecommendationPoolFiltersBar({
         className={
           showCountry
             ? "flex min-w-[10rem] flex-[2] flex-col gap-0.5 sm:min-w-[12rem]"
-            : showDecade && !showYearMin
+            : showDecade
               ? "flex min-w-[12rem] flex-[1.5] flex-col gap-0.5 sm:min-w-[18rem]"
-              : showDecade
-                ? "flex min-w-[12rem] flex-1 flex-col gap-0.5 sm:min-w-[16rem]"
-                : "flex min-w-[12rem] flex-[1.5] flex-col gap-0.5 sm:min-w-[18rem]"
+              : "flex min-w-[12rem] flex-[1.5] flex-col gap-0.5 sm:min-w-[18rem]"
         }
       >
         <label htmlFor={`${idPrefix}-similar`} className={labelCls}>
