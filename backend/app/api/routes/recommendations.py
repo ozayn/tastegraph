@@ -32,17 +32,24 @@ from app.services.taste_signals import (
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 # Greedy diversity for /simple ("Explore your favorites"): penalize repeating genre
-# labels, title_type, and primary country. Tail uses lighter weights; curated prefix
-# uses stronger weights + extra cost for a second documentary early on.
-_SIMPLE_CURATED_PREFIX = 5
-_SIMPLE_DIV_LIGHT_GENRE_W = 0.14
-_SIMPLE_DIV_LIGHT_TYPE_W = 0.22
-_SIMPLE_DIV_LIGHT_COUNTRY_W = 0.07
-_SIMPLE_DIV_CURATED_GENRE_W = 0.34
-_SIMPLE_DIV_CURATED_TYPE_W = 0.42
-_SIMPLE_DIV_CURATED_COUNTRY_W = 0.12
-_SIMPLE_DIV_CURATED_DOC_REPEAT_W = 0.78
-_SIMPLE_DIV_RELAX_DOC_REPEAT_W = 0.52
+# labels, primary (lead) genre, title_type, and primary country. Tail uses lighter weights;
+# curated prefix covers the full visible slice when limit allows + extra cost for repeat
+# documentaries / clustering on the same lead genre (e.g. two comedies early).
+_SIMPLE_CURATED_PREFIX = 10
+_SIMPLE_DIV_LIGHT_GENRE_W = 0.22
+_SIMPLE_DIV_LIGHT_TYPE_W = 0.30
+_SIMPLE_DIV_LIGHT_COUNTRY_W = 0.10
+_SIMPLE_DIV_LIGHT_PRIMARY_GENRE_W = 0.28
+_SIMPLE_DIV_CURATED_GENRE_W = 0.44
+_SIMPLE_DIV_CURATED_TYPE_W = 0.52
+_SIMPLE_DIV_CURATED_COUNTRY_W = 0.15
+_SIMPLE_DIV_CURATED_PRIMARY_GENRE_W = 0.62
+_SIMPLE_DIV_CURATED_DOC_REPEAT_W = 0.85
+_SIMPLE_DIV_RELAX_DOC_REPEAT_W = 0.55
+_SIMPLE_DIV_NARROW_GENRE_W = 0.32
+_SIMPLE_DIV_NARROW_TYPE_W = 0.40
+_SIMPLE_DIV_NARROW_COUNTRY_W = 0.12
+_SIMPLE_DIV_NARROW_PRIMARY_GENRE_W = 0.42
 
 
 def _simple_genre_tokens(genres_csv: str | None) -> list[str]:
@@ -90,6 +97,12 @@ def _simple_is_documentary(r: IMDbRating) -> bool:
     return any(g.lower() == "documentary" for g in _simple_genre_tokens(r.genres))
 
 
+def _simple_primary_genre(genres_csv: str | None) -> str:
+    """First listed genre (IMDb order)—used to soften repeated lead-genre clusters."""
+    toks = _simple_genre_tokens(genres_csv)
+    return toks[0].lower() if toks else ""
+
+
 def _greedy_diversify_simple_rows(
     pool_in: list,
     pick: int,
@@ -97,6 +110,7 @@ def _greedy_diversify_simple_rows(
     genre_w: float,
     type_w: float,
     country_w: float,
+    primary_genre_w: float = 0.0,
     documentary_repeat_w: float = 0.0,
 ) -> list:
     """Pick `pick` rows from pool_in (already quality-ordered) by maximizing
@@ -104,12 +118,13 @@ def _greedy_diversify_simple_rows(
     if pick <= 0 or not pool_in:
         return []
 
-    pool_size = min(len(pool_in), max(pick * 5, 45))
+    pool_size = min(len(pool_in), max(pick * 6, 60))
     pool = pool_in[:pool_size]
     remaining = list(range(len(pool)))
     chosen_idx: list[int] = []
 
     genre_counts: defaultdict[str, int] = defaultdict(int)
+    primary_genre_counts: defaultdict[str, int] = defaultdict(int)
     type_counts: defaultdict[str, int] = defaultdict(int)
     country_counts: defaultdict[str, int] = defaultdict(int)
     doc_chosen = 0
@@ -119,6 +134,9 @@ def _greedy_diversify_simple_rows(
         _score, _date_rated, r, _poster, _matches, c = pool[ix]
         for g in _simple_genre_tokens(r.genres):
             genre_counts[g] += 1
+        pg = _simple_primary_genre(r.genres)
+        if pg:
+            primary_genre_counts[pg] += 1
         type_counts[_simple_norm_title_type(r.title_type)] += 1
         pk = _simple_primary_country(c)
         if pk:
@@ -131,6 +149,10 @@ def _greedy_diversify_simple_rows(
         pen = 0.0
         for g in _simple_genre_tokens(r.genres):
             pen += genre_w * genre_counts[g]
+        if primary_genre_w > 0:
+            pg = _simple_primary_genre(r.genres)
+            if pg:
+                pen += primary_genre_w * primary_genre_counts[pg]
         pen += type_w * type_counts[_simple_norm_title_type(r.title_type)]
         pk = _simple_primary_country(c)
         if pk:
@@ -198,6 +220,7 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
             genre_w=_SIMPLE_DIV_CURATED_GENRE_W,
             type_w=_SIMPLE_DIV_CURATED_TYPE_W,
             country_w=_SIMPLE_DIV_CURATED_COUNTRY_W,
+            primary_genre_w=_SIMPLE_DIV_CURATED_PRIMARY_GENRE_W,
             documentary_repeat_w=_SIMPLE_DIV_CURATED_DOC_REPEAT_W,
         ),
         max_total=k,
@@ -217,6 +240,7 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
                 genre_w=_SIMPLE_DIV_CURATED_GENRE_W,
                 type_w=_SIMPLE_DIV_CURATED_TYPE_W,
                 country_w=_SIMPLE_DIV_CURATED_COUNTRY_W,
+                primary_genre_w=_SIMPLE_DIV_CURATED_PRIMARY_GENRE_W,
                 documentary_repeat_w=_SIMPLE_DIV_RELAX_DOC_REPEAT_W,
             ),
             max_total=k,
@@ -228,9 +252,10 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
             _greedy_diversify_simple_rows(
                 narrow,
                 k - len(picked),
-                genre_w=0.26,
-                type_w=0.34,
-                country_w=0.10,
+                genre_w=_SIMPLE_DIV_NARROW_GENRE_W,
+                type_w=_SIMPLE_DIV_NARROW_TYPE_W,
+                country_w=_SIMPLE_DIV_NARROW_COUNTRY_W,
+                primary_genre_w=_SIMPLE_DIV_NARROW_PRIMARY_GENRE_W,
                 documentary_repeat_w=_SIMPLE_DIV_RELAX_DOC_REPEAT_W,
             ),
             max_total=k,
@@ -248,6 +273,7 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
                 genre_w=_SIMPLE_DIV_LIGHT_GENRE_W,
                 type_w=_SIMPLE_DIV_LIGHT_TYPE_W,
                 country_w=_SIMPLE_DIV_LIGHT_COUNTRY_W,
+                primary_genre_w=_SIMPLE_DIV_LIGHT_PRIMARY_GENRE_W,
                 documentary_repeat_w=0.0,
             ),
         )
@@ -259,6 +285,7 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
                     genre_w=_SIMPLE_DIV_LIGHT_GENRE_W,
                     type_w=_SIMPLE_DIV_LIGHT_TYPE_W,
                     country_w=_SIMPLE_DIV_LIGHT_COUNTRY_W,
+                    primary_genre_w=_SIMPLE_DIV_LIGHT_PRIMARY_GENRE_W,
                     documentary_repeat_w=0.0,
                 ),
             )
@@ -384,7 +411,7 @@ def recommendations_simple(
         if year_to is not None:
             q = q.filter(IMDbRating.year <= year_to)
 
-        fetch_limit = min(100, max(limit * 5, 50))
+        fetch_limit = min(100, max(limit * 6, 60))
         rows = (
             q.order_by(
                 desc(IMDbRating.user_rating),

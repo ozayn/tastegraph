@@ -18,7 +18,7 @@ import {
 
 const DEBOUNCE_MS = 350;
 /** Top N titles to show; passed as API limit (backend still scores a wider pool first). */
-const DISPLAY_LIMIT = 5;
+const DISPLAY_LIMIT = 10;
 
 type Item = {
   imdb_title_id: string;
