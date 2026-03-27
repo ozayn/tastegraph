@@ -8,7 +8,12 @@ from fastapi import APIRouter, Query
 
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.services.provider_catalog import get_provider_high_fit, get_provider_ml, load_catalog
+from app.services.provider_catalog import (
+    get_britbox_matched_pool_profile,
+    get_provider_high_fit,
+    get_provider_ml,
+    load_catalog,
+)
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -54,17 +59,38 @@ def recommendations_britbox_ml(
 
 
 @router.get("/britbox-stats")
-def recommendations_britbox_stats():
-    """BritBox catalog snapshot stats."""
+def recommendations_britbox_stats(
+    include_matched_pool_profile: bool = Query(
+        default=False,
+        description="Include year/decade diagnostics for the metadata-matched pool (needs DB)",
+    ),
+    title_type: str = Query(
+        default="show",
+        description="Same as /britbox: show, movie, or all",
+    ),
+    exclude_rated: bool = Query(default=True),
+):
+    """BritBox catalog snapshot stats; optional matched-pool age profile (aligned with High-Fit filters)."""
     catalog = load_catalog("britbox-us")
     if catalog is None:
         msg = "BritBox catalog snapshot is not available."
         if settings.DEBUG:
             msg += " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
         return {"loaded": False, "message": msg}
-    return {
+    out: dict = {
         "loaded": True,
         "provider": catalog.get("provider_clear_name", "BritBox"),
         "fetched_at": catalog.get("fetched_at"),
         "stats": catalog.get("stats", {}),
     }
+    if include_matched_pool_profile:
+        db = SessionLocal()
+        try:
+            out["matched_pool_profile"] = get_britbox_matched_pool_profile(
+                db,
+                title_type=title_type,
+                exclude_rated=exclude_rated,
+            )
+        finally:
+            db.close()
+    return out

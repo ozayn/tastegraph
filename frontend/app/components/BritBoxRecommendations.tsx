@@ -25,6 +25,18 @@ type CatalogStats = {
     distinct_catalog_imdb_ids: number;
     catalog_imdb_id_sample: string[];
     title_metadata_rows_hitting_catalog: number;
+    high_fit_ranking?: {
+      top_n: number;
+      top_median_year?: number | null;
+      top_mean_year?: number | null;
+      top_decade_counts: Record<string, number>;
+      decade_compare?: {
+        top_results_decade_share_pct: Record<string, number>;
+        matched_pool_decade_share_pct: Record<string, number>;
+      };
+      sort_note?: string;
+      hints?: string[];
+    };
   };
 };
 
@@ -45,6 +57,12 @@ type HighFitItem = {
   title_type: string | null;
   poster: string | null;
   explanation: HighFitExplanation;
+  scoring?: {
+    fit_score: number;
+    favorite_boost: number;
+    uk_catalog_bonus: number;
+    total: number;
+  };
 };
 
 type MLItem = {

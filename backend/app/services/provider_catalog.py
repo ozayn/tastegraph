@@ -8,6 +8,8 @@ Availability is not live-verified—only as accurate as the snapshot in data/<pr
 """
 
 import json
+import statistics
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -271,6 +273,125 @@ def _britbox_catalog_stats_extras(
     }
 
 
+def _year_value_for_pool_profile(meta: TitleMetadata, cat: dict) -> int | None:
+    """Pick a sensible release year from TitleMetadata or catalog row."""
+    for candidate in (meta.year, cat.get("year")):
+        if candidate is None:
+            continue
+        if isinstance(candidate, float) and np.isnan(candidate):
+            continue
+        try:
+            y = int(candidate)
+        except (ValueError, TypeError):
+            continue
+        if 1870 <= y <= 2035:
+            return y
+    return None
+
+
+def _britbox_matched_pool_year_profile(
+    meta_by_id: dict[str, TitleMetadata],
+    lookup: dict[str, dict],
+) -> dict[str, object]:
+    """Year/decade spread for the pool that actually has TitleMetadata (same ids High-Fit can score)."""
+    if not meta_by_id:
+        return {
+            "matched_count": 0,
+            "shows": 0,
+            "movies": 0,
+            "unknown_kind": 0,
+            "with_year": 0,
+            "without_year": 0,
+            "mean_year": None,
+            "median_year": None,
+            "decade_counts": {},
+            "newest_titles_sample": [],
+            "oldest_titles_sample": [],
+        }
+
+    shows = movies = unknown_kind = 0
+    for iid in meta_by_id:
+        kind = _jw_object_kind(lookup.get(iid, {}))
+        if kind == "SHOW":
+            shows += 1
+        elif kind == "MOVIE":
+            movies += 1
+        else:
+            unknown_kind += 1
+
+    row_info: list[tuple[int, str, str]] = []
+    without_year = 0
+    for iid, meta in meta_by_id.items():
+        cat = lookup.get(iid, {})
+        y = _year_value_for_pool_profile(meta, cat)
+        title = (meta.title or cat.get("title") or iid).strip() or iid
+        if y is None:
+            without_year += 1
+        else:
+            row_info.append((y, iid, title))
+
+    decade_counts: dict[str, int] = {}
+    years_only = [r[0] for r in row_info]
+    for y in years_only:
+        decade = f"{y // 10 * 10}s"
+        decade_counts[decade] = decade_counts.get(decade, 0) + 1
+
+    row_info.sort(key=lambda x: x[0])
+    oldest = [{"imdb_title_id": iid, "title": t, "year": y} for y, iid, t in row_info[:5]]
+    newest = [{"imdb_title_id": iid, "title": t, "year": y} for y, iid, t in row_info[-5:][::-1]]
+
+    mean_year = round(statistics.mean(years_only), 1) if years_only else None
+    median_y = statistics.median(years_only) if years_only else None
+    median_year: int | float | None
+    if median_y is None:
+        median_year = None
+    elif isinstance(median_y, float) and median_y.is_integer():
+        median_year = int(median_y)
+    else:
+        median_year = median_y
+
+    return {
+        "matched_count": len(meta_by_id),
+        "shows": shows,
+        "movies": movies,
+        "unknown_kind": unknown_kind,
+        "with_year": len(years_only),
+        "without_year": without_year,
+        "mean_year": mean_year,
+        "median_year": median_year,
+        "decade_counts": dict(sorted(decade_counts.items())),
+        "newest_titles_sample": newest,
+        "oldest_titles_sample": oldest,
+    }
+
+
+def get_britbox_matched_pool_profile(
+    db: Session,
+    *,
+    provider_slug: str = "britbox-us",
+    title_type: str | None = "show",
+    exclude_rated: bool = True,
+) -> dict | None:
+    """Year/decade summary for titles in the metadata-matched pool (same filters as High-Fit / ML)."""
+    catalog = load_catalog(provider_slug)
+    if catalog is None:
+        return None
+    all_imdb_ids = get_catalog_imdb_ids(catalog)
+    lookup = _catalog_lookup(catalog)
+    cand_after_type = _filter_by_type(all_imdb_ids, lookup, title_type)
+    cand_after_rated = set(cand_after_type)
+    if exclude_rated:
+        cand_after_rated, _ = _exclude_rated(db, cand_after_rated)
+    cand_final, _ = _exclude_watchlist(db, cand_after_rated)
+    meta_rows = _query_title_metadata_for_ids(db, cand_final)
+    meta_by_id: dict[str, TitleMetadata] = {}
+    for m in meta_rows:
+        nk = _normalize_db_imdb_id(m.imdb_title_id)
+        if nk:
+            meta_by_id[nk] = m
+    return _britbox_matched_pool_year_profile(meta_by_id, lookup)
+
+
 def _has_uk_origin(country: str | None) -> bool:
     if not country:
         return False
@@ -296,6 +417,115 @@ def _britbox_uk_catalog_bonus(
 def _provider_high_fit_total(fit_score: int, favorite_boost: float) -> float:
     """Taste fit plus one favorite-people boost pass (ROLE_WEIGHT sum, not doubled)."""
     return float(fit_score) + float(favorite_boost)
+
+
+def _year_int_for_ranking(y: object) -> int | None:
+    if y is None:
+        return None
+    if isinstance(y, float) and np.isnan(y):
+        return None
+    try:
+        iy = int(y)
+    except (ValueError, TypeError):
+        return None
+    if 1870 <= iy <= 2035:
+        return iy
+    return None
+
+
+def _high_fit_ranking_diagnostics(
+    top: list[dict],
+    pool_profile: dict[str, object],
+) -> dict[str, object]:
+    """Compare top High-Fit rows to the matched pool decade profile; summarize years / tie-break."""
+    n = len(top)
+    years: list[int] = []
+    for it in top:
+        iy = _year_int_for_ranking(it.get("year"))
+        if iy is not None:
+            years.append(iy)
+
+    top_dc = Counter()
+    for iy in years:
+        top_dc[f"{iy // 10 * 10}s"] += 1
+
+    pool_dc_raw = pool_profile.get("decade_counts")
+    pool_dc: dict[str, int] = dict(pool_dc_raw) if isinstance(pool_dc_raw, dict) else {}
+    pool_with_year = int(pool_profile.get("with_year") or 0) or sum(pool_dc.values()) or 1
+
+    def _pct_share(counts: dict[str, int], denom: int) -> dict[str, float]:
+        keys = sorted(set(counts) | set(pool_dc))
+        return {d: round(100.0 * counts.get(d, 0) / denom, 1) for d in keys if counts.get(d, 0) or pool_dc.get(d, 0)}
+
+    top_mean = round(statistics.mean(years), 1) if years else None
+    top_median_y = statistics.median(years) if years else None
+    top_median: int | float | None
+    if top_median_y is None:
+        top_median = None
+    elif isinstance(top_median_y, float) and top_median_y.is_integer():
+        top_median = int(top_median_y)
+    else:
+        top_median = top_median_y
+
+    pool_median = pool_profile.get("median_year")
+    hints: list[str] = []
+    if isinstance(pool_median, (int, float)) and isinstance(top_median, (int, float)):
+        if float(top_median) < float(pool_median) - 12:
+            hints.append(
+                f"Top-{n} median year ({top_median}) is notably below matched-pool median ({pool_median}); "
+                "genre/country/decade fit or tie-breaks may be lifting older titles."
+            )
+    if n >= 2:
+        totals = [it.get("scoring", {}).get("total") for it in top if isinstance(it.get("scoring"), dict)]
+        if totals and len([t for t in totals if t == totals[0]]) >= max(2, n // 2):
+            hints.append(
+                "Several top rows share the same total score; sort tie-break is ascending imdb_title_id "
+                "(lower id first—often older catalog entries)."
+            )
+
+    uk_hits = sum(
+        1
+        for it in top
+        if isinstance(it.get("scoring"), dict) and int(it["scoring"].get("uk_catalog_bonus") or 0) > 0
+    )
+    if uk_hits and n and uk_hits >= max(2, (n + 1) // 3):
+        hints.append(
+            f"{uk_hits}/{n} top results include the +3 BritBox UK catalog bonus (UK-origin title + UK in strong countries)."
+        )
+
+    fav_boost_hits = sum(
+        1
+        for it in top
+        if isinstance(it.get("scoring"), dict) and float(it["scoring"].get("favorite_boost") or 0) > 0
+    )
+    if fav_boost_hits and n and fav_boost_hits >= max(2, (n + 1) // 3):
+        hints.append(f"{fav_boost_hits}/{n} top results have a non-zero favorite-people boost.")
+
+    decade_fit_hits = sum(
+        1
+        for it in top
+        if (it.get("explanation") or {}).get("matched_decade")
+    )
+    if decade_fit_hits and n and decade_fit_hits >= max(2, (n + 1) // 3):
+        hints.append(
+            f"{decade_fit_hits}/{n} top results matched a strong decade from your 8+ history (+1 fit each)."
+        )
+
+    return {
+        "top_n": n,
+        "top_with_year": len(years),
+        "top_mean_year": top_mean,
+        "top_median_year": top_median,
+        "top_decade_counts": dict(sorted(top_dc.items())),
+        "decade_compare": {
+            "matched_pool_decade_counts": pool_dc,
+            "top_results_decade_counts": dict(sorted(top_dc.items())),
+            "matched_pool_decade_share_pct": _pct_share(pool_dc, pool_with_year),
+            "top_results_decade_share_pct": _pct_share(dict(top_dc), max(len(years), 1)),
+        },
+        "sort_note": "Descending total (fit + favorite_boost + uk_catalog_bonus); ties broken by ascending imdb_title_id.",
+        "hints": hints,
+    }
 
 
 def get_provider_high_fit(
@@ -358,12 +588,12 @@ def get_provider_high_fit(
         fit_score, explanation = score_title_by_taste_signals(
             imdb_id, meta.genres, meta.country, meta.year, meta.directors, matches, signals
         )
-        total = _provider_high_fit_total(fit_score, boost)
-        total += _britbox_uk_catalog_bonus(
+        uk_bonus = _britbox_uk_catalog_bonus(
             is_britbox=is_britbox,
             country=meta.country,
             strong_countries=signals.get("strong_countries", set()),
         )
+        total = _provider_high_fit_total(fit_score, boost) + uk_bonus
 
         scored.append({
             "imdb_title_id": imdb_id,
@@ -373,12 +603,26 @@ def get_provider_high_fit(
             "poster": meta.poster if meta.poster and meta.poster != "N/A" else None,
             "explanation": explanation,
             "_score": total,
+            "_fit_score": fit_score,
+            "_favorite_boost": boost,
+            "_uk_bonus": uk_bonus,
         })
 
     scored.sort(key=lambda x: (-x["_score"], x["imdb_title_id"]))
-    top = scored[:limit]
-    for item in top:
-        del item["_score"]
+    top_raw = scored[:limit]
+    top: list[dict] = []
+    for row in top_raw:
+        item = {k: v for k, v in row.items() if not k.startswith("_")}
+        item["scoring"] = {
+            "fit_score": row["_fit_score"],
+            "favorite_boost": round(float(row["_favorite_boost"]), 4),
+            "uk_catalog_bonus": row["_uk_bonus"],
+            "total": round(float(row["_score"]), 4),
+        }
+        top.append(item)
+
+    pool_profile = _britbox_matched_pool_year_profile(meta_by_id, lookup)
+    high_fit_ranking = _high_fit_ranking_diagnostics(top, pool_profile)
 
     pool_breakdown = _britbox_catalog_stats_extras(
         db, catalog, all_imdb_ids, lookup, exclude_rated=exclude_rated
@@ -399,7 +643,12 @@ def get_provider_high_fit(
     md = pool_breakdown.get("matching_diagnostic") or {}
     pool_breakdown = {
         **pool_breakdown,
-        "matching_diagnostic": {**md, "pipeline": pipe},
+        "matching_diagnostic": {
+            **md,
+            "pipeline": pipe,
+            "matched_pool_profile": pool_profile,
+            "high_fit_ranking": high_fit_ranking,
+        },
     }
 
     return {
@@ -542,6 +791,12 @@ def get_provider_ml(
     tm_rows = _query_title_metadata_for_ids(db, cand_final)
     skipped_bad = sum(1 for m in tm_rows if not _normalize_db_imdb_id(m.imdb_title_id))
     df = _provider_candidates_dataframe_from_tm_rows(db, tm_rows)
+    meta_by_id_ml: dict[str, TitleMetadata] = {}
+    for m in tm_rows:
+        nk = _normalize_db_imdb_id(m.imdb_title_id)
+        if nk:
+            meta_by_id_ml[nk] = m
+    pool_profile_ml = _britbox_matched_pool_year_profile(meta_by_id_ml, lookup)
     pool_breakdown = _britbox_catalog_stats_extras(
         db, catalog, all_imdb_ids, lookup, exclude_rated=exclude_rated
     )
@@ -559,7 +814,14 @@ def get_provider_ml(
         "title_metadata_rows_skipped_bad_pk": skipped_bad,
     }
     md0 = pool_breakdown.get("matching_diagnostic") or {}
-    pool_breakdown_merged = {**pool_breakdown, "matching_diagnostic": {**md0, "pipeline": pipe_ml}}
+    pool_breakdown_merged = {
+        **pool_breakdown,
+        "matching_diagnostic": {
+            **md0,
+            "pipeline": pipe_ml,
+            "matched_pool_profile": pool_profile_ml,
+        },
+    }
     if len(df) == 0:
         return {
             **base_resp,
