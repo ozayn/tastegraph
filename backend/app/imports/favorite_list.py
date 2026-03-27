@@ -1,7 +1,10 @@
-"""Import favorite list from CSV. Idempotent sync: inserts missing, deletes removed.
+"""Import favorite list from CSV. Idempotent sync: inserts missing, deletes removed, updates changed.
 
-Accepts IMDb-style list CSV: Const, Position, Title, Title Type, Year, Genres.
-Same format as watchlist export. Identity: imdb_title_id.
+Accepts IMDb **list export** CSV (from a list page: Export → CSV). Typical columns:
+Const, Position, Title, Title Type, Year, Genres (same family as watchlist export).
+Identity: ``Const`` (``tt…``). Rows not in the file are removed from the DB (mirror).
+
+UTF-8 BOM on the header row is tolerated.
 """
 
 import csv
@@ -10,6 +13,17 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.models.favorite_list_item import FavoriteListItem
+
+
+def _normalize_row_keys(row: dict[str, str]) -> dict[str, str]:
+    """Strip BOM/spaces from CSV header keys (IMDb exports sometimes prefix Const with BOM)."""
+    out: dict[str, str] = {}
+    for k, v in row.items():
+        if k is None:
+            continue
+        nk = k.lstrip("\ufeff").strip()
+        out[nk] = v if v is not None else ""
+    return out
 
 
 def _parse_int(value: str) -> int | None:
@@ -30,8 +44,9 @@ def _parse_str(value: str, max_len: int | None = None) -> str | None:
     return s
 
 
-def _parse_row(row: dict) -> tuple[str | None, dict] | None:
+def _parse_row(row: dict[str, str]) -> tuple[str | None, dict] | None:
     """Parse CSV row. Returns (imdb_id, data) or None if invalid."""
+    row = _normalize_row_keys(row)
     imdb_id = _parse_str(row.get("Const", ""), 20)
     if not imdb_id:
         return None
@@ -48,8 +63,11 @@ def _parse_row(row: dict) -> tuple[str | None, dict] | None:
     )
 
 
-def import_favorite_list_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
-    """Import favorite list from CSV. Idempotent: inserts missing, deletes removed. Returns (inserted, deleted, errors)."""
+def import_favorite_list_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int, int]:
+    """Mirror favorite list from CSV. Inserts new, deletes absent, updates changed rows.
+
+    Returns ``(inserted, deleted, updated, errors)``.
+    """
     incoming: dict[str, dict] = {}
     errors = 0
     position = 0
@@ -91,5 +109,24 @@ def import_favorite_list_from_csv(db: Session, csv_path: Path) -> tuple[int, int
         db.delete(existing[imdb_id])
         deleted += 1
 
+    updated = 0
+    for imdb_id, d in incoming.items():
+        if imdb_id in to_insert:
+            continue
+        r = existing[imdb_id]
+        if (
+            r.position != d["position"]
+            or r.title != d["title"]
+            or r.title_type != d["title_type"]
+            or r.year != d["year"]
+            or r.genres != d["genres"]
+        ):
+            r.position = d["position"]
+            r.title = d["title"]
+            r.title_type = d["title_type"]
+            r.year = d["year"]
+            r.genres = d["genres"]
+            updated += 1
+
     db.commit()
-    return inserted, deleted, errors
+    return inserted, deleted, updated, errors

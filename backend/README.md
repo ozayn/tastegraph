@@ -2,6 +2,8 @@
 
 FastAPI backend. Runs on port 8000.
 
+**Production / Railway:** install **`requirements.txt` only** (no Playwright). Unattended IMDb CSV refresh on a server uses `python -m app.scripts.refresh_imdb_public_scrape` (see `docs/imdb-export-sync.md`). Optional Playwright + Export automation is **local-only** (`requirements-imdb-browser.txt`, `docs/imdb-playwright-local-only.md`).
+
 ```bash
 pip install -r requirements.txt
 cp .env.example .env   # load from backend/.env

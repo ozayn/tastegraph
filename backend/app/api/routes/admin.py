@@ -41,6 +41,10 @@ async def admin_import_ratings(
         False,
         description="If true, update existing rows when CSV values differ (parity sync).",
     ),
+    mirror: bool = Query(
+        False,
+        description="If true, delete ratings not in the CSV after upsert (full export parity).",
+    ),
     _: None = Depends(_require_admin_token),
 ):
     """Import IMDb ratings from uploaded ratings.csv. Requires X-Admin-Import-Token header."""
@@ -57,15 +61,17 @@ async def admin_import_ratings(
     try:
         db = SessionLocal()
         try:
-            inserted, updated, skipped, errors = import_ratings_from_csv(
-                db, tmp_path, upsert=upsert
+            inserted, updated, skipped, errors, deleted = import_ratings_from_csv(
+                db, tmp_path, upsert=upsert, mirror=mirror
             )
             return {
                 "inserted": inserted,
                 "updated": updated,
                 "skipped": skipped,
                 "errors": errors,
+                "deleted": deleted,
                 "upsert": upsert,
+                "mirror": mirror,
             }
         finally:
             db.close()
@@ -76,6 +82,10 @@ async def admin_import_ratings(
 @router.post("/import/watchlist")
 async def admin_import_watchlist(
     file: UploadFile,
+    mirror: bool = Query(
+        False,
+        description="If true, delete watchlist rows not in the CSV (export parity).",
+    ),
     _: None = Depends(_require_admin_token),
 ):
     """Import IMDb watchlist from uploaded watchlist.csv. Requires X-Admin-Import-Token header."""
@@ -92,8 +102,16 @@ async def admin_import_watchlist(
     try:
         db = SessionLocal()
         try:
-            inserted, updated, errors = import_watchlist_from_csv(db, tmp_path)
-            return {"inserted": inserted, "updated": updated, "errors": errors}
+            inserted, updated, errors, deleted = import_watchlist_from_csv(
+                db, tmp_path, mirror=mirror
+            )
+            return {
+                "inserted": inserted,
+                "updated": updated,
+                "errors": errors,
+                "deleted": deleted,
+                "mirror": mirror,
+            }
         finally:
             db.close()
     finally:
@@ -156,8 +174,15 @@ async def admin_import_favorite_list(
     try:
         db = SessionLocal()
         try:
-            inserted, deleted, errors = import_favorite_list_from_csv(db, tmp_path)
-            return {"inserted": inserted, "deleted": deleted, "errors": errors}
+            inserted, deleted, updated, errors = import_favorite_list_from_csv(
+                db, tmp_path
+            )
+            return {
+                "inserted": inserted,
+                "deleted": deleted,
+                "updated": updated,
+                "errors": errors,
+            }
         finally:
             db.close()
     finally:

@@ -49,6 +49,17 @@ def _parse_date(value: str) -> date | None:
     return None
 
 
+def _normalize_row_keys(row: dict) -> dict[str, str]:
+    """Strip BOM/spaces from CSV header keys (IMDb exports may prefix Const with BOM)."""
+    out: dict[str, str] = {}
+    for k, v in row.items():
+        if k is None:
+            continue
+        nk = str(k).lstrip("\ufeff").strip()
+        out[nk] = v if isinstance(v, str) else (str(v) if v is not None else "")
+    return out
+
+
 def _parse_str(value: str, max_len: int | None = None) -> str | None:
     if not value or not value.strip():
         return None
@@ -134,15 +145,20 @@ def _apply_rating_fields(existing: IMDbRating, incoming: IMDbRating, *, rich: bo
 
 
 def import_ratings_from_csv(
-    db: Session, csv_path: Path, *, upsert: bool = False
-) -> tuple[int, int, int, int]:
+    db: Session, csv_path: Path, *, upsert: bool = False, mirror: bool = False
+) -> tuple[int, int, int, int, int]:
     """Import ratings from CSV.
 
     When upsert is False (default): insert new rows only; existing imdb_title_id rows are skipped.
     When upsert is True: insert new rows; update existing rows when CSV values differ.
+    When mirror is True: after import, delete DB rows whose imdb_title_id is not in the CSV
+    (full parity with the export). Mirror implies upsert.
 
-    Returns (inserted, updated, skipped, errors).
+    Returns (inserted, updated, skipped, errors, deleted).
     """
+    if mirror:
+        upsert = True
+
     existing_by_id: dict[str, IMDbRating] = {
         r.imdb_title_id: r for r in db.query(IMDbRating).all()
     }
@@ -151,13 +167,15 @@ def import_ratings_from_csv(
     updated = 0
     skipped = 0
     errors = 0
+    incoming_ids: set[str] = set()
 
     with open(csv_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames or []
+        fieldnames = [fn.lstrip("\ufeff").strip() for fn in (reader.fieldnames or [])]
         is_rich = _is_rich_format(fieldnames)
 
         for row in reader:
+            row = _normalize_row_keys(row)
             if is_rich:
                 rating = _row_to_rating_rich(row)
             else:
@@ -167,6 +185,7 @@ def import_ratings_from_csv(
                 errors += 1
                 continue
 
+            incoming_ids.add(rating.imdb_title_id)
             ex = existing_by_id.get(rating.imdb_title_id)
             if ex is None:
                 db.add(rating)
@@ -180,11 +199,20 @@ def import_ratings_from_csv(
             else:
                 skipped += 1
 
+    deleted = 0
+    if mirror:
+        q = db.query(IMDbRating)
+        if incoming_ids:
+            q = q.filter(~IMDbRating.imdb_title_id.in_(incoming_ids))
+        for r in q.all():
+            db.delete(r)
+            deleted += 1
+
     db.commit()
-    return inserted, updated, skipped, errors
+    return inserted, updated, skipped, errors, deleted
 
 
-def run_import(csv_path: str, *, upsert: bool = False) -> None:
+def run_import(csv_path: str, *, upsert: bool = False, mirror: bool = False) -> None:
     """Run import and print summary."""
     from app.core.database import SessionLocal
 
@@ -195,10 +223,18 @@ def run_import(csv_path: str, *, upsert: bool = False) -> None:
 
     db = SessionLocal()
     try:
-        inserted, updated, skipped, errors = import_ratings_from_csv(db, path, upsert=upsert)
-        print(
-            f"Import complete: {inserted} inserted, {updated} updated, {skipped} skipped, {errors} errors"
+        inserted, updated, skipped, errors, deleted = import_ratings_from_csv(
+            db, path, upsert=upsert, mirror=mirror
         )
+        parts = [
+            f"{inserted} inserted",
+            f"{updated} updated",
+            f"{skipped} skipped",
+            f"{errors} errors",
+        ]
+        if deleted:
+            parts.append(f"{deleted} deleted")
+        print(f"Import complete: {', '.join(parts)}")
     finally:
         db.close()
 
@@ -207,7 +243,10 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python -m app.imports.ratings <path/to/ratings.csv> [--upsert]")
+        print(
+            "Usage: python -m app.imports.ratings <path/to/ratings.csv> [--upsert] [--mirror]"
+        )
         sys.exit(1)
-    upsert_flag = len(sys.argv) > 2 and sys.argv[2] == "--upsert"
-    run_import(sys.argv[1], upsert=upsert_flag)
+    upsert_flag = "--upsert" in sys.argv
+    mirror_flag = "--mirror" in sys.argv
+    run_import(sys.argv[1], upsert=upsert_flag, mirror=mirror_flag)

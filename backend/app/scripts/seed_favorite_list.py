@@ -1,7 +1,10 @@
-"""Seed favorite list from CSV. Idempotent sync: inserts missing, deletes removed.
+"""Seed favorite list from CSV. Mirror sync (insert / update / delete).
 
-Accepts IMDb-style list CSV (Const, Position, Title, Title Type, Year, Genres).
-Same format as watchlist export.
+Accepts IMDb **list export** CSV (Const, Position, Title, Title Type, Year, Genres).
+
+For an explicit ``--csv`` flag, prefer:
+
+  python -m app.scripts.sync_imdb_favorite_list --csv path/to/export.csv
 
 Usage:
   python -m app.scripts.seed_favorite_list
@@ -27,10 +30,12 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        inserted, deleted, errors = import_favorite_list_from_csv(db, path)
+        inserted, deleted, updated, errors = import_favorite_list_from_csv(db, path)
         parts = []
         if inserted:
             parts.append(f"{inserted} inserted")
+        if updated:
+            parts.append(f"{updated} updated")
         if deleted:
             parts.append(f"{deleted} deleted")
         msg = f"Seeded favorite list from {path}: {', '.join(parts) or 'no changes'}"

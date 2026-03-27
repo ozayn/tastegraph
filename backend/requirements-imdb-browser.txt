@@ -1,0 +1,5 @@
+# LOCAL / DEV OPTIONAL ONLY — not used by Docker, Railway, or `requirements.txt`.
+# Never add this file to the backend Dockerfile or production install path.
+# Install on your machine: pip install -r requirements-imdb-browser.txt && playwright install chromium
+# See docs/imdb-playwright-local-only.md
+playwright>=1.49.0

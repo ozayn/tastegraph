@@ -1,12 +1,17 @@
-"""Enrich a small batch of ratings and watchlist titles missing or incomplete in TitleMetadata via OMDb."""
+"""Enrich a small batch of library titles missing or incomplete in TitleMetadata via OMDb.
+
+Candidates: ratings, watchlist, and curated favorite_list (missing row or incomplete metadata).
+"""
 
 import sys
 import time
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
+from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.models.favorite_list_item import FavoriteListItem
 from app.models.imdb_rating import IMDbRating
 from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.metadata_enrichment_failure import MetadataEnrichmentFailure
@@ -120,6 +125,116 @@ def enrich_imdb_ids_batch(
     return attempted, inserted, updated, failed
 
 
+def collect_enrichment_candidates(
+    db: Session,
+    *,
+    limit: int,
+    retry_failed: bool = False,
+) -> tuple[
+    list[str],
+    dict[str, str | None],
+    int,
+    dict[str, int],
+]:
+    """Pick up to ``limit`` imdb_title_ids needing OMDb enrichment (missing or incomplete).
+
+    Includes titles referenced by ratings, watchlist, or favorite_list.
+
+    Returns (ids, title_lookup, skipped_recent_failures, counts) where counts has
+    keys from_ratings, from_watchlist, from_favorite_list for the returned id list.
+    """
+    existing_subq = db.query(TitleMetadata.imdb_title_id)
+    missing_ratings = {
+        r[0]
+        for r in db.query(IMDbRating.imdb_title_id)
+        .filter(IMDbRating.imdb_title_id.notin_(existing_subq))
+        .distinct()
+        .all()
+    }
+    missing_watchlist = {
+        r[0]
+        for r in db.query(IMDbWatchlistItem.imdb_title_id)
+        .filter(IMDbWatchlistItem.imdb_title_id.notin_(existing_subq))
+        .distinct()
+        .all()
+    }
+    missing_favorites = {
+        r[0]
+        for r in db.query(FavoriteListItem.imdb_title_id)
+        .filter(FavoriteListItem.imdb_title_id.notin_(existing_subq))
+        .distinct()
+        .all()
+    }
+
+    incomplete_ids = {
+        r[0]
+        for r in db.query(TitleMetadata.imdb_title_id)
+        .filter(_INCOMPLETE_FILTER)
+        .distinct()
+        .all()
+    }
+    all_rating_ids = {r[0] for r in db.query(IMDbRating.imdb_title_id).distinct().all()}
+    all_watchlist_ids = {r[0] for r in db.query(IMDbWatchlistItem.imdb_title_id).distinct().all()}
+    all_favorite_ids = {r[0] for r in db.query(FavoriteListItem.imdb_title_id).distinct().all()}
+    incomplete_candidates = incomplete_ids & (
+        all_rating_ids | all_watchlist_ids | all_favorite_ids
+    )
+
+    all_candidates_set = (
+        missing_ratings | missing_watchlist | missing_favorites | incomplete_candidates
+    )
+
+    skipped_recent_failures = 0
+    if not retry_failed:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_SKIP_RECENT_FAILURES_DAYS)
+        recently_failed = {
+            r[0]
+            for r in db.query(MetadataEnrichmentFailure.imdb_title_id)
+            .filter(MetadataEnrichmentFailure.last_failed_at >= cutoff)
+            .all()
+        }
+        before_skip = len(all_candidates_set)
+        all_candidates_set = all_candidates_set - recently_failed
+        skipped_recent_failures = before_skip - len(all_candidates_set)
+
+    all_candidates = list(all_candidates_set)[:limit]
+    from_ratings = len(set(all_candidates) & all_rating_ids)
+    from_watchlist = len(set(all_candidates) & all_watchlist_ids)
+    from_favorite_list = len(set(all_candidates) & all_favorite_ids)
+
+    rating_titles = {
+        r[0]: r[1]
+        for r in db.query(IMDbRating.imdb_title_id, IMDbRating.title)
+        .filter(IMDbRating.imdb_title_id.in_(all_candidates))
+        .all()
+        if r[1]
+    }
+    watchlist_titles = {
+        r[0]: r[1]
+        for r in db.query(IMDbWatchlistItem.imdb_title_id, IMDbWatchlistItem.title)
+        .filter(IMDbWatchlistItem.imdb_title_id.in_(all_candidates))
+        .all()
+        if r[1]
+    }
+    favorite_titles = {
+        r[0]: r[1]
+        for r in db.query(FavoriteListItem.imdb_title_id, FavoriteListItem.title)
+        .filter(FavoriteListItem.imdb_title_id.in_(all_candidates))
+        .all()
+        if r[1]
+    }
+    title_lookup = {
+        i: rating_titles.get(i) or watchlist_titles.get(i) or favorite_titles.get(i)
+        for i in all_candidates
+    }
+    counts = {
+        "from_ratings": from_ratings,
+        "from_watchlist": from_watchlist,
+        "from_favorite_list": from_favorite_list,
+    }
+    return all_candidates, title_lookup, skipped_recent_failures, counts
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if a != "--retry-failed"]
     retry_failed = "--retry-failed" in sys.argv
@@ -133,75 +248,18 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        existing_subq = db.query(TitleMetadata.imdb_title_id)
-        missing_ratings = {
-            r[0]
-            for r in db.query(IMDbRating.imdb_title_id)
-            .filter(IMDbRating.imdb_title_id.notin_(existing_subq))
-            .distinct()
-            .all()
-        }
-        missing_watchlist = {
-            r[0]
-            for r in db.query(IMDbWatchlistItem.imdb_title_id)
-            .filter(IMDbWatchlistItem.imdb_title_id.notin_(existing_subq))
-            .distinct()
-            .all()
-        }
-
-        incomplete_ids = {
-            r[0]
-            for r in db.query(TitleMetadata.imdb_title_id)
-            .filter(_INCOMPLETE_FILTER)
-            .distinct()
-            .all()
-        }
-        all_rating_ids = {r[0] for r in db.query(IMDbRating.imdb_title_id).distinct().all()}
-        all_watchlist_ids = {r[0] for r in db.query(IMDbWatchlistItem.imdb_title_id).distinct().all()}
-        incomplete_candidates = incomplete_ids & (all_rating_ids | all_watchlist_ids)
-
-        all_candidates_set = missing_ratings | missing_watchlist | incomplete_candidates
-
-        # Exclude titles that failed within last N days (unless --retry-failed)
-        skipped_recent_failures = 0
-        if not retry_failed:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=_SKIP_RECENT_FAILURES_DAYS)
-            recently_failed = {
-                r[0]
-                for r in db.query(MetadataEnrichmentFailure.imdb_title_id)
-                .filter(MetadataEnrichmentFailure.last_failed_at >= cutoff)
-                .all()
-            }
-            before_skip = len(all_candidates_set)
-            all_candidates_set = all_candidates_set - recently_failed
-            skipped_recent_failures = before_skip - len(all_candidates_set)
-
-        all_candidates = list(all_candidates_set)[:limit]
-        from_ratings = len(set(all_candidates) & all_rating_ids)
-        from_watchlist = len(set(all_candidates) & all_watchlist_ids)
-
-        # Build title lookup for failed-case reporting
-        rating_titles = {
-            r[0]: r[1]
-            for r in db.query(IMDbRating.imdb_title_id, IMDbRating.title)
-            .filter(IMDbRating.imdb_title_id.in_(all_candidates))
-            .all()
-            if r[1]
-        }
-        watchlist_titles = {
-            r[0]: r[1]
-            for r in db.query(IMDbWatchlistItem.imdb_title_id, IMDbWatchlistItem.title)
-            .filter(IMDbWatchlistItem.imdb_title_id.in_(all_candidates))
-            .all()
-            if r[1]
-        }
-        title_lookup = {i: rating_titles.get(i) or watchlist_titles.get(i) for i in all_candidates}
+        all_candidates, title_lookup, skipped_recent_failures, counts = (
+            collect_enrichment_candidates(db, limit=limit, retry_failed=retry_failed)
+        )
     finally:
         db.close()
 
     if not all_candidates:
         sf = f" skipped_recent_failures={skipped_recent_failures}" if skipped_recent_failures else ""
-        print(f"attempted=0 inserted=0 updated=0 skipped=0 failed=0{sf} (no missing or incomplete from ratings or watchlist)")
+        print(
+            f"attempted=0 inserted=0 updated=0 skipped=0 failed=0{sf} "
+            "(no missing or incomplete from ratings, watchlist, or favorite_list)"
+        )
         return
 
     attempted, inserted, updated, failed = enrich_imdb_ids_batch(
@@ -209,7 +267,10 @@ def main() -> None:
     )
 
     sf = f" skipped_recent_failures={skipped_recent_failures}" if skipped_recent_failures else ""
-    suffix = f" (ratings: {from_ratings} watchlist: {from_watchlist} candidates)"
+    suffix = (
+        f" (ratings: {counts['from_ratings']} watchlist: {counts['from_watchlist']} "
+        f"favorite_list: {counts['from_favorite_list']} candidates)"
+    )
     print(f"attempted={attempted} inserted={inserted} updated={updated} skipped=0 failed={failed}{sf}{suffix}")
 
 

@@ -35,6 +35,16 @@ def _parse_date(value: str) -> date | None:
     return None
 
 
+def _normalize_row_keys(row: dict) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for k, v in row.items():
+        if k is None:
+            continue
+        nk = str(k).lstrip("\ufeff").strip()
+        out[nk] = v if isinstance(v, str) else (str(v) if v is not None else "")
+    return out
+
+
 def _parse_str(value: str, max_len: int | None = None) -> str | None:
     if not value or not value.strip():
         return None
@@ -65,21 +75,35 @@ def _row_to_item(row: dict[str, str]) -> IMDbWatchlistItem | None:
     )
 
 
-def import_watchlist_from_csv(db: Session, csv_path: Path) -> tuple[int, int, int]:
-    """Import watchlist from CSV. Returns (inserted, updated, errors)."""
+def import_watchlist_from_csv(
+    db: Session, csv_path: Path, *, mirror: bool = False
+) -> tuple[int, int, int, int]:
+    """Import watchlist from CSV.
+
+    Default: upsert rows from the file (insert new, update existing). Does not remove
+    titles absent from the CSV.
+
+    When mirror is True: same upserts, then delete DB rows not present in the CSV
+    (parity with IMDb watchlist export).
+
+    Returns (inserted, updated, errors, deleted).
+    """
     existing = {r.imdb_title_id: r for r in db.query(IMDbWatchlistItem).all()}
 
     inserted = 0
     updated = 0
     errors = 0
+    incoming_ids: set[str] = set()
 
     with open(csv_path, encoding="utf-8", errors="replace") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            row = _normalize_row_keys(row)
             item = _row_to_item(row)
             if not item:
                 errors += 1
                 continue
+            incoming_ids.add(item.imdb_title_id)
             existing_row = existing.get(item.imdb_title_id)
             if existing_row:
                 existing_row.created = item.created
@@ -96,11 +120,20 @@ def import_watchlist_from_csv(db: Session, csv_path: Path) -> tuple[int, int, in
                 existing[item.imdb_title_id] = item
                 inserted += 1
 
+    deleted = 0
+    if mirror:
+        q = db.query(IMDbWatchlistItem)
+        if incoming_ids:
+            q = q.filter(~IMDbWatchlistItem.imdb_title_id.in_(incoming_ids))
+        for r in q.all():
+            db.delete(r)
+            deleted += 1
+
     db.commit()
-    return inserted, updated, errors
+    return inserted, updated, errors, deleted
 
 
-def run_import(csv_path: str) -> None:
+def run_import(csv_path: str, *, mirror: bool = False) -> None:
     """Run import and print summary."""
     from app.core.database import SessionLocal
 
@@ -111,8 +144,13 @@ def run_import(csv_path: str) -> None:
 
     db = SessionLocal()
     try:
-        inserted, updated, errors = import_watchlist_from_csv(db, path)
-        print(f"Import complete: {inserted} inserted, {updated} updated, {errors} errors")
+        inserted, updated, errors, deleted = import_watchlist_from_csv(
+            db, path, mirror=mirror
+        )
+        parts = [f"{inserted} inserted", f"{updated} updated", f"{errors} errors"]
+        if deleted:
+            parts.append(f"{deleted} deleted")
+        print(f"Import complete: {', '.join(parts)}")
     finally:
         db.close()
 
@@ -121,6 +159,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python -m app.imports.watchlist <path/to/watchlist.csv>")
+        print("Usage: python -m app.imports.watchlist <path/to/watchlist.csv> [--mirror]")
         sys.exit(1)
-    run_import(sys.argv[1])
+    mirror_flag = "--mirror" in sys.argv
+    run_import(sys.argv[1], mirror=mirror_flag)

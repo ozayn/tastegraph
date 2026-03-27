@@ -15,6 +15,8 @@ router = APIRouter(prefix="/ratings", tags=["ratings"])
 
 class ImportRequest(BaseModel):
     file_path: str
+    upsert: bool = False
+    mirror: bool = False
 
 
 @router.get("/summary")
@@ -317,7 +319,15 @@ def import_ratings(request: ImportRequest):
 
     db = SessionLocal()
     try:
-        inserted, updated, skipped, errors = import_ratings_from_csv(db, path, upsert=False)
-        return {"inserted": inserted, "updated": updated, "skipped": skipped, "errors": errors}
+        inserted, updated, skipped, errors, deleted = import_ratings_from_csv(
+            db, path, upsert=request.upsert, mirror=request.mirror
+        )
+        return {
+            "inserted": inserted,
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors,
+            "deleted": deleted,
+        }
     finally:
         db.close()

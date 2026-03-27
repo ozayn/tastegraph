@@ -183,7 +183,7 @@ Deploy frontend, backend, and Postgres as separate Railway services. Set the roo
 ### 2. Backend service
 
 - **Root directory:** `backend`
-- **Build command:** `pip install -r requirements.txt`
+- **Build command:** `pip install -r requirements.txt` (this file **does not** include Playwright or browser automation; optional IMDb browser tooling is **local-only** — see `backend/docs/imdb-playwright-local-only.md`)
 - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - **Environment variables:**
 

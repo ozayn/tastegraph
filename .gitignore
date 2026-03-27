@@ -55,6 +55,9 @@ yarn-error.log*
 # Local IMDb exports (personal data)
 data/imdb/*.csv
 !data/imdb/title_metadata.template.csv
+# Local-only Playwright session for IMDb export refresh (cookies — never commit)
+data/imdb/.playwright_storage_state.json
+data/imdb/.scrape_refresh_state.json
 
 # Provider catalog snapshots live in backend/data/britbox/, data/mubi/ (typically tracked)
 
