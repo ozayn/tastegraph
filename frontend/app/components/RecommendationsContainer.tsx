@@ -83,10 +83,10 @@ function BritBoxModeContent() {
   return (
     <div>
       <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        British series and films from the BritBox catalog, ranked for your taste. Prototype&mdash;catalog is approximate.
+        BritBox catalog snapshot ranked for your taste. <strong>Series</strong> is the default; use <strong>Movies</strong> or <strong>All</strong> to include films. Your IMDb watchlist is taste-only&mdash;those titles are not shown here.
         <SectionHelp title="How this works">
-          <p>Candidate pool from JustWatch&apos;s <strong>BritBox</strong> provider listing (US). This is an approximation&mdash;JustWatch may include titles not on your specific BritBox subscription (e.g. Amazon Channel vs direct), or titles that have rotated off.</p>
-          <p>Titles are matched to your metadata and scored with your taste signals. UK-origin titles get a ranking boost. Default view is <strong>Series</strong>.</p>
+          <p>Candidate pool is <strong>only</strong> titles in the Watchmode BritBox US snapshot (default: Amazon Prime channel)&mdash;not your watchlist. Watchlist genres/decades are blended into taste scoring so recommendations align with what you save.</p>
+          <p>The banner shows how many series vs films are in the snapshot and how many have metadata in your database. Refresh the snapshot when the provider catalog changes.</p>
           <p>Refresh: <code>cd backend && python -m app.scripts.fetch_britbox_catalog</code></p>
         </SectionHelp>
       </p>

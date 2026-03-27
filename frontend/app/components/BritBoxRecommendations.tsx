@@ -5,7 +5,7 @@ import { API_URL } from "../lib/api";
 import { HighFitCard } from "./HighFitCard";
 
 type ScoringMode = "high-fit" | "ml";
-type TypeFilter = "show" | "movie" | null;
+type TypeFilter = "show" | "movie" | "all";
 
 type CatalogStats = {
   total_in_catalog: number;
@@ -13,6 +13,19 @@ type CatalogStats = {
   matched_metadata: number;
   unmatched?: number;
   already_rated?: number;
+  excluded_watchlist?: number;
+  /** Catalog snapshot rows with IMDb id (SHOW vs MOVIE) */
+  catalog_jw_shows?: number;
+  catalog_jw_movies?: number;
+  /** After rated + watchlist exclusions, with TitleMetadata */
+  matched_pool_shows?: number;
+  matched_pool_movies?: number;
+  matched_pool_total?: number;
+  matching_diagnostic?: {
+    distinct_catalog_imdb_ids: number;
+    catalog_imdb_id_sample: string[];
+    title_metadata_rows_hitting_catalog: number;
+  };
 };
 
 type HighFitExplanation = {
@@ -93,8 +106,34 @@ function StatsBanner({
         {stats.already_rated != null && stats.already_rated > 0 && (
           <span className="opacity-70">{stats.already_rated} already rated</span>
         )}
+        {stats.excluded_watchlist != null && stats.excluded_watchlist > 0 && (
+          <span className="opacity-70" title="On your IMDb watchlist—used for taste, not shown here">
+            {stats.excluded_watchlist} on watchlist (skipped)
+          </span>
+        )}
+        {stats.catalog_jw_shows != null && stats.catalog_jw_movies != null && (
+          <span className="opacity-70" title="From catalog.json (approx. BritBox US listing)">
+            Snapshot: {stats.catalog_jw_shows} series · {stats.catalog_jw_movies} films (IMDb id)
+          </span>
+        )}
+        {stats.matched_pool_shows != null && stats.matched_pool_movies != null && (
+          <span
+            className="opacity-70"
+            title="Titles with metadata in your DB after excluding rated & watchlist"
+          >
+            Matched: {stats.matched_pool_shows} series · {stats.matched_pool_movies} films
+          </span>
+        )}
+        {stats.matching_diagnostic &&
+          stats.matching_diagnostic.title_metadata_rows_hitting_catalog === 0 &&
+          stats.with_imdb_id > 0 && (
+            <span className="text-[var(--mondrian-red)]/90" title={stats.matching_diagnostic.catalog_imdb_id_sample.join(", ")}>
+              No DB metadata for catalog IMDb ids (enrich or check id format). Sample ids:{" "}
+              {stats.matching_diagnostic.catalog_imdb_id_sample.slice(0, 3).join(", ")}
+            </span>
+          )}
         {date && (
-          <span className="ml-auto opacity-50">JustWatch snapshot {date}</span>
+          <span className="ml-auto opacity-50">Watchmode snapshot {date}</span>
         )}
       </div>
     </div>
@@ -169,7 +208,7 @@ function BritBoxMLCard({ item }: { item: MLItem }) {
 const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
   { id: "show", label: "Series" },
   { id: "movie", label: "Movies" },
-  { id: null, label: "All" },
+  { id: "all", label: "All" },
 ];
 
 const activeBtn =
@@ -186,7 +225,7 @@ export function BritBoxRecommendations() {
 
   useEffect(() => {
     setLoading(true);
-    const typeParam = typeFilter ? `&title_type=${typeFilter}` : "";
+    const typeParam = `&title_type=${typeFilter === "all" ? "all" : typeFilter}`;
     if (scoring === "ml") {
       fetch(`${API_URL}/recommendations/britbox-ml?limit=15${typeParam}`)
         .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -204,7 +243,11 @@ export function BritBoxRecommendations() {
 
   const activeData = scoring === "ml" ? mlData : highFitData;
   const typeLabel =
-    typeFilter === "show" ? "series" : typeFilter === "movie" ? "films" : "titles";
+    typeFilter === "show"
+      ? "series"
+      : typeFilter === "movie"
+        ? "films"
+        : "titles";
 
   if (loading) {
     return (
@@ -230,12 +273,13 @@ export function BritBoxRecommendations() {
 
   return (
     <div>
-      {/* Controls row: type filter + scoring mode */}
+      {/* Default is series; Movies/All sends title_type to API. Pool counts always show series+film depth. */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
           {TYPE_FILTERS.map(({ id, label }) => (
             <button
-              key={label}
+              key={id}
+              type="button"
               onClick={() => setTypeFilter(id)}
               className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
                 typeFilter === id ? activeBtn : inactiveBtn

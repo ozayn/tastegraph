@@ -1,7 +1,10 @@
-"""Provider catalog loading, matching, and scoring for prototype provider-aware recommendations.
+"""Provider catalog loading, matching, and scoring (e.g. BritBox Watchmode snapshot).
 
-Loads a snapshot catalog (e.g. from JustWatch), matches entries to TitleMetadata by IMDb ID,
-and scores using existing taste-signal and ML pipelines.
+Candidate pool = IMDb IDs in the on-disk catalog JSON only, intersected with TitleMetadata.
+BritBox high-fit flow: default series (catalog ``object_type`` SHOW), exclude IMDb watchlist IDs
+from the pool while still blending watchlist genres/decades into taste via
+load_taste_signals_for_provider_catalog.
+Availability is not live-verified—only as accurate as the snapshot in data/<provider>/catalog.json.
 """
 
 import json
@@ -9,16 +12,141 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.imdb_rating import IMDbRating
+from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import _load_favorites_by_role, _parse_names, compute_favorite_boost
-from app.services.taste_signals import load_taste_signals, score_watchlist_item
+from app.services.taste_signals import load_taste_signals_for_provider_catalog, score_title_by_taste_signals
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+
+# SQLite often limits bound variables (~999). Catalog IN queries must be chunked.
+_SQL_IN_CHUNK = 400
+
+
+def _normalize_catalog_imdb_id(raw: str | int | float | None) -> str | None:
+    """Align catalog IMDb ids with TitleMetadata.imdb_title_id (tt + digits)."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s or s.upper() in ("N/A", "NULL", "NONE"):
+        return None
+    if len(s) >= 3 and s[:2].lower() == "tt" and s[2:].isdigit():
+        return "tt" + s[2:]
+    if s.isdigit():
+        return f"tt{s}"
+    return s
+
+
+def _jw_object_kind(entry: dict) -> str | None:
+    """Normalize catalog ``object_type`` SHOW / MOVIE (snapshot casing may vary)."""
+    ot = entry.get("object_type")
+    if ot is None:
+        return None
+    u = str(ot).strip().upper()
+    if u in ("SHOW", "SERIES", "TV_SHOW", "TV SERIES"):
+        return "SHOW"
+    if u in ("MOVIE", "FILM"):
+        return "MOVIE"
+    return None
+
+
+def _iter_id_chunks(imdb_ids: set[str]) -> list[list[str]]:
+    ids = sorted(imdb_ids)
+    return [ids[i : i + _SQL_IN_CHUNK] for i in range(0, len(ids), _SQL_IN_CHUNK)]
+
+
+def _sanitize_imdb_candidate_set(imdb_ids: set[str]) -> set[str]:
+    """Canonicalize every candidate id the same way as catalog keys (defensive for stray types/spacing)."""
+    out: set[str] = set()
+    for x in imdb_ids:
+        if x is None:
+            continue
+        n = _normalize_catalog_imdb_id(x if isinstance(x, str) else str(x))
+        if n:
+            out.add(n)
+    return out
+
+
+def _normalize_db_imdb_id(raw: str | None) -> str | None:
+    """Match ORM-stored ids to catalog keys (strip padding, tt + digits)."""
+    if raw is None:
+        return None
+    return _normalize_catalog_imdb_id(str(raw).strip())
+
+
+def _exclude_rated(db: Session, imdb_ids: set[str]) -> tuple[set[str], int]:
+    if not imdb_ids:
+        return imdb_ids, 0
+    rated_ids: set[str] = set()
+    for chunk in _iter_id_chunks(imdb_ids):
+        rows = db.query(IMDbRating.imdb_title_id).filter(IMDbRating.imdb_title_id.in_(chunk)).all()
+        for r in rows:
+            nid = _normalize_db_imdb_id(r.imdb_title_id)
+            if nid:
+                rated_ids.add(nid)
+    removed = imdb_ids & rated_ids
+    return imdb_ids - rated_ids, len(removed)
+
+
+def _exclude_watchlist(db: Session, imdb_ids: set[str]) -> tuple[set[str], int]:
+    """Remove IMDb watchlist titles from the candidate pool (taste only, not rec pool)."""
+    if not imdb_ids:
+        return imdb_ids, 0
+    wl_ids: set[str] = set()
+    for chunk in _iter_id_chunks(imdb_ids):
+        rows = db.query(IMDbWatchlistItem.imdb_title_id).filter(
+            IMDbWatchlistItem.imdb_title_id.in_(chunk)
+        ).all()
+        for r in rows:
+            nid = _normalize_db_imdb_id(r.imdb_title_id)
+            if nid:
+                wl_ids.add(nid)
+    removed = imdb_ids & wl_ids
+    return imdb_ids - wl_ids, len(removed)
+
+
+def _query_title_metadata_for_ids(db: Session, imdb_ids: set[str]) -> list[TitleMetadata]:
+    imdb_ids = _sanitize_imdb_candidate_set(imdb_ids)
+    if not imdb_ids:
+        return []
+    out: list[TitleMetadata] = []
+    for chunk in _iter_id_chunks(imdb_ids):
+        stmt = select(TitleMetadata).where(TitleMetadata.imdb_title_id.in_(chunk))
+        out.extend(db.scalars(stmt).all())
+    return out
+
+
+def _count_title_metadata_hits(db: Session, imdb_ids: set[str]) -> int:
+    imdb_ids = _sanitize_imdb_candidate_set(imdb_ids)
+    if not imdb_ids:
+        return 0
+    total = 0
+    for chunk in _iter_id_chunks(imdb_ids):
+        stmt = (
+            select(func.count())
+            .select_from(TitleMetadata)
+            .where(TitleMetadata.imdb_title_id.in_(chunk))
+        )
+        total += int(db.scalar(stmt) or 0)
+    return total
+
+
+def _metadata_pk_lookup_sample(db: Session, candidate_ids: list[str]) -> dict[str, object]:
+    """Small diagnostic: do the same IN lookup as the bulk fetch for a few ids."""
+    if not candidate_ids:
+        return {"raw_pks": [], "normalized_pks": []}
+    stmt = select(TitleMetadata.imdb_title_id).where(TitleMetadata.imdb_title_id.in_(candidate_ids))
+    raw = list(db.scalars(stmt).all())
+    return {
+        "raw_pks": raw,
+        "normalized_pks": [x for x in (_normalize_db_imdb_id(p) for p in raw) if x],
+    }
 
 
 def _catalog_path(provider_slug: str) -> Path:
@@ -34,31 +162,113 @@ def load_catalog(provider_slug: str = "britbox-us") -> dict | None:
 
 
 def get_catalog_imdb_ids(catalog: dict) -> set[str]:
-    return {t["imdb_id"] for t in catalog.get("titles", []) if t.get("imdb_id")}
+    out: set[str] = set()
+    for t in catalog.get("titles", []):
+        nid = _normalize_catalog_imdb_id(t.get("imdb_id"))
+        if nid:
+            out.add(nid)
+    return out
 
 
 def _catalog_lookup(catalog: dict) -> dict[str, dict]:
-    return {t["imdb_id"]: t for t in catalog.get("titles", []) if t.get("imdb_id")}
-
-
-def _exclude_rated(db: Session, imdb_ids: set[str]) -> tuple[set[str], int]:
-    if not imdb_ids:
-        return imdb_ids, 0
-    rated_rows = db.query(IMDbRating.imdb_title_id).filter(
-        IMDbRating.imdb_title_id.in_(imdb_ids)
-    ).all()
-    rated_ids = {r.imdb_title_id for r in rated_rows}
-    return imdb_ids - rated_ids, len(rated_ids)
+    by_id: dict[str, dict] = {}
+    for t in catalog.get("titles", []):
+        nid = _normalize_catalog_imdb_id(t.get("imdb_id"))
+        if not nid:
+            continue
+        by_id[nid] = {**t, "imdb_id": nid}
+    return by_id
 
 
 def _filter_by_type(imdb_ids: set[str], lookup: dict[str, dict], title_type: str | None) -> set[str]:
-    if not title_type:
+    if not title_type or title_type.lower() == "all":
         return imdb_ids
-    jw_type = "MOVIE" if title_type.lower() == "movie" else "SHOW"
-    return {iid for iid in imdb_ids if lookup.get(iid, {}).get("object_type") == jw_type}
+    want = "MOVIE" if title_type.lower() == "movie" else "SHOW"
+    return {
+        iid
+        for iid in imdb_ids
+        if _jw_object_kind(lookup.get(iid, {})) == want
+    }
 
 
-_UK_VARIANTS = {"united kingdom", "uk", "england", "scotland", "wales", "northern ireland"}
+def _catalog_jw_counts_with_imdb(catalog: dict) -> tuple[int, int]:
+    """SHOW vs MOVIE rows in snapshot that have an IMDb id."""
+    shows = movies = 0
+    for t in catalog.get("titles", []):
+        if not _normalize_catalog_imdb_id(t.get("imdb_id")):
+            continue
+        kind = _jw_object_kind(t)
+        if kind == "SHOW":
+            shows += 1
+        elif kind == "MOVIE":
+            movies += 1
+    return shows, movies
+
+
+def _britbox_matched_pool_by_jw_type(
+    db: Session,
+    all_imdb_ids: set[str],
+    lookup: dict[str, dict],
+    *,
+    exclude_rated: bool,
+) -> tuple[int, int, int]:
+    """After rated + watchlist exclusions, how many catalog titles have TitleMetadata, per JW type.
+
+    Returns (matched_shows, matched_movies, matched_total).
+    """
+    show_ids = {i for i in all_imdb_ids if _jw_object_kind(lookup.get(i, {})) == "SHOW"}
+    movie_ids = {i for i in all_imdb_ids if _jw_object_kind(lookup.get(i, {})) == "MOVIE"}
+
+    def _eligible(pool: set[str]) -> set[str]:
+        s = set(pool)
+        if exclude_rated:
+            s, _ = _exclude_rated(db, s)
+        s, _ = _exclude_watchlist(db, s)
+        return s
+
+    es = _eligible(show_ids)
+    em = _eligible(movie_ids)
+    if not es and not em:
+        return 0, 0, 0
+
+    n_show = _count_title_metadata_hits(db, es) if es else 0
+    n_movie = _count_title_metadata_hits(db, em) if em else 0
+    return n_show, n_movie, n_show + n_movie
+
+
+def _britbox_catalog_stats_extras(
+    db: Session,
+    catalog: dict,
+    all_imdb_ids: set[str],
+    lookup: dict[str, dict],
+    *,
+    exclude_rated: bool,
+) -> dict:
+    cat_shows, cat_movies = _catalog_jw_counts_with_imdb(catalog)
+    m_show, m_movie, m_total = _britbox_matched_pool_by_jw_type(
+        db, all_imdb_ids, lookup, exclude_rated=exclude_rated
+    )
+    overlap = _count_title_metadata_hits(db, all_imdb_ids)
+    sample = sorted(all_imdb_ids)[:5]
+    show_ids = {i for i in all_imdb_ids if _jw_object_kind(lookup.get(i, {})) == "SHOW"}
+    movie_ids = {i for i in all_imdb_ids if _jw_object_kind(lookup.get(i, {})) == "MOVIE"}
+    ov_show = _count_title_metadata_hits(db, show_ids)
+    ov_movie = _count_title_metadata_hits(db, movie_ids)
+
+    return {
+        "catalog_jw_shows": cat_shows,
+        "catalog_jw_movies": cat_movies,
+        "matched_pool_shows": m_show,
+        "matched_pool_movies": m_movie,
+        "matched_pool_total": m_total,
+        "matching_diagnostic": {
+            "distinct_catalog_imdb_ids": len(all_imdb_ids),
+            "catalog_imdb_id_sample": sample,
+            "title_metadata_rows_hitting_catalog": overlap,
+            "overlap_metadata_catalog_shows": ov_show,
+            "overlap_metadata_catalog_movies": ov_movie,
+        },
+    }
 
 
 def _has_uk_origin(country: str | None) -> bool:
@@ -67,13 +277,42 @@ def _has_uk_origin(country: str | None) -> bool:
     return bool(parse_and_normalize_countries(country) & {"United Kingdom"})
 
 
+def _britbox_uk_catalog_bonus(
+    *,
+    is_britbox: bool,
+    country: str | None,
+    strong_countries: set[str],
+) -> int:
+    """+3 only when the title is UK-origin and the user already has UK as a lift-based strong country."""
+    if not is_britbox:
+        return 0
+    if "United Kingdom" not in strong_countries:
+        return 0
+    if not _has_uk_origin(country):
+        return 0
+    return 3
+
+
+def _provider_high_fit_total(fit_score: int, favorite_boost: float) -> float:
+    """Taste fit plus one favorite-people boost pass (ROLE_WEIGHT sum, not doubled)."""
+    return float(fit_score) + float(favorite_boost)
+
+
 def get_provider_high_fit(
     db: Session,
     provider_slug: str = "britbox-us",
     limit: int = 15,
     exclude_rated: bool = True,
-    title_type: str | None = None,
+    title_type: str | None = "show",
 ) -> dict:
+    """Rank catalog titles by taste-signal overlap. Default ``title_type='show'`` (TV series in snapshot).
+
+    Score: ``fit_score + favorite_boost`` where ``fit_score`` comes from
+    ``score_title_by_taste_signals`` (genres/countries/decades/favorite-list/strong-directors/favorite-role weights)
+    and ``favorite_boost`` is the sum of ``ROLE_WEIGHT`` from ``compute_favorite_boost`` (not doubled).
+    BritBox UK catalog bonus (+3) applies only if ``United Kingdom`` is in the user's lift-based ``strong_countries``.
+    Tie-break: higher score first, then ascending ``imdb_title_id``.
+    """
     catalog = load_catalog(provider_slug)
     if catalog is None:
         msg = f"BritBox catalog snapshot is not available."
@@ -85,18 +324,28 @@ def get_provider_high_fit(
 
     all_imdb_ids = get_catalog_imdb_ids(catalog)
     lookup = _catalog_lookup(catalog)
-    imdb_ids = _filter_by_type(all_imdb_ids, lookup, title_type)
+    cand_after_type = _filter_by_type(all_imdb_ids, lookup, title_type)
 
     rated_count = 0
+    cand_after_rated = set(cand_after_type)
     if exclude_rated:
-        imdb_ids, rated_count = _exclude_rated(db, imdb_ids)
+        cand_after_rated, rated_count = _exclude_rated(db, cand_after_rated)
 
-    meta_rows = db.query(TitleMetadata).filter(TitleMetadata.imdb_title_id.in_(imdb_ids)).all()
-    meta_by_id = {m.imdb_title_id: m for m in meta_rows}
+    cand_final, _watchlist_excluded = _exclude_watchlist(db, cand_after_rated)
+
+    meta_rows = _query_title_metadata_for_ids(db, cand_final)
+    meta_by_id: dict[str, TitleMetadata] = {}
+    skipped_bad_meta_pk = 0
+    for m in meta_rows:
+        nk = _normalize_db_imdb_id(m.imdb_title_id)
+        if nk:
+            meta_by_id[nk] = m
+        else:
+            skipped_bad_meta_pk += 1
     matched_ids = set(meta_by_id.keys())
 
     favorites_by_role = _load_favorites_by_role(db)
-    signals = load_taste_signals(db)
+    signals = load_taste_signals_for_provider_catalog(db)
 
     scored = []
     for imdb_id in matched_ids:
@@ -106,13 +355,15 @@ def get_provider_high_fit(
         boost, matches = compute_favorite_boost(
             meta.actors, meta.directors, meta.writer, favorites_by_role
         )
-        fit_score, explanation = score_watchlist_item(
+        fit_score, explanation = score_title_by_taste_signals(
             imdb_id, meta.genres, meta.country, meta.year, meta.directors, matches, signals
         )
-        total = fit_score + boost * 2
-
-        if is_britbox and _has_uk_origin(meta.country):
-            total += 3
+        total = _provider_high_fit_total(fit_score, boost)
+        total += _britbox_uk_catalog_bonus(
+            is_britbox=is_britbox,
+            country=meta.country,
+            strong_countries=signals.get("strong_countries", set()),
+        )
 
         scored.append({
             "imdb_title_id": imdb_id,
@@ -124,10 +375,32 @@ def get_provider_high_fit(
             "_score": total,
         })
 
-    scored.sort(key=lambda x: -x["_score"])
+    scored.sort(key=lambda x: (-x["_score"], x["imdb_title_id"]))
     top = scored[:limit]
     for item in top:
         del item["_score"]
+
+    pool_breakdown = _britbox_catalog_stats_extras(
+        db, catalog, all_imdb_ids, lookup, exclude_rated=exclude_rated
+    )
+    sample_cand = sorted(_sanitize_imdb_candidate_set(cand_final))[:5]
+    pk_sample = _metadata_pk_lookup_sample(db, sample_cand)
+    pipe = {
+        "candidate_ids_after_type_filter": len(cand_after_type),
+        "candidate_ids_after_rated_exclusions": len(cand_after_rated),
+        "candidate_ids_after_watchlist_exclusions": len(cand_final),
+        "final_metadata_rows_fetched": len(meta_rows),
+        "final_scored_ids_count": len(matched_ids),
+        "sample_candidate_ids_after_watchlist": sample_cand,
+        "metadata_pk_lookup_for_sample_candidates": pk_sample["raw_pks"],
+        "normalized_metadata_pk_lookup_for_sample": pk_sample["normalized_pks"],
+        "title_metadata_rows_skipped_bad_pk": skipped_bad_meta_pk,
+    }
+    md = pool_breakdown.get("matching_diagnostic") or {}
+    pool_breakdown = {
+        **pool_breakdown,
+        "matching_diagnostic": {**md, "pipeline": pipe},
+    }
 
     return {
         "provider": provider_slug,
@@ -137,35 +410,44 @@ def get_provider_high_fit(
             "total_in_catalog": catalog.get("stats", {}).get("total", 0),
             "with_imdb_id": len(all_imdb_ids),
             "matched_metadata": len(matched_ids),
-            "unmatched": len(imdb_ids) - len(matched_ids),
+            "unmatched": len(cand_final) - len(matched_ids),
             "already_rated": rated_count,
+            "excluded_watchlist": _watchlist_excluded,
+            **pool_breakdown,
         },
         "items": top,
     }
 
 
-def _build_provider_candidates(db: Session, imdb_ids: set[str]) -> pd.DataFrame:
-    """Build ML feature DataFrame for a set of IMDb IDs from TitleMetadata."""
+def _provider_candidates_dataframe_from_tm_rows(db: Session, tm_rows: list[TitleMetadata]) -> pd.DataFrame:
+    """Build ML feature DataFrame from TitleMetadata rows already loaded for candidate ids."""
     from app.models.favorite_list_item import FavoriteListItem
 
-    rows = (
-        db.query(
-            TitleMetadata.imdb_title_id,
-            TitleMetadata.title,
-            TitleMetadata.title_type,
-            TitleMetadata.year,
-            TitleMetadata.genres,
-            TitleMetadata.country,
-            TitleMetadata.languages,
-            TitleMetadata.directors,
-            TitleMetadata.actors,
-            TitleMetadata.writer,
+    rows: list[tuple] = []
+    for m in tm_rows:
+        nk = _normalize_db_imdb_id(m.imdb_title_id)
+        if not nk:
+            continue
+        rows.append(
+            (
+                nk,
+                m.title,
+                m.title_type,
+                m.year,
+                m.genres,
+                m.country,
+                m.languages,
+                m.directors,
+                m.actors,
+                m.writer,
+            )
         )
-        .filter(TitleMetadata.imdb_title_id.in_(imdb_ids))
-        .all()
-    )
 
-    fav_ids = {r.imdb_title_id for r in db.query(FavoriteListItem.imdb_title_id).all()}
+    fav_ids: set[str] = set()
+    for r in db.query(FavoriteListItem.imdb_title_id).all():
+        fn = _normalize_db_imdb_id(r.imdb_title_id)
+        if fn:
+            fav_ids.add(fn)
     favs = _load_favorites_by_role(db)
 
     records = []
@@ -195,13 +477,20 @@ def _build_provider_candidates(db: Session, imdb_ids: set[str]) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def _build_provider_candidates(db: Session, imdb_ids: set[str]) -> pd.DataFrame:
+    """Build ML feature DataFrame for a set of IMDb IDs from TitleMetadata."""
+    tm_rows = _query_title_metadata_for_ids(db, imdb_ids)
+    return _provider_candidates_dataframe_from_tm_rows(db, tm_rows)
+
+
 def get_provider_ml(
     db: Session,
     provider_slug: str = "britbox-us",
     limit: int = 15,
     exclude_rated: bool = True,
-    title_type: str | None = None,
+    title_type: str | None = "show",
 ) -> dict:
+    """ML-ranked catalog titles. Same candidate rules as high-fit (default series; watchlist IDs excluded)."""
     import warnings
 
     import joblib
@@ -216,6 +505,9 @@ def get_provider_ml(
             msg += " Run: cd backend && python -m app.scripts.fetch_britbox_catalog"
         return {"error": "no_catalog", "message": msg}
 
+    all_imdb_ids = get_catalog_imdb_ids(catalog)
+    lookup = _catalog_lookup(catalog)
+
     model_path = MODELS_DIR / "8plus_baseline_model.joblib"
     artifact_path = MODELS_DIR / "8plus_baseline_artifacts.joblib"
     base_resp = {
@@ -225,19 +517,62 @@ def get_provider_ml(
     }
 
     if not model_path.exists() or not artifact_path.exists():
-        return {**base_resp, "items": [], "model_available": False, "catalog_stats": {}}
-
-    all_imdb_ids = get_catalog_imdb_ids(catalog)
-    lookup = _catalog_lookup(catalog)
-    imdb_ids = _filter_by_type(all_imdb_ids, lookup, title_type)
+        pool_breakdown = _britbox_catalog_stats_extras(
+            db, catalog, all_imdb_ids, lookup, exclude_rated=exclude_rated
+        )
+        return {
+            **base_resp,
+            "items": [],
+            "model_available": False,
+            "catalog_stats": {
+                "total_in_catalog": catalog.get("stats", {}).get("total", 0),
+                "with_imdb_id": len(all_imdb_ids),
+                **pool_breakdown,
+            },
+        }
+    cand_after_type = _filter_by_type(all_imdb_ids, lookup, title_type)
 
     rated_count = 0
+    cand_after_rated = set(cand_after_type)
     if exclude_rated:
-        imdb_ids, rated_count = _exclude_rated(db, imdb_ids)
+        cand_after_rated, rated_count = _exclude_rated(db, cand_after_rated)
 
-    df = _build_provider_candidates(db, imdb_ids)
+    cand_final, wl_excluded = _exclude_watchlist(db, cand_after_rated)
+
+    tm_rows = _query_title_metadata_for_ids(db, cand_final)
+    skipped_bad = sum(1 for m in tm_rows if not _normalize_db_imdb_id(m.imdb_title_id))
+    df = _provider_candidates_dataframe_from_tm_rows(db, tm_rows)
+    pool_breakdown = _britbox_catalog_stats_extras(
+        db, catalog, all_imdb_ids, lookup, exclude_rated=exclude_rated
+    )
+    sample_cand = sorted(_sanitize_imdb_candidate_set(cand_final))[:5]
+    pk_sample = _metadata_pk_lookup_sample(db, sample_cand)
+    pipe_ml = {
+        "candidate_ids_after_type_filter": len(cand_after_type),
+        "candidate_ids_after_rated_exclusions": len(cand_after_rated),
+        "candidate_ids_after_watchlist_exclusions": len(cand_final),
+        "final_metadata_rows_fetched": len(tm_rows),
+        "final_scored_ids_count": int(len(df)),
+        "sample_candidate_ids_after_watchlist": sample_cand,
+        "metadata_pk_lookup_for_sample_candidates": pk_sample["raw_pks"],
+        "normalized_metadata_pk_lookup_for_sample": pk_sample["normalized_pks"],
+        "title_metadata_rows_skipped_bad_pk": skipped_bad,
+    }
+    md0 = pool_breakdown.get("matching_diagnostic") or {}
+    pool_breakdown_merged = {**pool_breakdown, "matching_diagnostic": {**md0, "pipeline": pipe_ml}}
     if len(df) == 0:
-        return {**base_resp, "items": [], "model_available": True, "catalog_stats": {"matched_metadata": 0}}
+        return {
+            **base_resp,
+            "items": [],
+            "model_available": True,
+            "catalog_stats": {
+                "matched_metadata": 0,
+                "excluded_watchlist": wl_excluded,
+                "total_in_catalog": catalog.get("stats", {}).get("total", 0),
+                "with_imdb_id": len(all_imdb_ids),
+                **pool_breakdown_merged,
+            },
+        }
 
     model = joblib.load(model_path)
     loaded = joblib.load(artifact_path)
@@ -309,6 +644,8 @@ def get_provider_ml(
             "with_imdb_id": len(all_imdb_ids),
             "matched_metadata": len(df),
             "already_rated": rated_count,
+            "excluded_watchlist": wl_excluded,
+            **pool_breakdown_merged,
         },
         "items": results,
         "model_available": True,

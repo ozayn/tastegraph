@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 # Resolve backend root so .env loads correctly regardless of cwd
@@ -13,6 +14,19 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://localhost:5432/tastegraph"
     OMDB_API_KEY: str = ""
     OMDB_API_KEY_FALLBACK: str = ""
+    # Watchmode: BritBox catalog snapshot fetch (see app.scripts.fetch_britbox_catalog)
+    WATCHMODE_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("WATCHMODE_API_KEY", "watchmode_api_key"),
+    )
+    # Optional: Watchmode /v1/sources `id` for BritBox (default: auto-pick Amazon Prime channel US)
+    WATCHMODE_BRITBOX_SOURCE_ID: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "WATCHMODE_BRITBOX_SOURCE_ID",
+            "watchmode_britbox_source_id",
+        ),
+    )
     # TMDB (optional): poster fallback when OMDb URL is missing or unreachable
     TMDB_API_KEY: str = ""
     # CORS: comma-separated origins, e.g. "http://localhost:3000,http://127.0.0.1:3000"

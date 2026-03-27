@@ -1,7 +1,7 @@
 """Provider-aware recommendation endpoints (prototype).
 
-BritBox Amazon Channel (US) catalog scored by taste-signal high-fit and ML 8+ probability.
-Catalog sourced from a JustWatch snapshot stored in data/britbox/catalog.json.
+BritBox (US) catalog scored by taste-signal high-fit and ML 8+ probability.
+Catalog snapshot from Watchmode (see ``app.scripts.fetch_britbox_catalog``) in data/britbox/catalog.json.
 """
 
 from fastapi import APIRouter, Query
@@ -16,10 +16,13 @@ router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 @router.get("/britbox")
 def recommendations_britbox(
     limit: int = Query(default=15, ge=1, le=50),
-    title_type: str | None = Query(default=None, description="movie or show"),
+    title_type: str = Query(
+        default="show",
+        description="Catalog object_type filter: show (series), movie, or all",
+    ),
     exclude_rated: bool = Query(default=True),
 ):
-    """BritBox Amazon Channel: titles ranked by taste-signal high-fit. Prototype."""
+    """BritBox catalog: series (default) ranked by taste-signal high-fit. Watchlist shapes taste, not the pool."""
     db = SessionLocal()
     try:
         return get_provider_high_fit(
@@ -33,10 +36,13 @@ def recommendations_britbox(
 @router.get("/britbox-ml")
 def recommendations_britbox_ml(
     limit: int = Query(default=15, ge=1, le=50),
-    title_type: str | None = Query(default=None, description="movie or show"),
+    title_type: str = Query(
+        default="show",
+        description="Catalog object_type filter: show (series), movie, or all",
+    ),
     exclude_rated: bool = Query(default=True),
 ):
-    """BritBox Amazon Channel: titles ranked by ML 8+ probability. Prototype. Requires trained model."""
+    """BritBox catalog: series (default) ranked by ML 8+ probability. Watchlist excluded from candidates."""
     db = SessionLocal()
     try:
         return get_provider_ml(
