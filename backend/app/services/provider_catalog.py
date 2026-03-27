@@ -433,6 +433,18 @@ def _year_int_for_ranking(y: object) -> int | None:
     return None
 
 
+def _high_fit_year_tiebreak_key(year: object) -> int:
+    """Sort key fragment when High-Fit totals tie: prefer newer release years first.
+
+    Valid years map to ``-year`` so ascending sort orders larger years before smaller ones.
+    Missing or invalid years use ``0``, which sorts after any valid year (valid keys are <= -1870).
+    """
+    iy = _year_int_for_ranking(year)
+    if iy is None:
+        return 0
+    return -iy
+
+
 def _high_fit_ranking_diagnostics(
     top: list[dict],
     pool_profile: dict[str, object],
@@ -479,8 +491,8 @@ def _high_fit_ranking_diagnostics(
         totals = [it.get("scoring", {}).get("total") for it in top if isinstance(it.get("scoring"), dict)]
         if totals and len([t for t in totals if t == totals[0]]) >= max(2, n // 2):
             hints.append(
-                "Several top rows share the same total score; sort tie-break is ascending imdb_title_id "
-                "(lower id first—often older catalog entries)."
+                "Several top rows share the same total score; ties prefer newer release years, "
+                "then ascending imdb_title_id for a stable order."
             )
 
     uk_hits = sum(
@@ -523,7 +535,11 @@ def _high_fit_ranking_diagnostics(
             "matched_pool_decade_share_pct": _pct_share(pool_dc, pool_with_year),
             "top_results_decade_share_pct": _pct_share(dict(top_dc), max(len(years), 1)),
         },
-        "sort_note": "Descending total (fit + favorite_boost + uk_catalog_bonus); ties broken by ascending imdb_title_id.",
+        "sort_note": (
+            "Descending total (fit + favorite_boost + uk_catalog_bonus); equal totals prefer newer "
+            "release year, then ascending imdb_title_id. Titles without a usable year sort after dated "
+            "titles at the same total."
+        ),
         "hints": hints,
     }
 
@@ -541,7 +557,7 @@ def get_provider_high_fit(
     ``score_title_by_taste_signals`` (genres/countries/decades/favorite-list/strong-directors/favorite-role weights)
     and ``favorite_boost`` is the sum of ``ROLE_WEIGHT`` from ``compute_favorite_boost`` (not doubled).
     BritBox UK catalog bonus (+3) applies only if ``United Kingdom`` is in the user's lift-based ``strong_countries``.
-    Tie-break: higher score first, then ascending ``imdb_title_id``.
+    Tie-break: higher total first, then newer ``year`` (missing year last among ties), then ascending ``imdb_title_id``.
     """
     catalog = load_catalog(provider_slug)
     if catalog is None:
@@ -608,7 +624,9 @@ def get_provider_high_fit(
             "_uk_bonus": uk_bonus,
         })
 
-    scored.sort(key=lambda x: (-x["_score"], x["imdb_title_id"]))
+    scored.sort(
+        key=lambda x: (-x["_score"], _high_fit_year_tiebreak_key(x["year"]), x["imdb_title_id"])
+    )
     top_raw = scored[:limit]
     top: list[dict] = []
     for row in top_raw:

@@ -82,12 +82,17 @@ MINI_CATALOG = {
 }
 
 
-def _meta(iid: str, genres: str = "Drama", country: str | None = "United Kingdom") -> TitleMetadata:
+def _meta(
+    iid: str,
+    genres: str = "Drama",
+    country: str | None = "United Kingdom",
+    year: int | None = 2020,
+) -> TitleMetadata:
     return TitleMetadata(
         imdb_title_id=iid,
         title=iid,
         title_type="series",
-        year=2020,
+        year=year,
         genres=genres,
         country=country,
     )
@@ -263,7 +268,7 @@ TIE_CATALOG = {
 @patch.object(pc, "load_taste_signals_for_provider_catalog")
 @patch.object(pc, "load_catalog", return_value=TIE_CATALOG)
 def test_high_fit_tie_break_lexicographic(mock_load, mock_sig, db_session):
-    """Equal scores order by imdb_title_id ascending."""
+    """Equal scores and same year: order by imdb_title_id ascending."""
     mock_sig.return_value = {
         "strong_genres": {"Drama"},
         "strong_countries": set(),
@@ -277,6 +282,36 @@ def test_high_fit_tie_break_lexicographic(mock_load, mock_sig, db_session):
 
     out = pc.get_provider_high_fit(db_session, limit=10)
     assert [x["imdb_title_id"] for x in out["items"]] == ["ttApple", "ttZebra"]
+
+
+YEAR_TIE_CATALOG = {
+    "provider_clear_name": "BritBox",
+    "fetched_at": "2025-01-01T00:00:00+00:00",
+    "stats": {"total": 2},
+    "titles": [
+        {"imdb_id": "ttA_Old", "object_type": "SHOW", "title": "Older"},
+        {"imdb_id": "ttZ_New", "object_type": "SHOW", "title": "Newer"},
+    ],
+}
+
+
+@patch.object(pc, "load_taste_signals_for_provider_catalog")
+@patch.object(pc, "load_catalog", return_value=YEAR_TIE_CATALOG)
+def test_high_fit_tie_break_prefers_newer_year(mock_load, mock_sig, db_session):
+    """Equal totals: newer release year ranks before older (imdb id lex order alone would put ttA first)."""
+    mock_sig.return_value = {
+        "strong_genres": {"Drama"},
+        "strong_countries": set(),
+        "strong_decades": {"2020s"},
+        "strong_directors": set(),
+        "favorite_list_ids": set(),
+    }
+    db_session.add(_meta("ttA_Old", year=2000))
+    db_session.add(_meta("ttZ_New", year=2020))
+    db_session.commit()
+
+    out = pc.get_provider_high_fit(db_session, limit=10)
+    assert [x["imdb_title_id"] for x in out["items"]] == ["ttZ_New", "ttA_Old"]
 
 
 UK_VS_US_CATALOG = {
