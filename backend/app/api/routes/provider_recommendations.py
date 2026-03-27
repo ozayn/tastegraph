@@ -26,13 +26,40 @@ def recommendations_britbox(
         description="Catalog object_type filter: show (series), movie, or all",
     ),
     exclude_rated: bool = Query(default=True),
+    decade: str | None = Query(
+        default=None,
+        description="Restrict pool to release decade, e.g. 2020 or 2020s (applied before ranking)",
+    ),
+    year_min: int | None = Query(
+        default=None,
+        ge=1870,
+        le=2035,
+        description="Minimum release year (applied before ranking)",
+    ),
+    country: str | None = Query(
+        default=None,
+        max_length=80,
+        description="Substring match on country (case-insensitive, applied before ranking)",
+    ),
+    similar_to: str | None = Query(
+        default=None,
+        max_length=150,
+        description="Title hint: keep titles that share a genre with this resolved reference (rated/watchlist)",
+    ),
 ):
     """BritBox catalog: series (default) ranked by taste-signal high-fit. Watchlist shapes taste, not the pool."""
     db = SessionLocal()
     try:
         return get_provider_high_fit(
-            db, provider_slug="britbox-us", limit=limit,
-            exclude_rated=exclude_rated, title_type=title_type,
+            db,
+            provider_slug="britbox-us",
+            limit=limit,
+            exclude_rated=exclude_rated,
+            title_type=title_type,
+            decade=decade,
+            year_min=year_min,
+            country=country,
+            similar_to=similar_to,
         )
     finally:
         db.close()
@@ -46,13 +73,40 @@ def recommendations_britbox_ml(
         description="Catalog object_type filter: show (series), movie, or all",
     ),
     exclude_rated: bool = Query(default=True),
+    decade: str | None = Query(
+        default=None,
+        description="Restrict pool to release decade, e.g. 2020 or 2020s (applied before ranking)",
+    ),
+    year_min: int | None = Query(
+        default=None,
+        ge=1870,
+        le=2035,
+        description="Minimum release year (applied before ranking)",
+    ),
+    country: str | None = Query(
+        default=None,
+        max_length=80,
+        description="Substring match on country (case-insensitive, applied before ranking)",
+    ),
+    similar_to: str | None = Query(
+        default=None,
+        max_length=150,
+        description="Title hint: keep titles that share a genre with this resolved reference (rated/watchlist)",
+    ),
 ):
     """BritBox catalog: series (default) ranked by ML 8+ probability. Watchlist excluded from candidates."""
     db = SessionLocal()
     try:
         return get_provider_ml(
-            db, provider_slug="britbox-us", limit=limit,
-            exclude_rated=exclude_rated, title_type=title_type,
+            db,
+            provider_slug="britbox-us",
+            limit=limit,
+            exclude_rated=exclude_rated,
+            title_type=title_type,
+            decade=decade,
+            year_min=year_min,
+            country=country,
+            similar_to=similar_to,
         )
     finally:
         db.close()

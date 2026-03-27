@@ -12,6 +12,13 @@ from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import filter_variants_for_country, parse_and_normalize_countries
 from app.services.favorite_boost import compute_favorite_boost, _load_favorites_by_role
 from app.services.llm_search import search_rated, search_watchlist
+from app.services.recommendation_filters import (
+    any_recommendation_filter_active,
+    normalize_year_value,
+    parse_decade_bounds,
+    pool_row_matches_filters,
+    resolve_similar_to_genre_set,
+)
 from app.services.ml_recommendations import get_ml_watchlist_recommendations
 from app.services.taste_signals import load_taste_signals, build_reasons, score_title_by_taste_signals
 
@@ -172,6 +179,26 @@ def recommendations_simple(
 @router.get("/watchlist-high-fit")
 def recommendations_watchlist_high_fit(
     limit: int = Query(default=15, ge=1, le=50),
+    decade: str | None = Query(
+        default=None,
+        description="Restrict pool to release decade, e.g. 2020 or 2020s (before ranking)",
+    ),
+    year_min: int | None = Query(
+        default=None,
+        ge=1870,
+        le=2035,
+        description="Minimum release year (before ranking)",
+    ),
+    country: str | None = Query(
+        default=None,
+        max_length=80,
+        description="Substring match on country (before ranking)",
+    ),
+    similar_to: str | None = Query(
+        default=None,
+        max_length=150,
+        description="Title hint: keep items that share a genre with resolved reference (rated/watchlist)",
+    ),
 ):
     """Underwatched but high-fit: watchlist items ranked by taste alignment (excludes rated)."""
     db = SessionLocal()
@@ -200,14 +227,34 @@ def recommendations_watchlist_high_fit(
         signals = load_taste_signals(db)
         favorite_list_ids = signals.get("favorite_list_ids", set())
 
+        decade_bounds = parse_decade_bounds(decade)
+        ref_genres, _similar_resolved = resolve_similar_to_genre_set(db, similar_to)
+        filter_active = any_recommendation_filter_active(
+            decade_bounds=decade_bounds,
+            year_min=year_min,
+            country_contains=country,
+            ref_genres=ref_genres,
+        )
+
         scored_items = []
         for r, poster, actors, directors, writer, country, meta_genres in rows:
             if r.imdb_title_id in favorite_list_ids:
                 continue  # exclude favorite_list titles from underwatched candidates
+            genres_str = meta_genres or r.genres
+            y = normalize_year_value(r.year)
+            if filter_active and not pool_row_matches_filters(
+                year=y,
+                genres_csv=genres_str,
+                country=country,
+                decade_bounds=decade_bounds,
+                year_min=year_min,
+                country_contains=country,
+                ref_genres=ref_genres,
+            ):
+                continue
             boost, matches = compute_favorite_boost(
                 actors, directors, writer, favorites_by_role
             )
-            genres_str = meta_genres or r.genres
             fit_score, explanation = score_title_by_taste_signals(
                 r.imdb_title_id, genres_str, country, r.year, directors, matches, signals
             )

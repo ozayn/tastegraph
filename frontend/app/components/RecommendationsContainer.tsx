@@ -53,7 +53,7 @@ function HighFitModeContent() {
   return (
     <div>
       <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        Unrated watchlist items ranked by alignment with your 8+ taste signals. Each card explains why it fits.
+        Unrated watchlist items ranked by alignment with your 8+ taste signals. Each card explains why it fits. Use the pool filters to narrow by decade, minimum year, country, or a title similar to one in your rated/watchlist data.
         <SectionHelp title="How this works">
           <p>Items you saved but haven&apos;t rated, ranked by overlap with your <strong>8+ taste signals</strong>: genres, countries, decades, and creators that appear in titles you loved.</p>
           <p>Each card explains <em>why</em> it fits. Higher overlap suggests stronger fit, but it&apos;s heuristic—your next favorite might surprise you.</p>
@@ -83,7 +83,7 @@ function BritBoxModeContent() {
   return (
     <div>
       <p className="mb-4 text-[14px] leading-[1.5] text-[var(--muted-soft)]">
-        BritBox catalog snapshot ranked for your taste. <strong>Series</strong> is the default; use <strong>Movies</strong> or <strong>All</strong> to include films. Your IMDb watchlist is taste-only&mdash;those titles are not shown here.
+        BritBox catalog snapshot ranked for your taste. <strong>Series</strong> is the default; use <strong>Movies</strong> or <strong>All</strong> to include films. Optional <strong>pool filters</strong> (decade, minimum year, country, similar-to) narrow candidates before ranking. Your IMDb watchlist is taste-only&mdash;those titles are not shown here.
         <SectionHelp title="How this works">
           <p>Candidate pool is <strong>only</strong> titles in the Watchmode BritBox US snapshot (default: Amazon Prime channel)&mdash;not your watchlist. Watchlist genres/decades are blended into taste scoring so recommendations align with what you save.</p>
           <p>The banner shows how many series vs films are in the snapshot and how many have metadata in your database. Refresh the snapshot when the provider catalog changes.</p>

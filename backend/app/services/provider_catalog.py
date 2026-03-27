@@ -23,6 +23,12 @@ from app.models.imdb_watchlist_item import IMDbWatchlistItem
 from app.models.title_metadata import TitleMetadata
 from app.services.country_normalize import parse_and_normalize_countries
 from app.services.favorite_boost import _load_favorites_by_role, _parse_names, compute_favorite_boost
+from app.services.recommendation_filters import (
+    any_recommendation_filter_active,
+    parse_decade_bounds,
+    resolve_similar_to_genre_set,
+    title_metadata_matches_pool_filters,
+)
 from app.services.taste_signals import load_taste_signals_for_provider_catalog, score_title_by_taste_signals
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
@@ -550,6 +556,10 @@ def get_provider_high_fit(
     limit: int = 15,
     exclude_rated: bool = True,
     title_type: str | None = "show",
+    decade: str | None = None,
+    year_min: int | None = None,
+    country: str | None = None,
+    similar_to: str | None = None,
 ) -> dict:
     """Rank catalog titles by taste-signal overlap. Default ``title_type='show'`` (TV series in snapshot).
 
@@ -558,6 +568,9 @@ def get_provider_high_fit(
     and ``favorite_boost`` is the sum of ``ROLE_WEIGHT`` from ``compute_favorite_boost`` (not doubled).
     BritBox UK catalog bonus (+3) applies only if ``United Kingdom`` is in the user's lift-based ``strong_countries``.
     Tie-break: higher total first, then newer ``year`` (missing year last among ties), then ascending ``imdb_title_id``.
+
+    Optional ``decade`` (e.g. ``2020`` / ``2020s``), ``year_min``, ``country`` (substring), and ``similar_to`` (title
+    hint resolved via your rated/watchlist titles) narrow the pool **before** scoring.
     """
     catalog = load_catalog(provider_slug)
     if catalog is None:
@@ -588,7 +601,29 @@ def get_provider_high_fit(
             meta_by_id[nk] = m
         else:
             skipped_bad_meta_pk += 1
-    matched_ids = set(meta_by_id.keys())
+    matched_ids_all = set(meta_by_id.keys())
+    decade_bounds = parse_decade_bounds(decade)
+    ref_genres, similar_resolved_title = resolve_similar_to_genre_set(db, similar_to)
+    filter_active = any_recommendation_filter_active(
+        decade_bounds=decade_bounds,
+        year_min=year_min,
+        country_contains=country,
+        ref_genres=ref_genres,
+    )
+    matched_ids = matched_ids_all
+    if filter_active:
+        matched_ids = {
+            iid
+            for iid in matched_ids_all
+            if title_metadata_matches_pool_filters(
+                meta_by_id[iid],
+                lookup.get(iid, {}),
+                decade_bounds=decade_bounds,
+                year_min=year_min,
+                country_contains=country,
+                ref_genres=ref_genres,
+            )
+        }
 
     favorites_by_role = _load_favorites_by_role(db)
     signals = load_taste_signals_for_provider_catalog(db)
@@ -639,7 +674,8 @@ def get_provider_high_fit(
         }
         top.append(item)
 
-    pool_profile = _britbox_matched_pool_year_profile(meta_by_id, lookup)
+    meta_for_pool_profile = {iid: meta_by_id[iid] for iid in matched_ids}
+    pool_profile = _britbox_matched_pool_year_profile(meta_for_pool_profile, lookup)
     high_fit_ranking = _high_fit_ranking_diagnostics(top, pool_profile)
 
     pool_breakdown = _britbox_catalog_stats_extras(
@@ -652,6 +688,7 @@ def get_provider_high_fit(
         "candidate_ids_after_rated_exclusions": len(cand_after_rated),
         "candidate_ids_after_watchlist_exclusions": len(cand_final),
         "final_metadata_rows_fetched": len(meta_rows),
+        "metadata_matched_before_pool_filters": len(matched_ids_all),
         "final_scored_ids_count": len(matched_ids),
         "sample_candidate_ids_after_watchlist": sample_cand,
         "metadata_pk_lookup_for_sample_candidates": pk_sample["raw_pks"],
@@ -659,6 +696,15 @@ def get_provider_high_fit(
         "title_metadata_rows_skipped_bad_pk": skipped_bad_meta_pk,
     }
     md = pool_breakdown.get("matching_diagnostic") or {}
+    rec_filter_echo = {
+        "decade": decade,
+        "year_min": year_min,
+        "country_contains": country,
+        "similar_to": similar_to,
+        "similar_to_resolved_title": similar_resolved_title,
+        "pool_filters_active": filter_active,
+        "pool_size_after_filters": len(matched_ids),
+    }
     pool_breakdown = {
         **pool_breakdown,
         "matching_diagnostic": {
@@ -667,6 +713,7 @@ def get_provider_high_fit(
             "matched_pool_profile": pool_profile,
             "high_fit_ranking": high_fit_ranking,
         },
+        "recommendation_filters": rec_filter_echo,
     }
 
     return {
@@ -676,8 +723,8 @@ def get_provider_high_fit(
         "catalog_stats": {
             "total_in_catalog": catalog.get("stats", {}).get("total", 0),
             "with_imdb_id": len(all_imdb_ids),
-            "matched_metadata": len(matched_ids),
-            "unmatched": len(cand_final) - len(matched_ids),
+            "matched_metadata": len(matched_ids_all),
+            "unmatched": len(cand_final) - len(matched_ids_all),
             "already_rated": rated_count,
             "excluded_watchlist": _watchlist_excluded,
             **pool_breakdown,
@@ -756,8 +803,15 @@ def get_provider_ml(
     limit: int = 15,
     exclude_rated: bool = True,
     title_type: str | None = "show",
+    decade: str | None = None,
+    year_min: int | None = None,
+    country: str | None = None,
+    similar_to: str | None = None,
 ) -> dict:
-    """ML-ranked catalog titles. Same candidate rules as high-fit (default series; watchlist IDs excluded)."""
+    """ML-ranked catalog titles. Same candidate rules as high-fit (default series; watchlist IDs excluded).
+
+    Optional pool filters match :func:`get_provider_high_fit` (applied before ML scoring).
+    """
     import warnings
 
     import joblib
@@ -807,6 +861,30 @@ def get_provider_ml(
     cand_final, wl_excluded = _exclude_watchlist(db, cand_after_rated)
 
     tm_rows = _query_title_metadata_for_ids(db, cand_final)
+    decade_bounds_ml = parse_decade_bounds(decade)
+    ref_genres_ml, similar_resolved_ml = resolve_similar_to_genre_set(db, similar_to)
+    filter_active_ml = any_recommendation_filter_active(
+        decade_bounds=decade_bounds_ml,
+        year_min=year_min,
+        country_contains=country,
+        ref_genres=ref_genres_ml,
+    )
+    if filter_active_ml:
+        filtered_ml: list[TitleMetadata] = []
+        for m in tm_rows:
+            nk = _normalize_db_imdb_id(m.imdb_title_id)
+            if not nk:
+                continue
+            if title_metadata_matches_pool_filters(
+                m,
+                lookup.get(nk, {}),
+                decade_bounds=decade_bounds_ml,
+                year_min=year_min,
+                country_contains=country,
+                ref_genres=ref_genres_ml,
+            ):
+                filtered_ml.append(m)
+        tm_rows = filtered_ml
     skipped_bad = sum(1 for m in tm_rows if not _normalize_db_imdb_id(m.imdb_title_id))
     df = _provider_candidates_dataframe_from_tm_rows(db, tm_rows)
     meta_by_id_ml: dict[str, TitleMetadata] = {}
@@ -831,6 +909,15 @@ def get_provider_ml(
         "normalized_metadata_pk_lookup_for_sample": pk_sample["normalized_pks"],
         "title_metadata_rows_skipped_bad_pk": skipped_bad,
     }
+    rec_filter_ml = {
+        "decade": decade,
+        "year_min": year_min,
+        "country_contains": country,
+        "similar_to": similar_to,
+        "similar_to_resolved_title": similar_resolved_ml,
+        "pool_filters_active": filter_active_ml,
+        "pool_size_after_filters": int(len(df)),
+    }
     md0 = pool_breakdown.get("matching_diagnostic") or {}
     pool_breakdown_merged = {
         **pool_breakdown,
@@ -839,6 +926,7 @@ def get_provider_ml(
             "pipeline": pipe_ml,
             "matched_pool_profile": pool_profile_ml,
         },
+        "recommendation_filters": rec_filter_ml,
     }
     if len(df) == 0:
         return {

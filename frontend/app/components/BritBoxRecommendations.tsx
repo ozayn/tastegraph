@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../lib/api";
 import { HighFitCard } from "./HighFitCard";
+import {
+  getInitialPoolFilters,
+  poolFiltersToQueryString,
+  RecommendationPoolFiltersBar,
+  type RecommendationPoolFilterValues,
+} from "./RecommendationPoolFiltersBar";
 
 type ScoringMode = "high-fit" | "ml";
 type TypeFilter = "show" | "movie" | "all";
@@ -21,6 +27,15 @@ type CatalogStats = {
   matched_pool_shows?: number;
   matched_pool_movies?: number;
   matched_pool_total?: number;
+  recommendation_filters?: {
+    decade?: string | null;
+    year_min?: number | null;
+    country_contains?: string | null;
+    similar_to?: string | null;
+    similar_to_resolved_title?: string | null;
+    pool_filters_active?: boolean;
+    pool_size_after_filters?: number;
+  };
   matching_diagnostic?: {
     distinct_catalog_imdb_ids: number;
     catalog_imdb_id_sample: string[];
@@ -109,14 +124,35 @@ function StatsBanner({
   typeLabel: string;
 }) {
   const date = fetchedAt ? new Date(fetchedAt).toLocaleDateString() : null;
+  const rf = stats.recommendation_filters;
+  const filtered =
+    rf?.pool_filters_active &&
+    typeof rf.pool_size_after_filters === "number" &&
+    typeof stats.matched_metadata === "number" &&
+    rf.pool_size_after_filters !== stats.matched_metadata;
   return (
     <div className="mb-4 rounded-lg border border-dashed border-[var(--section-border)] bg-[var(--section-bg)] px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--muted-soft)]">
         <span>
-          <strong className="text-[var(--foreground)]">
-            {stats.matched_metadata}
-          </strong>{" "}
-          {typeLabel} scored from BritBox catalog (approx.)
+          {filtered ? (
+            <>
+              <strong className="text-[var(--foreground)]">
+                {rf!.pool_size_after_filters}
+              </strong>{" "}
+              {typeLabel} in filtered pool
+              <span className="opacity-70">
+                {" "}
+                ({stats.matched_metadata} with metadata before filters)
+              </span>
+            </>
+          ) : (
+            <>
+              <strong className="text-[var(--foreground)]">
+                {stats.matched_metadata}
+              </strong>{" "}
+              {typeLabel} scored from BritBox catalog (approx.)
+            </>
+          )}
         </span>
         <span className="opacity-70">
           {stats.total_in_catalog} total in catalog
@@ -154,6 +190,14 @@ function StatsBanner({
           <span className="ml-auto opacity-50">Watchmode snapshot {date}</span>
         )}
       </div>
+      {rf?.similar_to?.trim() && rf.similar_to_resolved_title && (
+        <p className="mt-1.5 text-[11px] text-[var(--muted-soft)]">
+          Similar to resolved as:{" "}
+          <span className="text-[var(--foreground)]">{rf.similar_to_resolved_title}</span>
+          {" — "}
+          showing titles that share at least one of its genres.
+        </p>
+      )}
     </div>
   );
 }
@@ -237,6 +281,9 @@ const inactiveBtn =
 export function BritBoxRecommendations() {
   const [scoring, setScoring] = useState<ScoringMode>("high-fit");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("show");
+  const [poolFilters, setPoolFilters] = useState<RecommendationPoolFilterValues>(
+    getInitialPoolFilters
+  );
   const [highFitData, setHighFitData] = useState<HighFitResponse | null>(null);
   const [mlData, setMlData] = useState<MLResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -244,20 +291,21 @@ export function BritBoxRecommendations() {
   useEffect(() => {
     setLoading(true);
     const typeParam = `&title_type=${typeFilter === "all" ? "all" : typeFilter}`;
+    const filterQ = poolFiltersToQueryString(poolFilters);
     if (scoring === "ml") {
-      fetch(`${API_URL}/recommendations/britbox-ml?limit=15${typeParam}`)
+      fetch(`${API_URL}/recommendations/britbox-ml?limit=15${typeParam}${filterQ}`)
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then(setMlData)
         .catch(() => setMlData(null))
         .finally(() => setLoading(false));
     } else {
-      fetch(`${API_URL}/recommendations/britbox?limit=15${typeParam}`)
+      fetch(`${API_URL}/recommendations/britbox?limit=15${typeParam}${filterQ}`)
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then(setHighFitData)
         .catch(() => setHighFitData(null))
         .finally(() => setLoading(false));
     }
-  }, [scoring, typeFilter]);
+  }, [scoring, typeFilter, poolFilters]);
 
   const activeData = scoring === "ml" ? mlData : highFitData;
   const typeLabel =
@@ -266,6 +314,11 @@ export function BritBoxRecommendations() {
       : typeFilter === "movie"
         ? "films"
         : "titles";
+  const poolFiltersActive =
+    poolFilters.decade ||
+    poolFilters.yearMin ||
+    poolFilters.country.trim() ||
+    poolFilters.similarTo.trim();
 
   if (loading) {
     return (
@@ -323,6 +376,12 @@ export function BritBoxRecommendations() {
         </div>
       </div>
 
+      <RecommendationPoolFiltersBar
+        idPrefix="britbox"
+        value={poolFilters}
+        onChange={setPoolFilters}
+      />
+
       {activeData?.catalog_stats && (
         <StatsBanner
           stats={activeData.catalog_stats}
@@ -339,8 +398,9 @@ export function BritBoxRecommendations() {
         <>
           {highFitData.items.length === 0 ? (
             <p className="text-[14px] text-[var(--muted-soft)]">
-              No scoreable BritBox {typeLabel} yet. Enrich more metadata to
-              improve matching.
+              {poolFiltersActive
+                ? `No scoreable BritBox ${typeLabel} match these pool filters. Try clearing decade, year, country, or similar-to.`
+                : `No scoreable BritBox ${typeLabel} yet. Enrich more metadata to improve matching.`}
             </p>
           ) : (
             <ul className="space-y-4 sm:space-y-5">
@@ -378,7 +438,9 @@ export function BritBoxRecommendations() {
             </div>
           ) : mlData.items.length === 0 ? (
             <p className="text-[14px] text-[var(--muted-soft)]">
-              No scoreable BritBox {typeLabel} for ML ranking.
+              {poolFiltersActive
+                ? `No BritBox ${typeLabel} in the filtered pool for ML ranking. Try loosening filters.`
+                : `No scoreable BritBox ${typeLabel} for ML ranking.`}
             </p>
           ) : (
             <ul className="space-y-4 sm:space-y-5">
