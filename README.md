@@ -92,6 +92,76 @@ Runs `enrich_missing_metadata` on Railway against the deployed database. Populat
 
 Prints TitleMetadata coverage for country, languages, poster, actors, writer, plot, metascore, awards, rated. Includes separate counts for titles in IMDbRating and IMDbWatchlistItem. Requires `backend/.venv`.
 
+## Maintenance & refresh
+
+Practical commands for recurring data work. Run Python modules from **`backend`** with the venv below (adjust path if your venv lives elsewhere).
+
+| Command | When |
+|---------|------|
+| Rebuild title embeddings | After **metadata / title / plot** changes when **semantic similarity** (`similar_to` embeddings) should reflect new text. **Restart the backend** after regenerating `title_embeddings.npz` so the process reloads vectors. |
+| Retrain 8+ baseline | **Optional** — when you want **ML weights and feature vocab** (genres/countries/decades) refreshed from current ratings + metadata. Inference already reads live DB rows; retrain updates the model files. |
+| Fetch BritBox catalog | When the **provider catalog** may have changed (new/removed titles on the service). |
+| BritBox metadata report / enrich | When the snapshot has **low TitleMetadata coverage** for catalog IDs; enrich fills gaps via OMDb. |
+| `sync_remote.sh --parity` | After **local DB or CSV exports** should **match production** (ratings upsert + metadata overwrite). |
+
+**1. Rebuild title embeddings**
+
+```bash
+cd backend
+./.venv/bin/python -m app.scripts.generate_title_embeddings
+```
+
+**2. Retrain the 8+ baseline model**
+
+```bash
+cd backend
+./.venv/bin/python -m app.ml.train_8plus_baseline
+```
+
+**3. Refresh the BritBox catalog snapshot**
+
+```bash
+cd backend
+./.venv/bin/python -m app.scripts.fetch_britbox_catalog
+```
+
+**4. Check BritBox catalog metadata coverage**
+
+```bash
+cd backend
+./.venv/bin/python -m app.scripts.britbox_catalog_metadata
+```
+
+**5. Enrich missing metadata for the current BritBox snapshot**
+
+```bash
+cd backend
+./.venv/bin/python -m app.scripts.britbox_catalog_metadata --enrich --limit 40
+```
+
+**6. Retry recently failed BritBox metadata enrichments**
+
+```bash
+cd backend
+./.venv/bin/python -m app.scripts.britbox_catalog_metadata --enrich --retry-failed --limit 20
+```
+
+**7. Sync local DB-backed data to remote with parity**
+
+```bash
+./scripts/sync_remote.sh --parity
+```
+
+(Run from **repository root**; needs `REMOTE_API_URL` and `ADMIN_IMPORT_TOKEN` as in [Scripts quick reference](#scripts-quick-reference).)
+
+**Safe workflow after enrichment (example)**
+
+1. Enrich metadata (e.g. `./scripts/enrich_metadata_local.sh` or BritBox enrich commands above).
+2. Rebuild embeddings (command **1**), then restart the backend.
+3. Optionally retrain the model (command **2**).
+4. If BritBox listings matter: refresh the snapshot (command **3**), then check/enrich metadata (**4**–**6**) as needed.
+5. Push changes to production data: `./scripts/sync_remote.sh --parity`.
+
 ## Docker (local development)
 
 ```bash
