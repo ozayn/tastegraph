@@ -62,7 +62,7 @@ function ModeTabButton({
       role="tab"
       aria-selected={mode === id}
       onClick={() => onChange(id)}
-      className={`max-w-full shrink-0 rounded-md px-2.5 py-2 text-left text-[13px] leading-snug transition-colors sm:px-3.5 sm:py-2.5 sm:text-[14px] lg:px-4 ${
+      className={`max-w-full min-w-0 shrink rounded-md px-2 py-2 text-left text-[12px] leading-snug transition-colors sm:px-3 sm:py-2 sm:text-[13px] md:text-[14px] lg:px-3.5 ${
         mode === id
           ? "bg-[var(--control-surface)] font-semibold text-[var(--foreground)] shadow-sm ring-1 ring-[var(--card-border)]"
           : "font-medium text-[var(--muted)] hover:bg-[var(--card-hover)] hover:text-[var(--foreground)]"
@@ -86,7 +86,7 @@ export function RecommendationModeSwitcher({
   onChange: (mode: RecommendationMode) => void;
 }) {
   return (
-    <div className="flex w-full max-w-full flex-col gap-2.5 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-2 lg:gap-y-1.5">
+    <div className="flex w-full max-w-full flex-col gap-2 rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-1 xl:flex-row xl:flex-wrap xl:items-center xl:gap-x-2 xl:gap-y-1">
       <div
         role="tablist"
         aria-label="Library recommendation modes"
@@ -106,9 +106,9 @@ export function RecommendationModeSwitcher({
       <div
         role="group"
         aria-label="Catalog providers"
-        className="flex min-w-0 w-full flex-col gap-2 border-t border-[var(--card-border)]/55 pt-2 lg:flex-1 lg:flex-row lg:items-center lg:gap-2 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-2.5"
+        className="flex min-w-0 w-full flex-col gap-2 border-t border-[var(--card-border)]/55 pt-2 xl:flex-1 xl:flex-row xl:items-center xl:gap-2 xl:border-l xl:border-t-0 xl:pt-0 xl:pl-2.5"
       >
-        <span className="shrink-0 pl-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted-soft)] lg:pl-0">
+        <span className="shrink-0 pl-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted-soft)] xl:pl-0">
           Providers
         </span>
         <div

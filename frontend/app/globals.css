@@ -27,6 +27,31 @@
   --mondrian-yellow-muted: rgba(180, 83, 9, 0.06);
   --shift-increase: rgba(180, 95, 95, 0.10);
   --shift-decline: rgba(85, 115, 175, 0.10);
+  /* Page shell: one gutter + max width across routes (aligns with former max-w-2xl/3xl/4xl + px scale) */
+  --tg-gutter: 1rem;
+  --tg-content-max: 42rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --tg-gutter: 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --tg-content-max: 48rem;
+    --tg-gutter: 2.5rem;
+  }
+}
+
+/* lg: keep the same column cap as md (48rem / max-w-3xl); only widen gutters like lg:px-12.
+   Bumping --tg-content-max to 56rem here made the inner column ~7rem wider and read as edge-to-edge
+   for full-width blocks (e.g. Home recommendations) while nav stayed tied to the same token. */
+@media (min-width: 1024px) {
+  :root {
+    --tg-gutter: 3rem;
+  }
 }
 
 @theme inline {
@@ -102,6 +127,7 @@
 html {
   color-scheme: light dark;
   background: var(--background);
+  overflow-x: clip;
 }
 
 body {
@@ -110,6 +136,31 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  min-width: 0;
+}
+
+/**
+ * Centered content column shared by main pages + nav inner.
+ * Horizontal padding comes from --tg-gutter only (do not add px-* on the same node).
+ */
+.tg-main {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: var(--tg-content-max);
+  min-width: 0;
+  padding-left: var(--tg-gutter);
+  padding-right: var(--tg-gutter);
+}
+
+/** Full-bleed band within .tg-main (e.g. home overview) without horizontal scroll. */
+.tg-bleed-x {
+  margin-left: calc(-1 * var(--tg-gutter));
+  margin-right: calc(-1 * var(--tg-gutter));
+  padding-left: var(--tg-gutter);
+  padding-right: var(--tg-gutter);
 }
 
 .font-display {

@@ -15,14 +15,14 @@ export function ViewModeToggle({
 }) {
   return (
     <div
-      className={`flex rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] p-0.5${className ? ` ${className}` : ""}`}
+      className={`flex w-full max-w-full flex-wrap rounded-lg border border-[var(--section-border)] bg-[var(--section-bg)] p-0.5 sm:w-auto sm:flex-nowrap${className ? ` ${className}` : ""}`}
       role="group"
       aria-label="View mode"
     >
       <button
         type="button"
         onClick={() => onModeChange("scroll")}
-        className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+        className={`min-h-[40px] flex-1 rounded-md px-3 py-2 text-[13px] font-medium transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
           mode === "scroll"
             ? "bg-[var(--accent)] text-white"
             : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
@@ -33,7 +33,7 @@ export function ViewModeToggle({
       <button
         type="button"
         onClick={() => onModeChange("slide")}
-        className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
+        className={`min-h-[40px] flex-1 rounded-md px-3 py-2 text-[13px] font-medium transition-colors sm:min-h-0 sm:flex-none sm:py-1.5 ${
           mode === "slide"
             ? "bg-[var(--accent)] text-white"
             : "text-[var(--muted-soft)] hover:text-[var(--foreground)]"
@@ -103,7 +103,7 @@ export function SlideOrScrollContainer({
     <div className="relative">
       <div
         ref={containerRef}
-        className="flex h-[calc(100vh-12rem)] min-h-[420px] overflow-x-auto snap-x snap-mandatory overscroll-x-contain scroll-smooth"
+        className="flex h-[calc(100dvh-10.5rem)] min-h-[min(420px,85dvh)] overflow-x-auto snap-x snap-mandatory overscroll-x-contain scroll-smooth sm:h-[calc(100dvh-11.5rem)] sm:min-h-[420px]"
         style={{ scrollSnapType: "x mandatory" }}
         role="region"
         aria-label={ariaLabel}
@@ -111,10 +111,12 @@ export function SlideOrScrollContainer({
         {slides.map((slide, i) => (
           <div
             key={i}
-            className="flex min-w-full flex-shrink-0 snap-center justify-center overflow-y-auto px-2 sm:px-4"
+            className="flex min-w-full flex-shrink-0 snap-center justify-center overflow-y-auto px-1 sm:px-4"
             style={{ scrollSnapAlign: "center" }}
           >
-            <div className="w-full max-w-2xl py-2">{slide}</div>
+            <div className="w-full max-w-[min(100%,var(--tg-content-max))] py-2">
+              {slide}
+            </div>
           </div>
         ))}
       </div>

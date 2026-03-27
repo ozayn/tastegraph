@@ -20,26 +20,29 @@ export function NavBar() {
       className="sticky top-0 z-10 border-b border-[var(--card-border)] bg-[var(--card-bg)]"
       aria-label="Main navigation"
     >
-      <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-x-1 gap-y-2 px-4 py-3.5 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+      <div className="tg-main grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-2 gap-y-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-rows-1 sm:items-center sm:gap-x-3 sm:py-3.5">
         <Link
           href="/"
-          className="mr-2 shrink-0 sm:mr-4"
+          className="col-start-1 row-start-1 shrink-0 self-center"
           aria-label="TasteGraph home"
         >
           <img
             src="/logo-horizontal.svg"
             alt=""
-            className="h-6 w-auto sm:h-8"
+            className="h-6 w-auto sm:h-7"
           />
         </Link>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
+
+        <div className="col-span-2 col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-x-0.5 gap-y-1 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-center">
           {tabs.map(({ href, label }) => {
-            const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
+            const isActive =
+              pathname === href ||
+              (href !== "/" && pathname.startsWith(href));
             return (
               <Link
                 key={href}
                 href={href}
-                className={`shrink-0 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-[14px] ${
+                className={`shrink-0 rounded-md px-2.5 py-2 text-[13px] font-medium leading-none transition-colors sm:px-3 sm:py-2 sm:text-[14px] ${
                   isActive
                     ? "bg-[var(--section-bg)] text-[var(--foreground)] ring-1 ring-[var(--section-border)]"
                     : "text-[var(--muted)] hover:bg-[var(--section-bg)] hover:text-[var(--foreground)]"
@@ -50,7 +53,8 @@ export function NavBar() {
             );
           })}
         </div>
-        <div className="shrink-0 self-center">
+
+        <div className="col-start-2 row-start-1 justify-self-end self-center sm:col-start-3">
           <ThemeToggle />
         </div>
       </div>

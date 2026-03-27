@@ -274,7 +274,7 @@ function DivergingBarList<T extends { delta: number }>({
             <span className="w-16 min-w-0 shrink-0 truncate text-[14px] text-[var(--foreground)] sm:w-24">
               {renderLabel(item)}
             </span>
-            <div className="flex min-h-[18px] flex-1 items-stretch">
+            <div className="flex min-h-[18px] min-w-0 flex-1 items-stretch">
               <div className="flex flex-1 justify-end">
                 {delta < 0 && (
                   <div
@@ -514,8 +514,8 @@ function BarChart({
   return (
     <div className="space-y-3">
       {items.map((d, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <span className="w-10 shrink-0 text-[13px] font-medium tabular-nums text-[var(--foreground)]">
+        <div key={i} className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <span className="w-9 min-w-0 shrink-0 truncate text-[12px] font-medium tabular-nums text-[var(--foreground)] sm:w-10 sm:text-[13px]">
             {getLabel(d)}
           </span>
           <div className="min-w-0 flex-1">
@@ -554,8 +554,8 @@ export default function StudiesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
+      <div className="min-h-screen min-w-0 bg-[var(--background)]">
+        <main className="tg-main pb-28 pt-10 sm:pt-12 sm:pb-32 md:pt-14 md:pb-40">
           <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
             Loading studies…
@@ -567,8 +567,8 @@ export default function StudiesPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+      <div className="min-h-screen min-w-0 bg-[var(--background)]">
+        <main className="tg-main pb-28 pt-10">
           <p className="text-[14px] text-[var(--muted-soft)]">
             Unable to load studies. Check that the backend is running.
           </p>
@@ -598,11 +598,11 @@ export default function StudiesPage() {
   allSignals.sort((a, b) => (b.score ?? b.lift) - (a.score ?? a.lift));
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
+    <div className="min-h-screen min-w-0 bg-[var(--background)]">
+      <main className="tg-main pb-28 pt-10 sm:pt-12 sm:pb-32 md:pt-14 md:pb-40">
         <header className="mb-14 sm:mb-16 md:mb-20">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
                 Studies
               </h1>
@@ -610,7 +610,7 @@ export default function StudiesPage() {
                 Analytical deep-dives into your viewing patterns.
               </p>
             </div>
-            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="shrink-0" />
+            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="w-full min-w-0 sm:w-auto sm:shrink-0" />
           </div>
         </header>
 

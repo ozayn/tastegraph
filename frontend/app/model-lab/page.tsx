@@ -106,8 +106,8 @@ export default function ModelLabPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+      <div className="min-h-screen min-w-0 bg-[var(--background)]">
+        <main className="tg-main pb-28 pt-10">
           <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
             Loading Model Lab…
@@ -124,11 +124,11 @@ export default function ModelLabPage() {
   const hfOnly = [...hfIds].filter((id) => !mlIds.has(id)).length;
 
   return (
-    <div className="model-lab min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
+    <div className="model-lab min-h-screen min-w-0 bg-[var(--background)]">
+      <main className="tg-main pb-28 pt-10 sm:pt-12 sm:pb-32 md:pt-14 md:pb-40">
         <header className="mb-10 sm:mb-12">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
                 Model Lab
               </h1>
@@ -137,7 +137,7 @@ export default function ModelLabPage() {
                 <code className="text-[12px]">docs/ml-current-snapshot.md</code>.
               </p>
             </div>
-            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+            <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:w-auto sm:shrink-0 sm:items-end">
               <ViewModeToggle mode={mode} onModeChange={handleModeChange} />
               <Link
                 href="/learn"

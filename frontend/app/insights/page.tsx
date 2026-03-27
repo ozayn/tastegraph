@@ -331,8 +331,8 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
+      <div className="min-h-screen min-w-0 bg-[var(--background)]">
+        <main className="tg-main pb-28 pt-10 sm:pt-12 sm:pb-32 md:pt-14 md:pb-40">
           <div className="flex items-center gap-2 text-[14px] text-[var(--muted-soft)]">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-subtle)]" />
             Loading insights…
@@ -344,8 +344,8 @@ export default function InsightsPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[var(--background)]">
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 md:max-w-3xl md:px-10 lg:max-w-4xl lg:px-12">
+      <div className="min-h-screen min-w-0 bg-[var(--background)]">
+        <main className="tg-main pb-28 pt-10">
           <p className="text-[14px] text-[var(--muted-soft)]">
             Unable to load insights. Check that the backend is running.
           </p>
@@ -371,11 +371,11 @@ export default function InsightsPage() {
   })();
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-10 sm:px-8 sm:pt-12 sm:pb-32 md:max-w-3xl md:px-10 md:pt-14 md:pb-40 lg:max-w-4xl lg:px-12">
+    <div className="min-h-screen min-w-0 bg-[var(--background)]">
+      <main className="tg-main pb-28 pt-10 sm:pt-12 sm:pb-32 md:pt-14 md:pb-40">
         <header className="mb-10 sm:mb-12">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <h1 className="text-[24px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px] md:text-[32px]">
                 Insights
               </h1>
@@ -383,7 +383,7 @@ export default function InsightsPage() {
                 Aggregated viewing history and taste profile from your ratings.
               </p>
             </div>
-            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="shrink-0" />
+            <ViewModeToggle mode={mode} onModeChange={handleModeChange} className="w-full min-w-0 sm:w-auto sm:shrink-0" />
           </div>
         </header>
 

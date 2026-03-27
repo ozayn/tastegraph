@@ -88,7 +88,7 @@ export function HighFitCard({
 
   const cardShell = isProviderCatalog
     ? "group block overflow-hidden rounded-lg border border-[var(--card-border)] bg-[var(--control-surface)] transition-colors duration-200 hover:border-[var(--muted-soft)]"
-    : "group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-md";
+    : "group block overflow-hidden rounded-xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-sm";
 
   return (
     <a
@@ -100,8 +100,8 @@ export function HighFitCard({
       <div
         className={
           isProviderCatalog
-            ? "flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5"
-            : "flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5"
+            ? "flex gap-2.5 px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5"
+            : "flex gap-3 px-3 py-3.5 sm:gap-5 sm:px-5 sm:py-5"
         }
       >
         {showPoster && (

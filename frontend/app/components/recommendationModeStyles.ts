@@ -37,7 +37,7 @@ export const RECO_LOADING_DOT =
   "inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--muted-soft)]";
 
 /** Grid only (no top margin) — use inside stacks that already separate blocks. */
-export const RECO_RESULTS_GRID = "grid gap-4 sm:gap-5";
+export const RECO_RESULTS_GRID = "grid gap-3 sm:gap-4 md:gap-5";
 
 /** Results list: spacing from controls / secondary content. */
 export const RECO_RESULTS_LIST = `mt-5 ${RECO_RESULTS_GRID}`;

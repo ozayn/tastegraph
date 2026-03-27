@@ -35,9 +35,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${cormorant.variable} ${dmSans.variable} antialiased`}>
+      <body
+        className={`${cormorant.variable} ${dmSans.variable} min-w-0 antialiased`}
+      >
         <NavBar />
-        {children}
+        <div className="min-w-0">{children}</div>
       </body>
     </html>
   );

@@ -80,13 +80,13 @@ export function SectionHelp({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={title}
-        className="ml-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--muted-soft)] transition-colors hover:bg-[var(--section-bg)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 focus:ring-offset-2 focus:ring-offset-[var(--background)]"
+        className="ml-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--muted-soft)] transition-colors hover:bg-[var(--section-bg)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 focus:ring-offset-2 focus:ring-offset-[var(--background)] sm:h-8 sm:w-8"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="h-3.5 w-3.5"
+          className="h-4 w-4 sm:h-3.5 sm:w-3.5"
           aria-hidden
         >
           <path

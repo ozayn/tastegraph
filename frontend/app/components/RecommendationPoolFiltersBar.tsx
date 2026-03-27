@@ -162,7 +162,7 @@ export function RecommendationPoolFiltersBar({
         </div>
       )}
       {showCountry && !catalogProviderSlug && countryEntry === "text" && (
-        <div className="flex min-w-[8rem] max-w-[11rem] flex-1 flex-col">
+        <div className="flex min-w-0 max-w-full flex-1 flex-col sm:min-w-[8rem] sm:max-w-[11rem]">
           <input
             id={`${idPrefix}-country`}
             type="text"

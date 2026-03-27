@@ -396,9 +396,9 @@ export function ProviderCatalogRecommendations({
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
         <div
-          className="inline-flex rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-0.5"
+          className="inline-flex max-w-full flex-wrap rounded-md border border-[var(--card-border)] bg-[var(--control-track-bg)] p-0.5"
           role="tablist"
           aria-label="Ranking"
         >
@@ -409,7 +409,7 @@ export function ProviderCatalogRecommendations({
               role="tab"
               aria-selected={scoring === m}
               onClick={() => setScoring(m)}
-              className={`rounded px-2.5 py-1 text-[12px] font-medium transition-colors ${
+              className={`rounded px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                 scoring === m ? segActive : segInactive
               } ${scoring === m ? "bg-[var(--control-surface)] shadow-sm ring-1 ring-[var(--card-border)]" : ""}`}
             >

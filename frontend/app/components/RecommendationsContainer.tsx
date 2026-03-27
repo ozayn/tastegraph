@@ -28,9 +28,9 @@ export function RecommendationsContainer() {
 
   return (
     <section aria-labelledby="home-recommendations-heading">
-      <div className="rounded-xl border border-[var(--card-border)] bg-[var(--panel-bg)] p-4 shadow-sm sm:p-5">
-        <div className="max-w-2xl border-l-2 border-[var(--accent)] pl-4 sm:pl-5">
-          <h2 id="home-recommendations-heading" className="font-display text-[26px] font-medium leading-[1.2] tracking-[-0.02em] text-[var(--foreground)] sm:text-[30px]">
+      <div className="rounded-xl border border-[var(--card-border)] bg-[var(--panel-bg)] p-3.5 shadow-sm sm:p-5">
+        <div className="max-w-2xl border-l-2 border-[var(--accent)] pl-3 sm:pl-5">
+          <h2 id="home-recommendations-heading" className="font-display text-[22px] font-medium leading-[1.2] tracking-[-0.02em] text-[var(--foreground)] sm:text-[28px] md:text-[30px]">
             Recommendations
             <SectionHelp title="How this works">
               <p>
@@ -46,10 +46,10 @@ export function RecommendationsContainer() {
           </p>
         </div>
 
-        <div className="mt-5 sm:mt-6">
+        <div className="mt-4 sm:mt-6">
           <RecommendationModeSwitcher mode={mode} onChange={setMode} />
         </div>
-        <div className="mt-5 min-h-[22rem] sm:mt-6 sm:min-h-[26rem]">
+        <div className="mt-4 min-h-[18rem] sm:mt-6 sm:min-h-[24rem] md:min-h-[26rem]">
           {mode === "for-you" && <SimpleRecommendations embedded />}
           {mode === "watchlist" && <WatchlistRecommendations embedded />}
           {mode === "high-fit" && <HighFitModeContent />}

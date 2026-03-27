@@ -61,11 +61,11 @@ export function RecommendationCard({
       href={`https://www.imdb.com/title/${imdb_title_id}/`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-md"
+      className="group block overflow-hidden rounded-xl border border-[var(--card-border)] bg-[var(--control-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--muted-soft)] hover:shadow-sm"
     >
-      <div className="flex gap-4 px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
+      <div className="flex gap-3 px-3 py-3.5 sm:gap-5 sm:px-5 sm:py-5">
         {showPoster && (
-          <div className="h-[5.5rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
+          <div className="h-[5rem] w-[3.4rem] shrink-0 overflow-hidden rounded-md bg-[var(--control-track-bg)] ring-1 ring-[var(--card-border)] sm:h-[6.75rem] sm:w-[4.5rem]">
             <img
               src={poster!}
               alt=""

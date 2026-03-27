@@ -13,10 +13,10 @@ import { TasteHints } from "./components/TasteHints";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-6 sm:px-8 sm:pt-8 sm:pb-32 md:max-w-3xl md:px-10 md:pt-10 md:pb-40 lg:max-w-4xl lg:px-12">
+    <div className="min-h-screen min-w-0 bg-[var(--background)]">
+      <main className="tg-main pb-28 pt-6 sm:pt-8 sm:pb-32 md:pt-10 md:pb-40">
         {/* Overview band: grouped intro + stats; subtle surface separates from nav and from recommendations */}
-        <div className="-mx-4 rounded-b-xl bg-[var(--section-bg)] px-4 pb-8 pt-6 sm:-mx-8 sm:px-8 sm:pb-10 sm:pt-8 md:-mx-10 md:px-10 lg:-mx-12 lg:px-12">
+        <div className="tg-bleed-x rounded-b-xl bg-[var(--section-bg)] pb-8 pt-6 sm:pb-10 sm:pt-8">
           <header className="border-b border-[var(--section-border)] pb-5 sm:pb-6">
             <h1 className="font-display max-w-2xl text-[22px] font-medium leading-[1.3] tracking-[-0.02em] text-[var(--foreground)] sm:text-[26px]">
               Recommendations from your IMDb ratings, watchlist, and taste signals.
