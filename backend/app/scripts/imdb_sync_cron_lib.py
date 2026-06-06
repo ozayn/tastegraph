@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.imports.favorite_list import import_favorite_list_from_csv
 from app.imports.favorite_people import import_favorite_people_from_csv
 from app.imports.ratings import import_ratings_from_csv
+from app.imports.title_metadata import import_title_metadata_from_csv
 from app.imports.watchlist import import_watchlist_from_csv
 
 SOURCE_FILES: dict[str, str] = {
@@ -19,6 +20,7 @@ SOURCE_FILES: dict[str, str] = {
     "watchlist": "watchlist.csv",
     "favorite_list": "favorite_list.csv",
     "favorite_people": "favorite_people.csv",
+    "title_metadata": "title_metadata.csv",
 }
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -117,5 +119,12 @@ def run_import_for_source(db: Session, key: str, path: Path) -> dict[str, Any]:
             "deleted": deleted,
             "errors": err,
             "format": fmt,
+        }
+    if key == "title_metadata":
+        ins, upd = import_title_metadata_from_csv(db, path, overwrite=False)
+        return {
+            "source": key,
+            "inserted": ins,
+            "updated": upd,
         }
     raise ValueError(f"unknown source {key!r}")

@@ -60,13 +60,14 @@ def _parse_args() -> argparse.Namespace:
         "--data-dir",
         type=Path,
         default=default_data_dir(),
-        help="Directory with ratings.csv, watchlist.csv, favorite_list.csv, favorite_people.csv",
+        help="Directory with ratings.csv, watchlist.csv, favorite_list.csv, favorite_people.csv, title_metadata.csv",
     )
     p.add_argument("--state-file", type=Path, default=default_state_path(), help="JSON hash state")
     p.add_argument("--ratings", type=Path, default=None)
     p.add_argument("--watchlist", type=Path, default=None)
     p.add_argument("--favorite-list", type=Path, default=None)
     p.add_argument("--favorite-people", type=Path, default=None)
+    p.add_argument("--title-metadata", type=Path, default=None)
     p.add_argument("--dry-run", action="store_true", help="Print plan only; no DB or state writes")
     p.add_argument(
         "--skip-enrich",
@@ -111,6 +112,7 @@ def main() -> None:
         "watchlist": args.watchlist,
         "favorite_list": args.favorite_list,
         "favorite_people": args.favorite_people,
+        "title_metadata": args.title_metadata,
     }
     paths = resolve_paths(args.data_dir, overrides)
     state_path: Path = args.state_file
