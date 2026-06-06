@@ -1,16 +1,16 @@
 # IMDb export refresh via Playwright (local machine only)
 
-**Do not use this path on Railway, Docker production images, or any host where you only install `requirements.txt`.**
+**Supported path for automated source refresh outside Railway.** Playwright and Chromium are **not** installed on Railway or in the production Docker image (`requirements.txt` only). Install them on a **developer machine** (or another external runner) via `requirements-imdb-browser.txt`.
 
-Playwright and Chromium are **not** part of the normal backend dependency set. The backend `Dockerfile` runs `pip install -r requirements.txt` only. Optional browser automation is installed explicitly via `requirements-imdb-browser.txt` on a **developer workstation** when you want to drive IMDb’s logged-in **Export** UI.
+**Railway** runs **downstream only**: `cron_sync_imdb`, metadata enrichment, optional embeddings/ML — after CSVs reach production via volume, `sync_remote.sh`, or admin import. See [imdb-export-sync.md](imdb-export-sync.md).
 
-**Railway / unattended refresh:** use `refresh_imdb_public_scrape` + `cron_sync_imdb` as described in [imdb-export-sync.md](imdb-export-sync.md) (HTTP scrape; best-effort).
+**Do not** rely on `refresh_imdb_public_scrape` for production; public HTTP scrape is experimental and is often blocked by IMDb.
 
 ---
 
-## Why keep this at all?
+## Why this path?
 
-IMDb does not offer a stable authenticated HTTP API for the same CSVs as the Export button. Playwright can reuse a saved session and download exports **locally**, after which you can copy `data/imdb/*.csv` into place or sync via your usual workflow.
+IMDb does not offer a stable authenticated HTTP API for the same CSVs as the Export button. Playwright reuses a saved session and downloads exports **locally**. You then copy `data/imdb/*.csv` into place, run `cron_sync_imdb` locally, or push to Railway with `sync_remote.sh`.
 
 ## One-time setup (local)
 
@@ -57,9 +57,12 @@ playwright install chromium
 
 ## After a local refresh
 
-- Point `cron_sync_imdb` at the same `data/imdb/` on that machine, **or**
-- Copy the CSVs to another environment and run sync there, **or**
-- Use admin import / `sync_remote.sh` as you do today.
+Typical flow:
+
+1. **Local DB** — `cd backend && python -m app.scripts.cron_sync_imdb`
+2. **Production (Railway)** — from repo root: `./scripts/sync_remote.sh` (or `--parity`), **or** admin CSV import, **or** copy CSVs to a Railway volume and run `cron_sync_imdb` there
+
+Railway should **not** run `refresh_imdb_exports`; only the downstream sync step.
 
 ## Reliability
 

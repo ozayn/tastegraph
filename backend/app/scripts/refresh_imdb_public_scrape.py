@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Cron-friendly: fetch public IMDb pages, write defensive CSVs under data/imdb/, then stop.
+"""EXPERIMENTAL / best-effort: fetch public IMDb pages, write defensive CSVs under data/imdb/.
 
-Does **not** touch the database. Run ``python -m app.scripts.cron_sync_imdb`` after this
-to mirror-import when hashes change.
+**Not the supported production refresh path.** IMDb often blocks automated HTTP
+(``202`` + empty body); validation then refuses to overwrite CSVs. For real source
+refresh use manual Export or local ``refresh_imdb_exports`` (Playwright); Railway
+should only run ``cron_sync_imdb`` downstream. See ``docs/imdb-export-sync.md``.
 
-Environment (URLs — omit to skip that source):
+Does **not** touch the database. If scrape succeeds, run ``cron_sync_imdb`` to mirror-import.
+
+Environment (URLs — omit to skip that source; set in ``backend/.env`` or the process env; defined on ``app.core.config.Settings``):
 
 - ``IMDB_SCRAPE_LIST_URL`` → ``favorite_list.csv``
 - ``IMDB_SCRAPE_WATCHLIST_URL`` → ``watchlist.csv``

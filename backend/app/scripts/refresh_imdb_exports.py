@@ -1,8 +1,8 @@
 """Download fresh IMDb export CSVs via Playwright (logged-in browser session).
 
-**Local developer machine only — not for Railway, Docker production, or any host
-that only installs ``requirements.txt``.** Use ``refresh_imdb_public_scrape`` for
-unattended server refresh. See ``docs/imdb-playwright-local-only.md``.
+**Local / external source refresh — not for Railway.** Supported automated refresh
+outside production containers. Railway only runs downstream ``cron_sync_imdb``.
+See ``docs/imdb-playwright-local-only.md``.
 
 Uses IMDb’s own **Export** UI (no HTML scraping of title rows). Saves files next
 to the existing sync pipeline::

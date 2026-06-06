@@ -1,6 +1,70 @@
 # IMDb export → TasteGraph sync
 
-TasteGraph ingests **CSV exports** from IMDb (manual **Export** while logged in is the most reliable source). An optional **public HTTP scrape** can regenerate those CSVs for cron; see **Public scrape refresh** below for limits and safety behavior.
+TasteGraph ingests **CSV exports** from IMDb. The supported model splits **source refresh** (get new CSVs) from **downstream sync** (mirror into Postgres, enrich metadata, optional embeddings/ML).
+
+## Architecture (supported production model)
+
+```mermaid
+flowchart LR
+  subgraph external ["Source refresh (outside Railway)"]
+    A[Manual Export / local Playwright / other runner]
+    A --> B["data/imdb/*.csv"]
+  end
+  subgraph railway ["Railway (downstream only)"]
+    B --> C[cron_sync_imdb]
+    C --> D[Mirror import]
+    D --> E[OMDb enrichment]
+    E --> F["Optional: embeddings / ML train"]
+  end
+```
+
+| Role | Where | What runs |
+|------|--------|-----------|
+| **Source refresh** | Your laptop, CI, or any machine with browser/login | Manual IMDb **Export**, or [local Playwright](imdb-playwright-local-only.md), then copy CSVs or push via `sync_remote.sh` / admin import |
+| **Downstream sync** | **Railway** (or any host with the app DB) | `cron_sync_imdb` → mirror import → bounded OMDb enrichment; optionally `--embeddings` / `--train-ml` on a rare schedule |
+
+**Railway does not refresh IMDb source files.** It only consumes CSVs that already exist (volume, upload, or remote import). Public HTTP scrape (`refresh_imdb_public_scrape`) is **experimental** — see [Experimental: public scrape](#experimental-public-scrape-best-effort-only); do not rely on it in production (IMDb often returns `202` with empty bodies).
+
+### Recommended commands
+
+**1. Local / external — refresh source CSVs**
+
+```bash
+cd backend
+
+# Option A: manual — download from IMDb Export UI, copy into ../data/imdb/ with standard names
+
+# Option B: automated on your machine (Playwright + saved session)
+pip install -r requirements-imdb-browser.txt && playwright install chromium
+python -m app.scripts.imdb_playwright_save_storage -o ../data/imdb/.playwright_storage_state.json
+python -m app.scripts.refresh_imdb_exports
+```
+
+Then push data to production if needed (from repo root):
+
+```bash
+./scripts/sync_remote.sh          # or --parity when you want full mirror parity
+```
+
+**2. Railway — sync and enrich only**
+
+Scheduled job on the backend service (no Playwright, no scrape refresh):
+
+```bash
+cd /path/to/tastegraph/backend && /path/to/venv/bin/python -m app.scripts.cron_sync_imdb
+```
+
+Weekly metadata backlog without new CSVs:
+
+```bash
+python -m app.scripts.cron_sync_imdb --enrich-if-unchanged --enrich-limit 25
+```
+
+**3. Local — same downstream path as Railway** (when CSVs are already in `data/imdb/`):
+
+```bash
+cd backend && python -m app.scripts.cron_sync_imdb
+```
 
 ## What to download on IMDb
 
@@ -113,19 +177,17 @@ If **no** CSV changed and you did not pass `--enrich-if-unchanged`, the script e
 
 ### Recommended schedules
 
-1. **Often** (e.g. hourly): drop fresh IMDb exports into `data/imdb/` with standard names, then:
+1. **Source refresh (external, e.g. daily/weekly):** refresh CSVs on your machine (manual Export or `refresh_imdb_exports`), then `sync_remote.sh` or upload to wherever Railway reads `data/imdb/` — **not** on the Railway cron itself.
 
-   ```bash
-   cd /path/to/tastegraph/backend && /path/to/venv/bin/python -m app.scripts.cron_sync_imdb
-   ```
+2. **Railway (e.g. hourly):** downstream only — `cron_sync_imdb` when CSVs on the service have changed (or after remote import updated the DB via admin API).
 
-2. **Occasionally** (e.g. weekly) to drain metadata backlog without new CSVs:
+3. **Railway (weekly):** drain metadata backlog without new CSVs:
 
    ```bash
    python -m app.scripts.cron_sync_imdb --enrich-if-unchanged --enrich-limit 25
    ```
 
-3. **Rarely**: after meaningful library changes, optionally add `--embeddings` to the job that already saw imports, or run `generate_title_embeddings` manually. Run `train_8plus_baseline` on its own cadence (e.g. monthly), not every import.
+4. **Rarely:** after meaningful library changes, optionally add `--embeddings` to a job that already saw imports, or run `generate_title_embeddings` manually. Run `train_8plus_baseline` on its own cadence (e.g. monthly), not every import.
 
 ### Flags (see `--help`)
 
@@ -141,19 +203,21 @@ If **no** CSV changed and you did not pass `--enrich-if-unchanged`, the script e
 
 ### Operational assumption
 
-By default the cron job only reads local CSVs. **On Railway (or any production image),** refresh CSVs with **`refresh_imdb_public_scrape`** (HTTP; see below), then `cron_sync_imdb`. **Playwright is local-only** and is not installed from `requirements.txt`; see [imdb-playwright-local-only.md](imdb-playwright-local-only.md) if you use a browser on your laptop to run Export.
+`cron_sync_imdb` only reads **existing** CSVs and updates the DB when hashes change. **Refreshing those CSVs is an external step** (manual Export, local Playwright — see [imdb-playwright-local-only.md](imdb-playwright-local-only.md), or `sync_remote.sh` from a machine that has fresh data). **Railway cron = downstream sync/enrich only.**
 
 ---
 
-## Public scrape refresh (Railway, no browser)
+## Experimental: public scrape (best-effort only)
 
-For **unattended** jobs without Chromium, `refresh_imdb_public_scrape` fetches **public** URLs with HTTP and writes the same filenames under `data/imdb/`. `cron_sync_imdb` remains the downstream mirror import + enrich.
+**Not the supported production path.** `refresh_imdb_public_scrape` fetches public IMDb URLs with HTTP and writes the same filenames under `data/imdb/`. In practice IMDb often **blocks automated requests** (`202 Accepted` with **0-byte** bodies from datacenter IPs), so this usually **fails validation** and **does not overwrite** CSVs — which is intentional fail-safe behavior, not a reliable refresh mechanism.
 
-### Limitations (important)
+Kept for experimentation and possible future use; **do not schedule this on Railway** as your primary source refresh.
 
-- IMDb often serves **client-rendered** HTML or **empty shells** to datacenter IPs; responses may contain **no `tt…` ids**, so validation fails and **no CSV is replaced** (by design).
+### Why it usually fails
+
+- **Client-rendered** pages and **anti-bot** responses (empty shells, no `tt…` ids).
 - Layout and embedded JSON change without notice; extraction is **heuristic**.
-- **Ratings** are only written if this scraper can infer a **numeric 1–10 rating for every extracted title** on the page. If not, it **skips** `ratings.csv` so mirror sync cannot **wipe** scores with blanks.
+- **Ratings** are only written if a **numeric 1–10 rating** is parsed for **every** title; otherwise `ratings.csv` is skipped so mirror sync cannot wipe scores.
 
 ### Environment
 
@@ -176,20 +240,18 @@ Last accepted counts are stored in `data/imdb/.scrape_refresh_state.json` (gitig
 - Successful writes use a temp `*.csv.part` file and **atomic replace** of the target CSV.
 - Failed sources leave the **previous** CSV on disk, so the next `cron_sync_imdb` sees an **unchanged hash** and does **not** mirror-clear that table.
 
-### Full cron pipeline (Railway)
-
-From the `backend` directory (adjust venv path):
+If you try it locally (not recommended for production):
 
 ```bash
-cd /path/to/tastegraph/backend && /path/to/venv/bin/python -m app.scripts.refresh_imdb_public_scrape && /path/to/venv/bin/python -m app.scripts.cron_sync_imdb
+cd backend && python -m app.scripts.refresh_imdb_public_scrape
+# then, only if scrape succeeded:
+python -m app.scripts.cron_sync_imdb
 ```
-
-Using `&&` means a scrape failure exits non-zero and **skips** sync for that run (DB untouched). To always attempt sync, use `;` instead (usually **not** recommended if you rely on scrape for CSV freshness).
 
 ---
 
-## Local-only: Playwright + Export button
+## Local source refresh: Playwright + Export button
 
-**Not for Railway.** The backend ships without Playwright; production images install **`requirements.txt` only**.
+**Recommended automated refresh outside Railway.** The backend ships without Playwright; production images install **`requirements.txt` only**.
 
-To drive IMDb’s logged-in **Export** flow on your **own computer**, install the optional browser stack and follow [imdb-playwright-local-only.md](imdb-playwright-local-only.md).
+To drive IMDb’s logged-in **Export** flow on your **own computer**, install the optional browser stack and follow [imdb-playwright-local-only.md](imdb-playwright-local-only.md). Then run `cron_sync_imdb` locally or push data to Railway via `sync_remote.sh` / admin import.

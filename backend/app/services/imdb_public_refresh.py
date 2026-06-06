@@ -1,5 +1,8 @@
 """
-Defensive **public-page** refresh for IMDb-derived CSVs (Railway / cron, no browser).
+Experimental **public-page** refresh for IMDb-derived CSVs (HTTP only, no browser).
+
+**Not the supported production path.** Source refresh should happen outside Railway
+(manual Export or local Playwright). Railway runs downstream ``cron_sync_imdb`` only.
 
 Fetches configured URLs with httpx, extracts title ids (``tt…``) and optionally
 people (``nm…``) from embedded JSON and/or raw HTML. Writes CSV files compatible
@@ -8,9 +11,9 @@ replacing ``data/imdb/*.csv``.
 
 **Limitations (read this)**
 
-- IMDb is largely **client-rendered** and may **block datacenter IPs** or return
-  empty shells. This path may **often fail validation** in production; official
-  CSV export or authenticated automation remains more reliable.
+- IMDb often **blocks** automated requests (e.g. ``202 Accepted`` with **0-byte** body).
+  Failed validation **does not overwrite** existing CSVs (fail-safe).
+- Pages are largely **client-rendered**; official Export or local Playwright is reliable.
 - Layout and embedded JSON **change without notice**; extraction is **best-effort**.
 - **Ratings**: mirror import needs real scores. If this module cannot extract a
   numeric rating for **every** scraped title row, it **does not write**
@@ -50,6 +53,18 @@ DEFAULT_UA = (
 )
 
 
+def merge_backend_dotenv_into_environ() -> None:
+    """Load ``backend/.env`` into ``os.environ`` (no override) for IMDB_SCRAPE_* keys not on Settings."""
+    try:
+        from dotenv import load_dotenv
+
+        from app.core.config import ENV_FILE_PATH
+
+        load_dotenv(ENV_FILE_PATH, override=False)
+    except ImportError:
+        pass
+
+
 @dataclass
 class RefreshConfig:
     """Env-driven URLs; unset URL => skip that target."""
@@ -74,6 +89,9 @@ class RefreshConfig:
 
     @classmethod
     def from_env(cls, output_dir: Path, state_path: Path) -> RefreshConfig:
+        merge_backend_dotenv_into_environ()
+        from app.core.config import settings
+
         def _min(key: str, default: int) -> int:
             raw = os.environ.get(f"IMDB_SCRAPE_MIN_{key.upper()}", "")
             if not raw.strip():
@@ -83,16 +101,17 @@ class RefreshConfig:
             except ValueError:
                 return default
 
+        def _url(val: str) -> str | None:
+            s = (val or "").strip()
+            return s or None
+
         return cls(
             output_dir=output_dir,
             state_path=state_path,
-            list_url=os.environ.get("IMDB_SCRAPE_LIST_URL", "").strip() or None,
-            watchlist_url=os.environ.get("IMDB_SCRAPE_WATCHLIST_URL", "").strip() or None,
-            ratings_url=os.environ.get("IMDB_SCRAPE_RATINGS_URL", "").strip() or None,
-            favorite_people_url=os.environ.get(
-                "IMDB_SCRAPE_FAVORITE_PEOPLE_URL", ""
-            ).strip()
-            or None,
+            list_url=_url(settings.IMDB_SCRAPE_LIST_URL),
+            watchlist_url=_url(settings.IMDB_SCRAPE_WATCHLIST_URL),
+            ratings_url=_url(settings.IMDB_SCRAPE_RATINGS_URL),
+            favorite_people_url=_url(settings.IMDB_SCRAPE_FAVORITE_PEOPLE_URL),
             min_counts={
                 "favorite_list": _min("FAVORITE_LIST", 1),
                 "watchlist": _min("WATCHLIST", 1),
@@ -440,6 +459,7 @@ def run_public_refresh(cfg: RefreshConfig) -> dict[str, Any]:
 
     Returns summary dict for logging.
     """
+    merge_backend_dotenv_into_environ()
     summary: dict[str, Any] = {"written": [], "skipped": [], "errors": []}
     state = _load_state(cfg.state_path)
     state.setdefault("sources", {})

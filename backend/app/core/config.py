@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve backend root so .env loads correctly regardless of cwd
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 _ENV_FILE = _BACKEND_ROOT / ".env"
+# Exposed for scripts that need ``load_dotenv`` so ``os.environ`` matches ``backend/.env``.
+ENV_FILE_PATH = _ENV_FILE
 
 
 class Settings(BaseSettings):
@@ -42,12 +44,20 @@ class Settings(BaseSettings):
     PORT: int = 8000
     # Admin import: token required in X-Admin-Import-Token header for CSV upload endpoints
     ADMIN_IMPORT_TOKEN: str = ""
+    # Optional: experimental public scrape URLs (refresh_imdb_public_scrape; not production path)
+    IMDB_SCRAPE_LIST_URL: str = ""
+    IMDB_SCRAPE_WATCHLIST_URL: str = ""
+    IMDB_SCRAPE_RATINGS_URL: str = ""
+    IMDB_SCRAPE_FAVORITE_PEOPLE_URL: str = ""
     # LLM search: Groq API key for grounded watchlist search (OpenAI-compatible)
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.1-8b-instant"
 
-    class Config:
-        env_file = _ENV_FILE
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

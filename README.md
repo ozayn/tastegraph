@@ -195,6 +195,7 @@ Deploy frontend, backend, and Postgres as separate Railway services. Set the roo
 | `OMDB_API_KEY`      | No       | Optional, for metadata enrichment                       |
 
 - After deploy, run migrations: `alembic upgrade head` (via Railway shell or CLI)
+- **IMDb data:** refresh CSVs **outside** Railway (manual Export or local Playwright), then push via `sync_remote.sh` or admin import. On Railway, schedule **downstream only**: `python -m app.scripts.cron_sync_imdb` (+ optional `--enrich-if-unchanged`). See `backend/docs/imdb-export-sync.md`.
 
 ### 3. Frontend service
 

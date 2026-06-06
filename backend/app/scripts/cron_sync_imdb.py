@@ -9,7 +9,9 @@ success, then run a **bounded** OMDb enrichment batch for missing/incomplete
 metadata (ratings + watchlist + favorite_list). Optional: regenerate embeddings
 or run ML training (off by default; heavy).
 
-Assumes CSVs are produced by IMDb export, `refresh_imdb_public_scrape`, or synced there by you.
+Assumes CSVs already exist (manual Export, local Playwright refresh, sync_remote, or
+admin import). This is the **downstream** step for Railway/production; it does not
+refresh IMDb source files. See docs/imdb-export-sync.md.
 
 Examples:
   cd backend && python -m app.scripts.cron_sync_imdb
