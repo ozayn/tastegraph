@@ -10,6 +10,7 @@ import {
   RecommendationPoolFiltersBar,
   type RecommendationPoolFilterValues,
 } from "./RecommendationPoolFiltersBar";
+import { normalizeExploreDecade } from "./recoFilterPickers";
 import {
   RECO_EMPTY_MESSAGE,
   RECO_LOADING_DOT,
@@ -84,7 +85,7 @@ export function HighFitWatchlist() {
   }, [poolFilters]);
 
   const filtersActive =
-    poolFilters.decade ||
+    !!normalizeExploreDecade(poolFilters.decade) ||
     poolFilters.country.trim() ||
     poolFilters.similarTo.trim();
 

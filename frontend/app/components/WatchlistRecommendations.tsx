@@ -23,14 +23,12 @@ import {
   RecoSingleSelect,
   RECO_DECADE_OPTIONS,
   RECO_WATCHLIST_TITLE_TYPE_OPTIONS,
+  watchlistFiltersActive,
+  watchlistFiltersToSearchParams,
 } from "./recoFilterPickers";
 
 const DEBOUNCE_MS = 350;
 const FETCH_LIMIT = 25;
-
-function hasUsablePoster(poster: string | null | undefined): boolean {
-  return !!(poster && poster.trim() && poster !== "N/A");
-}
 
 type Item = {
   imdb_title_id: string;
@@ -48,6 +46,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
   const [listExpanded, setListExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
@@ -71,25 +70,28 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
       const id = ++requestIdRef.current;
       if (staleWhileRevalidate) setRefreshing(true);
       else setLoading(true);
-      const params = new URLSearchParams();
-      params.set("limit", String(FETCH_LIMIT));
-      genres.forEach((g) => params.append("genres", g));
-      countries.forEach((c) => params.append("countries", c));
-      if (tt) params.set("title_type", tt);
-      if (dec.trim()) params.set("decade", dec.trim());
-      if (incRated) params.set("include_rated", "true");
+      setFetchError(false);
+      const params = watchlistFiltersToSearchParams(
+        {
+          genres,
+          countries,
+          titleType: tt,
+          decade: dec,
+          includeRated: incRated,
+        },
+        { limit: FETCH_LIMIT }
+      );
 
       fetch(`${API_URL}/recommendations/watchlist-simple?${params}`)
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
           if (id !== requestIdRef.current) return;
-          const fetched = data as Item[];
-          const withPoster = fetched.filter((r) => hasUsablePoster(r.poster));
-          setItems(withPoster.slice(0, FETCH_LIMIT));
+          setItems((data as Item[]).slice(0, FETCH_LIMIT));
         })
         .catch(() => {
           if (id !== requestIdRef.current) return;
           setItems([]);
+          setFetchError(true);
         })
         .finally(() => {
           if (id !== requestIdRef.current) return;
@@ -130,6 +132,19 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
   useEffect(() => {
     setListExpanded(false);
   }, [items, selectedGenres, selectedCountries, titleType, decade, includeRated]);
+
+  const filtersActive = watchlistFiltersActive({
+    genres: selectedGenres,
+    countries: selectedCountries,
+    titleType,
+    decade,
+  });
+
+  const emptyMessage = fetchError
+    ? "Could not load watchlist. Check that the API is running."
+    : filtersActive
+      ? "No watchlist items match these filters yet."
+      : "No unrated watchlist items yet. Import your watchlist or enable Include rated.";
 
   const header = embedded ? (
     <p className={RECO_MODE_INTRO}>
@@ -263,7 +278,7 @@ export function WatchlistRecommendations({ embedded = false }: { embedded?: bool
                 : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
             }
           >
-            No poster-backed results for these filters yet.
+            {emptyMessage}
           </p>
         )}
       </div>

@@ -39,18 +39,31 @@ export const RECO_POOL_TITLE_TYPE_OPTIONS: { value: string; label: string }[] = 
   { value: "show", label: "Series" },
 ];
 
-const EXPLORE_TITLE_TYPE_PLACEHOLDERS = new Set(["", "all", "all types"]);
-const EXPLORE_DECADE_PLACEHOLDERS = new Set(["", "decade"]);
+const TITLE_TYPE_PLACEHOLDERS = new Set(["", "all", "all types"]);
+const DECADE_PLACEHOLDERS = new Set(["", "decade", "all decades", "any"]);
 
 /** UI placeholder / unset — do not send as an API filter (Explore your favorites). */
 export function normalizeExploreTitleType(value: string): string {
   const t = value.trim();
-  return EXPLORE_TITLE_TYPE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
+  return TITLE_TYPE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
 }
 
 export function normalizeExploreDecade(value: string): string {
   const t = value.trim();
-  return EXPLORE_DECADE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
+  return DECADE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
+}
+
+/** Watchlist tab uses exact CSV title types (``Movie``, ``TV Series``); only strip placeholders. */
+export function normalizeWatchlistTitleType(value: string): string {
+  return normalizeExploreTitleType(value);
+}
+
+/** Catalog pool bar: ``movie`` | ``show`` only; ``all`` / blank omits param. */
+export function normalizePoolTitleType(value: string): string {
+  const t = (value || "").trim().toLowerCase();
+  if (!t || t === "all") return "";
+  if (t === "movie" || t === "show") return t;
+  return "";
 }
 
 export function exploreFiltersActive(filters: {
@@ -87,6 +100,49 @@ export function exploreFiltersToSearchParams(filters: {
   if (tt) p.set("title_type", tt);
   const dec = normalizeExploreDecade(filters.decade);
   if (dec) p.set("decade", dec);
+  return p;
+}
+
+export function watchlistFiltersActive(filters: {
+  genres: string[];
+  countries: string[];
+  titleType: string;
+  decade: string;
+}): boolean {
+  return (
+    filters.genres.some((g) => g.trim()) ||
+    filters.countries.some((c) => c.trim()) ||
+    !!normalizeWatchlistTitleType(filters.titleType) ||
+    !!normalizeExploreDecade(filters.decade)
+  );
+}
+
+/** Query params for ``/recommendations/watchlist-simple``. */
+export function watchlistFiltersToSearchParams(
+  filters: {
+    genres: string[];
+    countries: string[];
+    titleType: string;
+    decade: string;
+    includeRated?: boolean;
+  },
+  opts?: { limit?: number }
+): URLSearchParams {
+  const p = new URLSearchParams();
+  if (opts?.limit != null) p.set("limit", String(opts.limit));
+  for (const g of filters.genres) {
+    const t = g.trim();
+    if (t) p.append("genres", t);
+  }
+  for (const c of filters.countries) {
+    const t = c.trim();
+    if (t) p.append("countries", t);
+  }
+  const tt = normalizeWatchlistTitleType(filters.titleType);
+  if (tt) p.set("title_type", tt);
+  const dec = normalizeExploreDecade(filters.decade);
+  if (dec) p.set("decade", dec);
+  if (filters.includeRated) p.set("include_rated", "true");
   return p;
 }
 

@@ -4,6 +4,8 @@ import { API_URL } from "../lib/api";
 import { CountryMultiSelect } from "./CountryMultiSelect";
 import { GenreMultiSelect } from "./GenreMultiSelect";
 import {
+  normalizeExploreDecade,
+  normalizePoolTitleType,
   RecoSingleSelect,
   RECO_DECADE_OPTIONS,
   RECO_POOL_TITLE_TYPE_OPTIONS,
@@ -46,7 +48,10 @@ export function poolFiltersToQueryString(
   const includeDecade = opts?.includeDecade !== false;
   const includeGenre = opts?.includeGenre !== false;
   const p = new URLSearchParams();
-  if (includeDecade && f.decade.trim()) p.set("decade", f.decade.trim());
+  if (includeDecade) {
+    const dec = normalizeExploreDecade(f.decade);
+    if (dec) p.set("decade", dec);
+  }
   if (includeCountry && f.country.trim()) p.set("country", f.country.trim());
   if (includeGenre) {
     for (const g of f.genres) {
@@ -55,10 +60,8 @@ export function poolFiltersToQueryString(
     }
   }
   if (f.similarTo.trim()) p.set("similar_to", f.similarTo.trim());
-  const tt = (f.titleType || "").trim().toLowerCase();
-  if (tt === "movie" || tt === "show" || tt === "all") {
-    p.set("title_type", tt);
-  }
+  const tt = normalizePoolTitleType(f.titleType);
+  if (tt) p.set("title_type", tt);
   const s = p.toString();
   return s ? `&${s}` : "";
 }

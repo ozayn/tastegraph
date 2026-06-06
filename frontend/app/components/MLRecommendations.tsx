@@ -9,6 +9,7 @@ import {
   RecommendationPoolFiltersBar,
   type RecommendationPoolFilterValues,
 } from "./RecommendationPoolFiltersBar";
+import { normalizeExploreDecade } from "./recoFilterPickers";
 import {
   RECO_EMPTY_MESSAGE,
   RECO_EMPTY_PANEL,
@@ -137,7 +138,7 @@ export function MLRecommendations() {
   }, [poolFilters]);
 
   const filtersActive =
-    poolFilters.decade ||
+    !!normalizeExploreDecade(poolFilters.decade) ||
     poolFilters.country.trim() ||
     poolFilters.similarTo.trim();
 
