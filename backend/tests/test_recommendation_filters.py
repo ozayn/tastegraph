@@ -5,6 +5,8 @@ from app.services.recommendation_filters import (
     WATCHLIST_RECENCY_FLOOR_YEAR,
     any_recommendation_filter_active,
     default_watchlist_recency_fraction,
+    normalize_decade_query,
+    normalize_simple_title_type,
     parse_decade_bounds,
     pool_row_matches_filters,
     title_metadata_matches_pool_filters,
@@ -18,6 +20,22 @@ def test_parse_decade_bounds():
     assert parse_decade_bounds("2020s") == (2020, 2029)
     assert parse_decade_bounds("2020") == (2020, 2029)
     assert parse_decade_bounds("2015") == (2010, 2019)
+    assert parse_decade_bounds("") is None
+    assert parse_decade_bounds("Decade") is None
+    assert parse_decade_bounds("  decade  ") is None
+
+
+def test_normalize_simple_title_type():
+    assert normalize_simple_title_type(None) is None
+    assert normalize_simple_title_type("") is None
+    assert normalize_simple_title_type("all") is None
+    assert normalize_simple_title_type("All types") is None
+    assert normalize_simple_title_type("movie") == "movie"
+
+
+def test_normalize_decade_query():
+    assert normalize_decade_query("Decade") is None
+    assert normalize_decade_query("2020s") == "2020s"
 
 
 def test_any_recommendation_filter_active():
@@ -204,6 +222,12 @@ def test_watchlist_simple_pool_filters_active():
         genres=None,
         countries=None,
         title_type="  ",
+        decade_bounds=None,
+    )
+    assert not watchlist_simple_pool_filters_active(
+        genres=None,
+        countries=None,
+        title_type="all",
         decade_bounds=None,
     )
     assert watchlist_simple_pool_filters_active(

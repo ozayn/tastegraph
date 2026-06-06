@@ -12,11 +12,36 @@ from sqlalchemy.orm import Session
 from app.models.title_metadata import TitleMetadata
 
 
-def parse_decade_bounds(decade: str | None) -> tuple[int, int] | None:
-    """Parse ``2020s`` / ``2020`` into inclusive year range for that decade."""
+_SIMPLE_TITLE_TYPE_PLACEHOLDERS = frozenset({"", "all", "all types"})
+_DECADE_QUERY_PLACEHOLDERS = frozenset({"", "decade", "all decades", "any"})
+
+
+def normalize_simple_title_type(title_type: str | None) -> str | None:
+    """Treat UI placeholders (``all``, ``All types``, blank) as no filter."""
+    if title_type is None:
+        return None
+    t = title_type.strip()
+    if not t or t.lower() in _SIMPLE_TITLE_TYPE_PLACEHOLDERS:
+        return None
+    return t
+
+
+def normalize_decade_query(decade: str | None) -> str | None:
+    """Treat UI placeholders (``Decade``, blank) as no filter."""
     if decade is None:
         return None
-    t = decade.strip().lower().rstrip("s")
+    t = decade.strip()
+    if not t or t.lower() in _DECADE_QUERY_PLACEHOLDERS:
+        return None
+    return t
+
+
+def parse_decade_bounds(decade: str | None) -> tuple[int, int] | None:
+    """Parse ``2020s`` / ``2020`` into inclusive year range for that decade."""
+    decade = normalize_decade_query(decade)
+    if decade is None:
+        return None
+    t = decade.lower().rstrip("s")
     if not t.isdigit():
         return None
     y = int(t)
@@ -194,7 +219,7 @@ def watchlist_simple_pool_filters_active(
         return True
     if countries and any((c or "").strip() for c in countries):
         return True
-    if title_type and str(title_type).strip():
+    if normalize_simple_title_type(title_type):
         return True
     if decade_bounds is not None:
         return True

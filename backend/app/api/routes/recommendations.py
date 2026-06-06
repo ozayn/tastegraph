@@ -19,6 +19,7 @@ from app.services.recommendation_filters import (
     WATCHLIST_RECENCY_WEIGHT_SIMPLE,
     any_recommendation_filter_active,
     default_watchlist_recency_fraction,
+    normalize_simple_title_type,
     normalize_year_value,
     parse_decade_bounds,
     pool_row_matches_filters,
@@ -315,9 +316,10 @@ def _assemble_simple_explore_favorites(scored_sorted: list, limit: int) -> list:
 
 def _title_type_matches(tt: str) -> list:
     """Build filters for title_type (movie, series, episode) matching CSV values like Movie, TV Series."""
-    tt = (tt or "").strip().lower()
-    if not tt:
+    normalized = normalize_simple_title_type(tt)
+    if not normalized:
         return []
+    tt = normalized.lower()
     if tt == "movie":
         return [IMDbRating.title_type.ilike("movie")]
     if tt == "series":
@@ -416,7 +418,7 @@ def recommendations_simple(
         tt_filters = _title_type_matches(title_type or "")
         if tt_filters:
             q = q.filter(or_(*tt_filters))
-        decade_bounds = parse_decade_bounds(decade)
+        decade_bounds = parse_decade_bounds(decade)  # normalizes placeholder decade labels
         if decade_bounds is not None:
             y0, y1 = decade_bounds
             q = q.filter(IMDbRating.year.isnot(None), IMDbRating.year >= y0, IMDbRating.year <= y1)
@@ -772,8 +774,9 @@ def recommendations_watchlist_simple(
             rated_exists = exists(select(1).where(IMDbRating.imdb_title_id == IMDbWatchlistItem.imdb_title_id))
             q = q.filter(~rated_exists)
 
-        if title_type:
-            q = q.filter(IMDbWatchlistItem.title_type == title_type)
+        wt = normalize_simple_title_type(title_type)
+        if wt:
+            q = q.filter(IMDbWatchlistItem.title_type == wt)
         wl_decade_bounds = parse_decade_bounds(decade)
         wl_filter_active = watchlist_simple_pool_filters_active(
             genres=genres,
@@ -897,9 +900,10 @@ def _build_simple_explanation(
             else:
                 parts.append(f"from {', '.join(cleaned[:-1])}, or {cleaned[-1]}")
 
-    if title_type:
+    wt = normalize_simple_title_type(title_type)
+    if wt:
         type_labels = {"movie": "movies", "series": "series", "episode": "episodes"}
-        type_label = type_labels.get(title_type, f"{title_type}s")
+        type_label = type_labels.get(wt.lower(), f"{wt}s")
         parts.append(f"{type_label} only")
 
     dec_phrase = _decade_phrase_for_simple_explanation(decade)

@@ -39,6 +39,57 @@ export const RECO_POOL_TITLE_TYPE_OPTIONS: { value: string; label: string }[] = 
   { value: "show", label: "Series" },
 ];
 
+const EXPLORE_TITLE_TYPE_PLACEHOLDERS = new Set(["", "all", "all types"]);
+const EXPLORE_DECADE_PLACEHOLDERS = new Set(["", "decade"]);
+
+/** UI placeholder / unset — do not send as an API filter (Explore your favorites). */
+export function normalizeExploreTitleType(value: string): string {
+  const t = value.trim();
+  return EXPLORE_TITLE_TYPE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
+}
+
+export function normalizeExploreDecade(value: string): string {
+  const t = value.trim();
+  return EXPLORE_DECADE_PLACEHOLDERS.has(t.toLowerCase()) ? "" : t;
+}
+
+export function exploreFiltersActive(filters: {
+  genres: string[];
+  countries: string[];
+  titleType: string;
+  decade: string;
+}): boolean {
+  return (
+    filters.genres.some((g) => g.trim()) ||
+    filters.countries.some((c) => c.trim()) ||
+    !!normalizeExploreTitleType(filters.titleType) ||
+    !!normalizeExploreDecade(filters.decade)
+  );
+}
+
+/** Query params for ``/recommendations/simple`` and ``/simple-explanation``. */
+export function exploreFiltersToSearchParams(filters: {
+  genres: string[];
+  countries: string[];
+  titleType: string;
+  decade: string;
+}): URLSearchParams {
+  const p = new URLSearchParams();
+  for (const g of filters.genres) {
+    const t = g.trim();
+    if (t) p.append("genres", t);
+  }
+  for (const c of filters.countries) {
+    const t = c.trim();
+    if (t) p.append("countries", t);
+  }
+  const tt = normalizeExploreTitleType(filters.titleType);
+  if (tt) p.set("title_type", tt);
+  const dec = normalizeExploreDecade(filters.decade);
+  if (dec) p.set("decade", dec);
+  return p;
+}
+
 type RecoSingleSelectProps = {
   id?: string;
   value: string;

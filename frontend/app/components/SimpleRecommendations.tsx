@@ -21,6 +21,8 @@ import {
   RECO_VISIBLE_INITIAL,
 } from "./recommendationModeStyles";
 import {
+  exploreFiltersActive,
+  exploreFiltersToSearchParams,
   RecoSingleSelect,
   RECO_DECADE_OPTIONS,
   RECO_EXPLORE_TITLE_TYPE_OPTIONS,
@@ -46,6 +48,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [titleType, setTitleType] = useState("");
@@ -67,34 +70,41 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
       const id = ++requestIdRef.current;
       if (staleWhileRevalidate) setRefreshing(true);
       else setLoading(true);
-      const baseParams = new URLSearchParams();
-      genres.forEach((g) => baseParams.append("genres", g));
-      countries.forEach((c) => baseParams.append("countries", c));
-      if (tt) baseParams.set("title_type", tt);
-      if (dec.trim()) baseParams.set("decade", dec.trim());
+      setFetchError(false);
 
+      const baseParams = exploreFiltersToSearchParams({
+        genres,
+        countries,
+        titleType: tt,
+        decade: dec,
+      });
       const recParams = new URLSearchParams(baseParams);
       recParams.set("limit", String(DISPLAY_LIMIT));
 
-      Promise.all([
-        fetch(`${API_URL}/recommendations/simple?${recParams}`).then((res) =>
-          res.ok ? res.json() : Promise.reject()
-        ),
-        fetch(`${API_URL}/recommendations/simple-explanation?${baseParams}`).then(
-          (res) => (res.ok ? res.json() : Promise.reject())
-        ),
-      ])
+      const recPromise = fetch(`${API_URL}/recommendations/simple?${recParams}`).then(
+        (res) => (res.ok ? res.json() : Promise.reject(new Error("simple")))
+      );
+      const explPromise = fetch(
+        `${API_URL}/recommendations/simple-explanation?${baseParams}`
+      ).then((res) => (res.ok ? res.json() : null));
+
+      Promise.all([recPromise, explPromise])
         .then(([recs, expl]) => {
           if (id !== requestIdRef.current) return;
           // Use API order as-is. Do not filter by poster—metadata poster URLs differ
           // across environments (null vs stale URL), which was hiding different titles.
           setItems((recs as Item[]).slice(0, DISPLAY_LIMIT));
-          setExplanation(expl.explanation ?? null);
+          setExplanation(
+            expl && typeof expl === "object" && "explanation" in expl
+              ? (expl.explanation as string | null)
+              : null
+          );
         })
         .catch(() => {
           if (id !== requestIdRef.current) return;
           setItems([]);
           setExplanation(null);
+          setFetchError(true);
         })
         .finally(() => {
           if (id !== requestIdRef.current) return;
@@ -133,6 +143,19 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
   useEffect(() => {
     setListExpanded(false);
   }, [items, selectedGenres, selectedCountries, titleType, decade]);
+
+  const filtersActive = exploreFiltersActive({
+    genres: selectedGenres,
+    countries: selectedCountries,
+    titleType,
+    decade,
+  });
+
+  const emptyMessage = fetchError
+    ? "Could not load favorites. Check that the API is running."
+    : filtersActive
+      ? "No 8+ titles match these filters yet."
+      : "No 8+ rated titles in your library yet. Import ratings to populate this view.";
 
   const helpContent = (
     <>
@@ -272,7 +295,7 @@ export function SimpleRecommendations({ embedded = false }: { embedded?: boolean
                       : "mt-5 rounded-lg border border-dashed border-[var(--card-border)] py-8 text-center text-[14px] text-[var(--muted)] sm:mt-6"
                 }
               >
-                No 8+ titles match these filters yet.
+                {emptyMessage}
               </p>
             )}
           </>
